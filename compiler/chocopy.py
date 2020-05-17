@@ -1,12 +1,17 @@
+from .AstNodes import *
+from .Types import *
+from .TypeChecker import TypeChecker
+from .Parser import Parser
 from ast import *
 
-# given an input file, parse it into an AST object
-def parse(infile):
-    # TODO
-    pass
+def parse(infile: str) -> Node:
+    # given an input file, parse it into an AST object
+    lines = None
+    with open(infile) as f:
+        lines = "\n".join([line for line in f])
+    tree = ast.parse(lines)
+    return Parser().visit(py_ast_tree)
 
-# given an AST object, typecheck it
-def typecheck(ast):
-    # TODO
-    pass
-
+def typecheck(ast: Node) -> Node:
+    # given an AST object, typecheck it
+    ast.typecheck(TypeChecker())
