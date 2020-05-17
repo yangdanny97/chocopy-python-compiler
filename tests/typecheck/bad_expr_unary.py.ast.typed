@@ -1,0 +1,114 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 4, 7 ],
+  "declarations" : [ ],
+  "statements" : [ {
+    "kind" : "ExprStmt",
+    "location" : [ 1, 1, 1, 9 ],
+    "expr" : {
+      "kind" : "UnaryExpr",
+      "location" : [ 1, 1, 1, 9 ],
+      "errorMsg" : "Cannot apply operator `not` on type `str`",
+      "inferredType" : {
+        "kind" : "ClassValueType",
+        "className" : "bool"
+      },
+      "operator" : "not",
+      "operand" : {
+        "kind" : "StringLiteral",
+        "location" : [ 1, 5, 1, 9 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "str"
+        },
+        "value" : "Bad"
+      }
+    }
+  }, {
+    "kind" : "ExprStmt",
+    "location" : [ 2, 1, 2, 5 ],
+    "expr" : {
+      "kind" : "UnaryExpr",
+      "location" : [ 2, 1, 2, 5 ],
+      "errorMsg" : "Cannot apply operator `-` on type `bool`",
+      "inferredType" : {
+        "kind" : "ClassValueType",
+        "className" : "int"
+      },
+      "operator" : "-",
+      "operand" : {
+        "kind" : "BooleanLiteral",
+        "location" : [ 2, 2, 2, 5 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "bool"
+        },
+        "value" : true
+      }
+    }
+  }, {
+    "kind" : "ExprStmt",
+    "location" : [ 3, 1, 3, 5 ],
+    "expr" : {
+      "kind" : "UnaryExpr",
+      "location" : [ 3, 1, 3, 5 ],
+      "errorMsg" : "Cannot apply operator `-` on type `<None>`",
+      "inferredType" : {
+        "kind" : "ClassValueType",
+        "className" : "int"
+      },
+      "operator" : "-",
+      "operand" : {
+        "kind" : "NoneLiteral",
+        "location" : [ 3, 2, 3, 5 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "<None>"
+        }
+      }
+    }
+  }, {
+    "kind" : "ExprStmt",
+    "location" : [ 4, 1, 4, 6 ],
+    "expr" : {
+      "kind" : "UnaryExpr",
+      "location" : [ 4, 1, 4, 6 ],
+      "errorMsg" : "Cannot apply operator `not` on type `<Empty>`",
+      "inferredType" : {
+        "kind" : "ClassValueType",
+        "className" : "bool"
+      },
+      "operator" : "not",
+      "operand" : {
+        "kind" : "ListExpr",
+        "location" : [ 4, 5, 4, 6 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "<Empty>"
+        },
+        "elements" : [ ]
+      }
+    }
+  } ],
+  "errors" : {
+    "errors" : [ {
+      "kind" : "CompilerError",
+      "location" : [ 1, 1, 1, 9 ],
+      "message" : "Cannot apply operator `not` on type `str`"
+    }, {
+      "kind" : "CompilerError",
+      "location" : [ 2, 1, 2, 5 ],
+      "message" : "Cannot apply operator `-` on type `bool`"
+    }, {
+      "kind" : "CompilerError",
+      "location" : [ 3, 1, 3, 5 ],
+      "message" : "Cannot apply operator `-` on type `<None>`"
+    }, {
+      "kind" : "CompilerError",
+      "location" : [ 4, 1, 4, 6 ],
+      "message" : "Cannot apply operator `not` on type `<Empty>`"
+    } ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}

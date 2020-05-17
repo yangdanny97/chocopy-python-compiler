@@ -1,0 +1,125 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 10, 20 ],
+  "declarations" : [ {
+    "kind" : "FuncDef",
+    "location" : [ 1, 1, 2, 16 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 1, 5, 1, 7 ],
+      "name" : "foo"
+    },
+    "params" : [ {
+      "kind" : "TypedVar",
+      "location" : [ 1, 9, 1, 13 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 1, 9, 1, 9 ],
+        "name" : "x"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 1, 11, 1, 13 ],
+        "className" : "str"
+      }
+    }, {
+      "kind" : "TypedVar",
+      "location" : [ 1, 16, 1, 21 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 1, 16, 1, 16 ],
+        "name" : "y"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 1, 18, 1, 21 ],
+        "className" : "bool"
+      }
+    } ],
+    "returnType" : {
+      "kind" : "ClassType",
+      "location" : [ 1, 27, 1, 29 ],
+      "className" : "int"
+    },
+    "declarations" : [ ],
+    "statements" : [ {
+      "kind" : "ReturnStmt",
+      "location" : [ 2, 5, 2, 15 ],
+      "value" : {
+        "kind" : "NoneLiteral",
+        "location" : [ 2, 12, 2, 15 ]
+      }
+    } ]
+  }, {
+    "kind" : "FuncDef",
+    "location" : [ 4, 1, 5, 13 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 4, 5, 4, 7 ],
+      "name" : "bar"
+    },
+    "params" : [ ],
+    "returnType" : {
+      "kind" : "ClassType",
+      "location" : [ 4, 14, 4, 17 ],
+      "className" : "bool"
+    },
+    "declarations" : [ ],
+    "statements" : [ {
+      "kind" : "ReturnStmt",
+      "location" : [ 5, 5, 5, 12 ],
+      "value" : {
+        "kind" : "IntegerLiteral",
+        "location" : [ 5, 12, 5, 12 ],
+        "value" : 1
+      }
+    } ]
+  }, {
+    "kind" : "FuncDef",
+    "location" : [ 7, 1, 8, 11 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 7, 5, 7, 7 ],
+      "name" : "baz"
+    },
+    "params" : [ ],
+    "returnType" : {
+      "kind" : "ClassType",
+      "location" : [ 7, 14, 7, 16 ],
+      "className" : "str"
+    },
+    "declarations" : [ ],
+    "statements" : [ {
+      "kind" : "ReturnStmt",
+      "location" : [ 8, 5, 8, 10 ],
+      "value" : null
+    } ]
+  } ],
+  "statements" : [ {
+    "kind" : "ExprStmt",
+    "location" : [ 10, 1, 10, 19 ],
+    "expr" : {
+      "kind" : "CallExpr",
+      "location" : [ 10, 1, 10, 19 ],
+      "function" : {
+        "kind" : "Identifier",
+        "location" : [ 10, 1, 10, 3 ],
+        "name" : "foo"
+      },
+      "args" : [ {
+        "kind" : "StringLiteral",
+        "location" : [ 10, 5, 10, 11 ],
+        "value" : "Hello"
+      }, {
+        "kind" : "BooleanLiteral",
+        "location" : [ 10, 14, 10, 18 ],
+        "value" : false
+      } ]
+    }
+  } ],
+  "errors" : {
+    "errors" : [ ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}

@@ -1,0 +1,199 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 14, 5 ],
+  "declarations" : [ {
+    "kind" : "ClassDef",
+    "location" : [ 1, 1, 2, 14 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 1, 7, 1, 7 ],
+      "name" : "A"
+    },
+    "superClass" : {
+      "kind" : "Identifier",
+      "location" : [ 1, 9, 1, 14 ],
+      "name" : "object"
+    },
+    "declarations" : [ {
+      "kind" : "VarDef",
+      "location" : [ 2, 5, 2, 13 ],
+      "var" : {
+        "kind" : "TypedVar",
+        "location" : [ 2, 5, 2, 9 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 2, 5, 2, 5 ],
+          "name" : "x"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 2, 7, 2, 9 ],
+          "className" : "int"
+        }
+      },
+      "value" : {
+        "kind" : "IntegerLiteral",
+        "location" : [ 2, 13, 2, 13 ],
+        "value" : 1
+      }
+    } ]
+  }, {
+    "kind" : "FuncDef",
+    "location" : [ 4, 1, 12, 9 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 4, 5, 4, 7 ],
+      "name" : "foo"
+    },
+    "params" : [ {
+      "kind" : "TypedVar",
+      "location" : [ 4, 9, 4, 13 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 4, 9, 4, 9 ],
+        "name" : "x"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 4, 11, 4, 13 ],
+        "className" : "int"
+      }
+    }, {
+      "kind" : "TypedVar",
+      "location" : [ 4, 16, 4, 23 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 4, 16, 4, 19 ],
+        "errorMsg" : "Cannot shadow class name: bool",
+        "name" : "bool"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 4, 21, 4, 23 ],
+        "className" : "str"
+      }
+    } ],
+    "returnType" : {
+      "kind" : "ClassType",
+      "location" : [ 4, 29, 4, 34 ],
+      "className" : "object"
+    },
+    "declarations" : [ {
+      "kind" : "VarDef",
+      "location" : [ 5, 5, 5, 13 ],
+      "var" : {
+        "kind" : "TypedVar",
+        "location" : [ 5, 5, 5, 9 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 5, 5, 5, 5 ],
+          "name" : "y"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 5, 7, 5, 9 ],
+          "className" : "int"
+        }
+      },
+      "value" : {
+        "kind" : "IntegerLiteral",
+        "location" : [ 5, 13, 5, 13 ],
+        "value" : 4
+      }
+    }, {
+      "kind" : "VarDef",
+      "location" : [ 6, 5, 6, 13 ],
+      "var" : {
+        "kind" : "TypedVar",
+        "location" : [ 6, 5, 6, 9 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 6, 5, 6, 5 ],
+          "errorMsg" : "Cannot shadow class name: A",
+          "name" : "A"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 6, 7, 6, 9 ],
+          "className" : "int"
+        }
+      },
+      "value" : {
+        "kind" : "IntegerLiteral",
+        "location" : [ 6, 13, 6, 13 ],
+        "value" : 5
+      }
+    }, {
+      "kind" : "VarDef",
+      "location" : [ 7, 5, 7, 19 ],
+      "var" : {
+        "kind" : "TypedVar",
+        "location" : [ 7, 5, 7, 14 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 7, 5, 7, 10 ],
+          "errorMsg" : "Cannot shadow class name: object",
+          "name" : "object"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 7, 12, 7, 14 ],
+          "className" : "str"
+        }
+      },
+      "value" : {
+        "kind" : "StringLiteral",
+        "location" : [ 7, 18, 7, 19 ],
+        "value" : ""
+      }
+    }, {
+      "kind" : "FuncDef",
+      "location" : [ 9, 5, 10, 21 ],
+      "name" : {
+        "kind" : "Identifier",
+        "location" : [ 9, 9, 9, 11 ],
+        "errorMsg" : "Cannot shadow class name: str",
+        "name" : "str"
+      },
+      "params" : [ ],
+      "returnType" : {
+        "kind" : "ClassType",
+        "location" : [ 9, 18, 9, 21 ],
+        "className" : "bool"
+      },
+      "declarations" : [ ],
+      "statements" : [ {
+        "kind" : "ReturnStmt",
+        "location" : [ 10, 9, 10, 20 ],
+        "value" : {
+          "kind" : "BooleanLiteral",
+          "location" : [ 10, 16, 10, 20 ],
+          "value" : false
+        }
+      } ]
+    } ],
+    "statements" : [ ]
+  } ],
+  "statements" : [ ],
+  "errors" : {
+    "errors" : [ {
+      "kind" : "CompilerError",
+      "location" : [ 4, 16, 4, 19 ],
+      "message" : "Cannot shadow class name: bool"
+    }, {
+      "kind" : "CompilerError",
+      "location" : [ 6, 5, 6, 5 ],
+      "message" : "Cannot shadow class name: A"
+    }, {
+      "kind" : "CompilerError",
+      "location" : [ 7, 5, 7, 10 ],
+      "message" : "Cannot shadow class name: object"
+    }, {
+      "kind" : "CompilerError",
+      "location" : [ 9, 9, 9, 11 ],
+      "message" : "Cannot shadow class name: str"
+    } ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}

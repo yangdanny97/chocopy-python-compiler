@@ -1,0 +1,106 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 7, 5 ],
+  "declarations" : [ {
+    "kind" : "VarDef",
+    "location" : [ 1, 1, 1, 10 ],
+    "var" : {
+      "kind" : "TypedVar",
+      "location" : [ 1, 1, 1, 3 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 1, 1, 1, 1 ],
+        "name" : "x"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 1, 3, 1, 3 ],
+        "errorMsg" : "Invalid type annotation; there is no class named: A",
+        "className" : "A"
+      }
+    },
+    "value" : {
+      "kind" : "NoneLiteral",
+      "location" : [ 1, 7, 1, 10 ]
+    }
+  }, {
+    "kind" : "FuncDef",
+    "location" : [ 3, 1, 5, 11 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 3, 5, 3, 7 ],
+      "name" : "foo"
+    },
+    "params" : [ {
+      "kind" : "TypedVar",
+      "location" : [ 3, 9, 3, 11 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 3, 9, 3, 9 ],
+        "name" : "x"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 3, 11, 3, 11 ],
+        "errorMsg" : "Invalid type annotation; there is no class named: B",
+        "className" : "B"
+      }
+    } ],
+    "returnType" : {
+      "kind" : "ClassType",
+      "location" : [ 3, 17, 3, 17 ],
+      "errorMsg" : "Invalid type annotation; there is no class named: C",
+      "className" : "C"
+    },
+    "declarations" : [ {
+      "kind" : "VarDef",
+      "location" : [ 4, 5, 4, 14 ],
+      "var" : {
+        "kind" : "TypedVar",
+        "location" : [ 4, 5, 4, 7 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 4, 5, 4, 5 ],
+          "name" : "y"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 4, 7, 4, 7 ],
+          "errorMsg" : "Invalid type annotation; there is no class named: D",
+          "className" : "D"
+        }
+      },
+      "value" : {
+        "kind" : "NoneLiteral",
+        "location" : [ 4, 11, 4, 14 ]
+      }
+    } ],
+    "statements" : [ {
+      "kind" : "ReturnStmt",
+      "location" : [ 5, 5, 5, 10 ],
+      "value" : null
+    } ]
+  } ],
+  "statements" : [ ],
+  "errors" : {
+    "errors" : [ {
+      "kind" : "CompilerError",
+      "location" : [ 1, 3, 1, 3 ],
+      "message" : "Invalid type annotation; there is no class named: A"
+    }, {
+      "kind" : "CompilerError",
+      "location" : [ 3, 11, 3, 11 ],
+      "message" : "Invalid type annotation; there is no class named: B"
+    }, {
+      "kind" : "CompilerError",
+      "location" : [ 3, 17, 3, 17 ],
+      "message" : "Invalid type annotation; there is no class named: C"
+    }, {
+      "kind" : "CompilerError",
+      "location" : [ 4, 7, 4, 7 ],
+      "message" : "Invalid type annotation; there is no class named: D"
+    } ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}

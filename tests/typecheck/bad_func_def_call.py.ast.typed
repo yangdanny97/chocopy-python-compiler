@@ -1,0 +1,336 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 12, 6 ],
+  "declarations" : [ {
+    "kind" : "FuncDef",
+    "location" : [ 1, 1, 2, 17 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 1, 5, 1, 7 ],
+      "name" : "foo"
+    },
+    "params" : [ {
+      "kind" : "TypedVar",
+      "location" : [ 1, 9, 1, 13 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 1, 9, 1, 9 ],
+        "name" : "x"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 1, 11, 1, 13 ],
+        "className" : "str"
+      }
+    }, {
+      "kind" : "TypedVar",
+      "location" : [ 1, 16, 1, 21 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 1, 16, 1, 16 ],
+        "name" : "y"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 1, 18, 1, 21 ],
+        "className" : "bool"
+      }
+    } ],
+    "returnType" : {
+      "kind" : "ClassType",
+      "location" : [ 1, 27, 1, 29 ],
+      "className" : "int"
+    },
+    "declarations" : [ ],
+    "statements" : [ {
+      "kind" : "ReturnStmt",
+      "location" : [ 2, 5, 2, 16 ],
+      "value" : {
+        "kind" : "CallExpr",
+        "location" : [ 2, 12, 2, 16 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "int"
+        },
+        "function" : {
+          "kind" : "Identifier",
+          "location" : [ 2, 12, 2, 14 ],
+          "inferredType" : {
+            "kind" : "FuncType",
+            "parameters" : [ ],
+            "returnType" : {
+              "kind" : "ClassValueType",
+              "className" : "int"
+            }
+          },
+          "name" : "bar"
+        },
+        "args" : [ ]
+      }
+    } ]
+  }, {
+    "kind" : "FuncDef",
+    "location" : [ 4, 1, 5, 13 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 4, 5, 4, 7 ],
+      "name" : "bar"
+    },
+    "params" : [ ],
+    "returnType" : {
+      "kind" : "ClassType",
+      "location" : [ 4, 14, 4, 16 ],
+      "className" : "int"
+    },
+    "declarations" : [ ],
+    "statements" : [ {
+      "kind" : "ReturnStmt",
+      "location" : [ 5, 5, 5, 12 ],
+      "value" : {
+        "kind" : "IntegerLiteral",
+        "location" : [ 5, 12, 5, 12 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "int"
+        },
+        "value" : 1
+      }
+    } ]
+  } ],
+  "statements" : [ {
+    "kind" : "ExprStmt",
+    "location" : [ 8, 1, 8, 12 ],
+    "expr" : {
+      "kind" : "CallExpr",
+      "location" : [ 8, 1, 8, 12 ],
+      "errorMsg" : "Expected 2 arguments; got 1",
+      "inferredType" : {
+        "kind" : "ClassValueType",
+        "className" : "int"
+      },
+      "function" : {
+        "kind" : "Identifier",
+        "location" : [ 8, 1, 8, 3 ],
+        "inferredType" : {
+          "kind" : "FuncType",
+          "parameters" : [ {
+            "kind" : "ClassValueType",
+            "className" : "str"
+          }, {
+            "kind" : "ClassValueType",
+            "className" : "bool"
+          } ],
+          "returnType" : {
+            "kind" : "ClassValueType",
+            "className" : "int"
+          }
+        },
+        "name" : "foo"
+      },
+      "args" : [ {
+        "kind" : "StringLiteral",
+        "location" : [ 8, 5, 8, 11 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "str"
+        },
+        "value" : "Hello"
+      } ]
+    }
+  }, {
+    "kind" : "ExprStmt",
+    "location" : [ 9, 1, 9, 22 ],
+    "expr" : {
+      "kind" : "CallExpr",
+      "location" : [ 9, 1, 9, 22 ],
+      "errorMsg" : "Expected 2 arguments; got 3",
+      "inferredType" : {
+        "kind" : "ClassValueType",
+        "className" : "int"
+      },
+      "function" : {
+        "kind" : "Identifier",
+        "location" : [ 9, 1, 9, 3 ],
+        "inferredType" : {
+          "kind" : "FuncType",
+          "parameters" : [ {
+            "kind" : "ClassValueType",
+            "className" : "str"
+          }, {
+            "kind" : "ClassValueType",
+            "className" : "bool"
+          } ],
+          "returnType" : {
+            "kind" : "ClassValueType",
+            "className" : "int"
+          }
+        },
+        "name" : "foo"
+      },
+      "args" : [ {
+        "kind" : "StringLiteral",
+        "location" : [ 9, 5, 9, 11 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "str"
+        },
+        "value" : "Hello"
+      }, {
+        "kind" : "BooleanLiteral",
+        "location" : [ 9, 14, 9, 18 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "bool"
+        },
+        "value" : false
+      }, {
+        "kind" : "IntegerLiteral",
+        "location" : [ 9, 21, 9, 21 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "int"
+        },
+        "value" : 3
+      } ]
+    }
+  }, {
+    "kind" : "ExprStmt",
+    "location" : [ 10, 1, 10, 15 ],
+    "expr" : {
+      "kind" : "CallExpr",
+      "location" : [ 10, 1, 10, 15 ],
+      "errorMsg" : "Expected type `bool`; got type `int` in parameter 1",
+      "inferredType" : {
+        "kind" : "ClassValueType",
+        "className" : "int"
+      },
+      "function" : {
+        "kind" : "Identifier",
+        "location" : [ 10, 1, 10, 3 ],
+        "inferredType" : {
+          "kind" : "FuncType",
+          "parameters" : [ {
+            "kind" : "ClassValueType",
+            "className" : "str"
+          }, {
+            "kind" : "ClassValueType",
+            "className" : "bool"
+          } ],
+          "returnType" : {
+            "kind" : "ClassValueType",
+            "className" : "int"
+          }
+        },
+        "name" : "foo"
+      },
+      "args" : [ {
+        "kind" : "StringLiteral",
+        "location" : [ 10, 5, 10, 11 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "str"
+        },
+        "value" : "Hello"
+      }, {
+        "kind" : "IntegerLiteral",
+        "location" : [ 10, 14, 10, 14 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "int"
+        },
+        "value" : 3
+      } ]
+    }
+  }, {
+    "kind" : "ExprStmt",
+    "location" : [ 11, 1, 11, 15 ],
+    "expr" : {
+      "kind" : "CallExpr",
+      "location" : [ 11, 1, 11, 15 ],
+      "errorMsg" : "Expected type `str`; got type `int` in parameter 0",
+      "inferredType" : {
+        "kind" : "ClassValueType",
+        "className" : "int"
+      },
+      "function" : {
+        "kind" : "Identifier",
+        "location" : [ 11, 1, 11, 3 ],
+        "inferredType" : {
+          "kind" : "FuncType",
+          "parameters" : [ {
+            "kind" : "ClassValueType",
+            "className" : "str"
+          }, {
+            "kind" : "ClassValueType",
+            "className" : "bool"
+          } ],
+          "returnType" : {
+            "kind" : "ClassValueType",
+            "className" : "int"
+          }
+        },
+        "name" : "foo"
+      },
+      "args" : [ {
+        "kind" : "IntegerLiteral",
+        "location" : [ 11, 5, 11, 5 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "int"
+        },
+        "value" : 1
+      }, {
+        "kind" : "StringLiteral",
+        "location" : [ 11, 8, 11, 14 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "str"
+        },
+        "value" : "Hello"
+      } ]
+    }
+  }, {
+    "kind" : "ExprStmt",
+    "location" : [ 12, 1, 12, 5 ],
+    "expr" : {
+      "kind" : "CallExpr",
+      "location" : [ 12, 1, 12, 5 ],
+      "errorMsg" : "Not a function or class: baz",
+      "inferredType" : {
+        "kind" : "ClassValueType",
+        "className" : "object"
+      },
+      "function" : {
+        "kind" : "Identifier",
+        "location" : [ 12, 1, 12, 3 ],
+        "name" : "baz"
+      },
+      "args" : [ ]
+    }
+  } ],
+  "errors" : {
+    "errors" : [ {
+      "kind" : "CompilerError",
+      "location" : [ 8, 1, 8, 12 ],
+      "message" : "Expected 2 arguments; got 1"
+    }, {
+      "kind" : "CompilerError",
+      "location" : [ 9, 1, 9, 22 ],
+      "message" : "Expected 2 arguments; got 3"
+    }, {
+      "kind" : "CompilerError",
+      "location" : [ 10, 1, 10, 15 ],
+      "message" : "Expected type `bool`; got type `int` in parameter 1"
+    }, {
+      "kind" : "CompilerError",
+      "location" : [ 11, 1, 11, 15 ],
+      "message" : "Expected type `str`; got type `int` in parameter 0"
+    }, {
+      "kind" : "CompilerError",
+      "location" : [ 12, 1, 12, 5 ],
+      "message" : "Not a function or class: baz"
+    } ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}

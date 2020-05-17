@@ -1,0 +1,103 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 8, 5 ],
+  "declarations" : [ {
+    "kind" : "FuncDef",
+    "location" : [ 1, 1, 3, 9 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 1, 5, 1, 7 ],
+      "name" : "foo"
+    },
+    "params" : [ {
+      "kind" : "TypedVar",
+      "location" : [ 1, 9, 1, 13 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 1, 9, 1, 9 ],
+        "name" : "x"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 1, 11, 1, 13 ],
+        "className" : "int"
+      }
+    } ],
+    "returnType" : {
+      "kind" : "ClassType",
+      "location" : [ 1, 19, 1, 24 ],
+      "className" : "object"
+    },
+    "declarations" : [ {
+      "kind" : "VarDef",
+      "location" : [ 2, 5, 2, 13 ],
+      "var" : {
+        "kind" : "TypedVar",
+        "location" : [ 2, 5, 2, 9 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 2, 5, 2, 5 ],
+          "errorMsg" : "Cannot shadow class name: A",
+          "name" : "A"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 2, 7, 2, 9 ],
+          "className" : "int"
+        }
+      },
+      "value" : {
+        "kind" : "IntegerLiteral",
+        "location" : [ 2, 13, 2, 13 ],
+        "value" : 5
+      }
+    } ],
+    "statements" : [ ]
+  }, {
+    "kind" : "ClassDef",
+    "location" : [ 5, 1, 6, 14 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 5, 7, 5, 7 ],
+      "name" : "A"
+    },
+    "superClass" : {
+      "kind" : "Identifier",
+      "location" : [ 5, 9, 5, 14 ],
+      "name" : "object"
+    },
+    "declarations" : [ {
+      "kind" : "VarDef",
+      "location" : [ 6, 5, 6, 13 ],
+      "var" : {
+        "kind" : "TypedVar",
+        "location" : [ 6, 5, 6, 9 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 6, 5, 6, 5 ],
+          "name" : "x"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 6, 7, 6, 9 ],
+          "className" : "int"
+        }
+      },
+      "value" : {
+        "kind" : "IntegerLiteral",
+        "location" : [ 6, 13, 6, 13 ],
+        "value" : 1
+      }
+    } ]
+  } ],
+  "statements" : [ ],
+  "errors" : {
+    "errors" : [ {
+      "kind" : "CompilerError",
+      "location" : [ 2, 5, 2, 5 ],
+      "message" : "Cannot shadow class name: A"
+    } ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}

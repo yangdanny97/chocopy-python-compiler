@@ -1,0 +1,75 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 5, 4 ],
+  "declarations" : [ {
+    "kind" : "ClassDef",
+    "location" : [ 1, 1, 5, 0 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 1, 7, 1, 7 ],
+      "name" : "A"
+    },
+    "superClass" : {
+      "kind" : "Identifier",
+      "location" : [ 1, 9, 1, 14 ],
+      "name" : "object"
+    },
+    "declarations" : [ {
+      "kind" : "FuncDef",
+      "location" : [ 2, 5, 3, 23 ],
+      "name" : {
+        "kind" : "Identifier",
+        "location" : [ 2, 9, 2, 16 ],
+        "name" : "__init__"
+      },
+      "params" : [ {
+        "kind" : "TypedVar",
+        "location" : [ 2, 18, 2, 25 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 2, 18, 2, 21 ],
+          "name" : "self"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 2, 23, 2, 25 ],
+          "className" : "A"
+        }
+      } ],
+      "returnType" : {
+        "kind" : "ClassType",
+        "location" : [ 2, 27, 2, 27 ],
+        "className" : "<None>"
+      },
+      "declarations" : [ ],
+      "statements" : [ {
+        "kind" : "ReturnStmt",
+        "location" : [ 3, 9, 3, 16 ],
+        "value" : {
+          "kind" : "IntegerLiteral",
+          "location" : [ 3, 16, 3, 16 ],
+          "value" : 1
+        }
+      } ]
+    } ]
+  } ],
+  "statements" : [ {
+    "kind" : "ExprStmt",
+    "location" : [ 5, 1, 5, 3 ],
+    "expr" : {
+      "kind" : "CallExpr",
+      "location" : [ 5, 1, 5, 3 ],
+      "function" : {
+        "kind" : "Identifier",
+        "location" : [ 5, 1, 5, 1 ],
+        "name" : "A"
+      },
+      "args" : [ ]
+    }
+  } ],
+  "errors" : {
+    "errors" : [ ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}

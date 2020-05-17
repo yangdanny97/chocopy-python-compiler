@@ -1,0 +1,37 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 2, 10 ],
+  "declarations" : [ ],
+  "statements" : [ {
+    "kind" : "ExprStmt",
+    "location" : [ 1, 1, 1, 2 ],
+    "expr" : {
+      "kind" : "UnaryExpr",
+      "location" : [ 1, 1, 1, 2 ],
+      "operator" : "-",
+      "operand" : {
+        "kind" : "IntegerLiteral",
+        "location" : [ 1, 2, 1, 2 ],
+        "value" : 1
+      }
+    }
+  }, {
+    "kind" : "ExprStmt",
+    "location" : [ 2, 1, 2, 9 ],
+    "expr" : {
+      "kind" : "UnaryExpr",
+      "location" : [ 2, 1, 2, 9 ],
+      "operator" : "not",
+      "operand" : {
+        "kind" : "BooleanLiteral",
+        "location" : [ 2, 5, 2, 9 ],
+        "value" : false
+      }
+    }
+  } ],
+  "errors" : {
+    "errors" : [ ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}

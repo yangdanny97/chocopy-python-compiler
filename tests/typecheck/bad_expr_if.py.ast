@@ -1,0 +1,70 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 2, 28 ],
+  "declarations" : [ {
+    "kind" : "VarDef",
+    "location" : [ 1, 1, 1, 10 ],
+    "var" : {
+      "kind" : "TypedVar",
+      "location" : [ 1, 1, 1, 6 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 1, 1, 1, 1 ],
+        "name" : "x"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 1, 4, 1, 6 ],
+        "className" : "int"
+      }
+    },
+    "value" : {
+      "kind" : "IntegerLiteral",
+      "location" : [ 1, 10, 1, 10 ],
+      "value" : 0
+    }
+  } ],
+  "statements" : [ {
+    "kind" : "AssignStmt",
+    "location" : [ 2, 1, 2, 27 ],
+    "targets" : [ {
+      "kind" : "Identifier",
+      "location" : [ 2, 1, 2, 1 ],
+      "name" : "x"
+    } ],
+    "value" : {
+      "kind" : "IfExpr",
+      "location" : [ 2, 5, 2, 27 ],
+      "condition" : {
+        "kind" : "BinaryExpr",
+        "location" : [ 2, 16, 2, 20 ],
+        "left" : {
+          "kind" : "IntegerLiteral",
+          "location" : [ 2, 16, 2, 16 ],
+          "value" : 2
+        },
+        "operator" : ">",
+        "right" : {
+          "kind" : "IntegerLiteral",
+          "location" : [ 2, 20, 2, 20 ],
+          "value" : 3
+        }
+      },
+      "thenExpr" : {
+        "kind" : "StringLiteral",
+        "location" : [ 2, 5, 2, 11 ],
+        "value" : "Hello"
+      },
+      "elseExpr" : {
+        "kind" : "IntegerLiteral",
+        "location" : [ 2, 27, 2, 27 ],
+        "value" : 3
+      }
+    }
+  } ],
+  "errors" : {
+    "errors" : [ ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}

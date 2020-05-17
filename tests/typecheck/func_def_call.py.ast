@@ -1,0 +1,111 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 7, 20 ],
+  "declarations" : [ {
+    "kind" : "FuncDef",
+    "location" : [ 1, 1, 2, 17 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 1, 5, 1, 7 ],
+      "name" : "foo"
+    },
+    "params" : [ {
+      "kind" : "TypedVar",
+      "location" : [ 1, 9, 1, 13 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 1, 9, 1, 9 ],
+        "name" : "x"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 1, 11, 1, 13 ],
+        "className" : "str"
+      }
+    }, {
+      "kind" : "TypedVar",
+      "location" : [ 1, 16, 1, 21 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 1, 16, 1, 16 ],
+        "name" : "y"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 1, 18, 1, 21 ],
+        "className" : "bool"
+      }
+    } ],
+    "returnType" : {
+      "kind" : "ClassType",
+      "location" : [ 1, 27, 1, 29 ],
+      "className" : "int"
+    },
+    "declarations" : [ ],
+    "statements" : [ {
+      "kind" : "ReturnStmt",
+      "location" : [ 2, 5, 2, 16 ],
+      "value" : {
+        "kind" : "CallExpr",
+        "location" : [ 2, 12, 2, 16 ],
+        "function" : {
+          "kind" : "Identifier",
+          "location" : [ 2, 12, 2, 14 ],
+          "name" : "bar"
+        },
+        "args" : [ ]
+      }
+    } ]
+  }, {
+    "kind" : "FuncDef",
+    "location" : [ 4, 1, 5, 13 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 4, 5, 4, 7 ],
+      "name" : "bar"
+    },
+    "params" : [ ],
+    "returnType" : {
+      "kind" : "ClassType",
+      "location" : [ 4, 14, 4, 16 ],
+      "className" : "int"
+    },
+    "declarations" : [ ],
+    "statements" : [ {
+      "kind" : "ReturnStmt",
+      "location" : [ 5, 5, 5, 12 ],
+      "value" : {
+        "kind" : "IntegerLiteral",
+        "location" : [ 5, 12, 5, 12 ],
+        "value" : 1
+      }
+    } ]
+  } ],
+  "statements" : [ {
+    "kind" : "ExprStmt",
+    "location" : [ 7, 1, 7, 19 ],
+    "expr" : {
+      "kind" : "CallExpr",
+      "location" : [ 7, 1, 7, 19 ],
+      "function" : {
+        "kind" : "Identifier",
+        "location" : [ 7, 1, 7, 3 ],
+        "name" : "foo"
+      },
+      "args" : [ {
+        "kind" : "StringLiteral",
+        "location" : [ 7, 5, 7, 11 ],
+        "value" : "Hello"
+      }, {
+        "kind" : "BooleanLiteral",
+        "location" : [ 7, 14, 7, 18 ],
+        "value" : false
+      } ]
+    }
+  } ],
+  "errors" : {
+    "errors" : [ ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}

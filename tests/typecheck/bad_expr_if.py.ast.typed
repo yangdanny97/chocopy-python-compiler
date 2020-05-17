@@ -1,0 +1,107 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 2, 28 ],
+  "declarations" : [ {
+    "kind" : "VarDef",
+    "location" : [ 1, 1, 1, 10 ],
+    "var" : {
+      "kind" : "TypedVar",
+      "location" : [ 1, 1, 1, 6 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 1, 1, 1, 1 ],
+        "name" : "x"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 1, 4, 1, 6 ],
+        "className" : "int"
+      }
+    },
+    "value" : {
+      "kind" : "IntegerLiteral",
+      "location" : [ 1, 10, 1, 10 ],
+      "inferredType" : {
+        "kind" : "ClassValueType",
+        "className" : "int"
+      },
+      "value" : 0
+    }
+  } ],
+  "statements" : [ {
+    "kind" : "AssignStmt",
+    "location" : [ 2, 1, 2, 27 ],
+    "errorMsg" : "Expected type `int`; got type `object`",
+    "targets" : [ {
+      "kind" : "Identifier",
+      "location" : [ 2, 1, 2, 1 ],
+      "inferredType" : {
+        "kind" : "ClassValueType",
+        "className" : "int"
+      },
+      "name" : "x"
+    } ],
+    "value" : {
+      "kind" : "IfExpr",
+      "location" : [ 2, 5, 2, 27 ],
+      "inferredType" : {
+        "kind" : "ClassValueType",
+        "className" : "object"
+      },
+      "condition" : {
+        "kind" : "BinaryExpr",
+        "location" : [ 2, 16, 2, 20 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "bool"
+        },
+        "left" : {
+          "kind" : "IntegerLiteral",
+          "location" : [ 2, 16, 2, 16 ],
+          "inferredType" : {
+            "kind" : "ClassValueType",
+            "className" : "int"
+          },
+          "value" : 2
+        },
+        "operator" : ">",
+        "right" : {
+          "kind" : "IntegerLiteral",
+          "location" : [ 2, 20, 2, 20 ],
+          "inferredType" : {
+            "kind" : "ClassValueType",
+            "className" : "int"
+          },
+          "value" : 3
+        }
+      },
+      "thenExpr" : {
+        "kind" : "StringLiteral",
+        "location" : [ 2, 5, 2, 11 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "str"
+        },
+        "value" : "Hello"
+      },
+      "elseExpr" : {
+        "kind" : "IntegerLiteral",
+        "location" : [ 2, 27, 2, 27 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "int"
+        },
+        "value" : 3
+      }
+    }
+  } ],
+  "errors" : {
+    "errors" : [ {
+      "kind" : "CompilerError",
+      "location" : [ 2, 1, 2, 27 ],
+      "message" : "Expected type `int`; got type `object`"
+    } ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 7, 5 ],
+  "declarations" : [ {
+    "kind" : "ClassDef",
+    "location" : [ 1, 1, 5, 0 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 1, 7, 1, 7 ],
+      "name" : "x"
+    },
+    "superClass" : {
+      "kind" : "Identifier",
+      "location" : [ 1, 9, 1, 14 ],
+      "name" : "object"
+    },
+    "declarations" : [ {
+      "kind" : "FuncDef",
+      "location" : [ 2, 3, 3, 13 ],
+      "name" : {
+        "kind" : "Identifier",
+        "location" : [ 2, 7, 2, 7 ],
+        "name" : "x"
+      },
+      "params" : [ {
+        "kind" : "TypedVar",
+        "location" : [ 2, 9, 2, 16 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 2, 9, 2, 12 ],
+          "name" : "self"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 2, 14, 2, 16 ],
+          "className" : "x"
+        }
+      } ],
+      "returnType" : {
+        "kind" : "ClassType",
+        "location" : [ 2, 22, 2, 24 ],
+        "className" : "int"
+      },
+      "declarations" : [ ],
+      "statements" : [ {
+        "kind" : "ReturnStmt",
+        "location" : [ 3, 5, 3, 12 ],
+        "value" : {
+          "kind" : "IntegerLiteral",
+          "location" : [ 3, 12, 3, 12 ],
+          "value" : 1
+        }
+      } ]
+    } ]
+  }, {
+    "kind" : "VarDef",
+    "location" : [ 5, 1, 5, 9 ],
+    "var" : {
+      "kind" : "TypedVar",
+      "location" : [ 5, 1, 5, 5 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 5, 1, 5, 1 ],
+        "name" : "x"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 5, 3, 5, 5 ],
+        "className" : "int"
+      }
+    },
+    "value" : {
+      "kind" : "IntegerLiteral",
+      "location" : [ 5, 9, 5, 9 ],
+      "value" : 5
+    }
+  } ],
+  "statements" : [ ],
+  "errors" : {
+    "errors" : [ ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}

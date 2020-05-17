@@ -1,0 +1,88 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 5, 1 ],
+  "declarations" : [ {
+    "kind" : "VarDef",
+    "location" : [ 1, 1, 1, 15 ],
+    "var" : {
+      "kind" : "TypedVar",
+      "location" : [ 1, 1, 1, 5 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 1, 1, 1, 1 ],
+        "name" : "s"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 1, 3, 1, 5 ],
+        "className" : "str"
+      }
+    },
+    "value" : {
+      "kind" : "StringLiteral",
+      "location" : [ 1, 9, 1, 15 ],
+      "inferredType" : {
+        "kind" : "ClassValueType",
+        "className" : "str"
+      },
+      "value" : "Hello"
+    }
+  } ],
+  "statements" : [ {
+    "kind" : "ForStmt",
+    "location" : [ 3, 1, 5, 1 ],
+    "identifier" : {
+      "kind" : "Identifier",
+      "location" : [ 3, 5, 3, 5 ],
+      "inferredType" : {
+        "kind" : "ClassValueType",
+        "className" : "str"
+      },
+      "name" : "s"
+    },
+    "iterable" : {
+      "kind" : "Identifier",
+      "location" : [ 3, 10, 3, 10 ],
+      "inferredType" : {
+        "kind" : "ClassValueType",
+        "className" : "str"
+      },
+      "name" : "s"
+    },
+    "body" : [ {
+      "kind" : "ExprStmt",
+      "location" : [ 4, 5, 4, 8 ],
+      "expr" : {
+        "kind" : "IndexExpr",
+        "location" : [ 4, 5, 4, 8 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "str"
+        },
+        "list" : {
+          "kind" : "Identifier",
+          "location" : [ 4, 5, 4, 5 ],
+          "inferredType" : {
+            "kind" : "ClassValueType",
+            "className" : "str"
+          },
+          "name" : "s"
+        },
+        "index" : {
+          "kind" : "IntegerLiteral",
+          "location" : [ 4, 7, 4, 7 ],
+          "inferredType" : {
+            "kind" : "ClassValueType",
+            "className" : "int"
+          },
+          "value" : 0
+        }
+      }
+    } ]
+  } ],
+  "errors" : {
+    "errors" : [ ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}

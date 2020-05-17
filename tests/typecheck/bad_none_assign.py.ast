@@ -1,0 +1,187 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 13, 12 ],
+  "declarations" : [ {
+    "kind" : "ClassDef",
+    "location" : [ 1, 1, 2, 14 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 1, 7, 1, 7 ],
+      "name" : "A"
+    },
+    "superClass" : {
+      "kind" : "Identifier",
+      "location" : [ 1, 9, 1, 14 ],
+      "name" : "object"
+    },
+    "declarations" : [ {
+      "kind" : "VarDef",
+      "location" : [ 2, 5, 2, 13 ],
+      "var" : {
+        "kind" : "TypedVar",
+        "location" : [ 2, 5, 2, 9 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 2, 5, 2, 5 ],
+          "name" : "x"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 2, 7, 2, 9 ],
+          "className" : "int"
+        }
+      },
+      "value" : {
+        "kind" : "IntegerLiteral",
+        "location" : [ 2, 13, 2, 13 ],
+        "value" : 1
+      }
+    } ]
+  }, {
+    "kind" : "VarDef",
+    "location" : [ 4, 1, 4, 15 ],
+    "var" : {
+      "kind" : "TypedVar",
+      "location" : [ 4, 1, 4, 8 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 4, 1, 4, 1 ],
+        "name" : "y"
+      },
+      "type" : {
+        "kind" : "ListType",
+        "location" : [ 4, 3, 4, 8 ],
+        "elementType" : {
+          "kind" : "ClassType",
+          "location" : [ 4, 4, 4, 7 ],
+          "className" : "bool"
+        }
+      }
+    },
+    "value" : {
+      "kind" : "NoneLiteral",
+      "location" : [ 4, 12, 4, 15 ]
+    }
+  }, {
+    "kind" : "VarDef",
+    "location" : [ 5, 1, 5, 10 ],
+    "var" : {
+      "kind" : "TypedVar",
+      "location" : [ 5, 1, 5, 5 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 5, 1, 5, 1 ],
+        "name" : "z"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 5, 3, 5, 5 ],
+        "className" : "str"
+      }
+    },
+    "value" : {
+      "kind" : "StringLiteral",
+      "location" : [ 5, 9, 5, 10 ],
+      "value" : ""
+    }
+  }, {
+    "kind" : "VarDef",
+    "location" : [ 6, 1, 6, 10 ],
+    "var" : {
+      "kind" : "TypedVar",
+      "location" : [ 6, 1, 6, 3 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 6, 1, 6, 1 ],
+        "name" : "a"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 6, 3, 6, 3 ],
+        "className" : "A"
+      }
+    },
+    "value" : {
+      "kind" : "NoneLiteral",
+      "location" : [ 6, 7, 6, 10 ]
+    }
+  } ],
+  "statements" : [ {
+    "kind" : "AssignStmt",
+    "location" : [ 8, 1, 8, 7 ],
+    "targets" : [ {
+      "kind" : "Identifier",
+      "location" : [ 8, 1, 8, 1 ],
+      "name" : "a"
+    } ],
+    "value" : {
+      "kind" : "CallExpr",
+      "location" : [ 8, 5, 8, 7 ],
+      "function" : {
+        "kind" : "Identifier",
+        "location" : [ 8, 5, 8, 5 ],
+        "name" : "A"
+      },
+      "args" : [ ]
+    }
+  }, {
+    "kind" : "AssignStmt",
+    "location" : [ 11, 1, 11, 8 ],
+    "targets" : [ {
+      "kind" : "Identifier",
+      "location" : [ 11, 1, 11, 1 ],
+      "name" : "z"
+    } ],
+    "value" : {
+      "kind" : "NoneLiteral",
+      "location" : [ 11, 5, 11, 8 ]
+    }
+  }, {
+    "kind" : "AssignStmt",
+    "location" : [ 12, 1, 12, 10 ],
+    "targets" : [ {
+      "kind" : "MemberExpr",
+      "location" : [ 12, 1, 12, 3 ],
+      "object" : {
+        "kind" : "Identifier",
+        "location" : [ 12, 1, 12, 1 ],
+        "name" : "a"
+      },
+      "member" : {
+        "kind" : "Identifier",
+        "location" : [ 12, 3, 12, 3 ],
+        "name" : "x"
+      }
+    } ],
+    "value" : {
+      "kind" : "NoneLiteral",
+      "location" : [ 12, 7, 12, 10 ]
+    }
+  }, {
+    "kind" : "AssignStmt",
+    "location" : [ 13, 1, 13, 11 ],
+    "targets" : [ {
+      "kind" : "IndexExpr",
+      "location" : [ 13, 1, 13, 4 ],
+      "list" : {
+        "kind" : "Identifier",
+        "location" : [ 13, 1, 13, 1 ],
+        "name" : "y"
+      },
+      "index" : {
+        "kind" : "IntegerLiteral",
+        "location" : [ 13, 3, 13, 3 ],
+        "value" : 0
+      }
+    } ],
+    "value" : {
+      "kind" : "NoneLiteral",
+      "location" : [ 13, 8, 13, 11 ]
+    }
+  } ],
+  "errors" : {
+    "errors" : [ ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}

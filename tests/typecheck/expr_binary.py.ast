@@ -1,0 +1,109 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 1, 53 ],
+  "declarations" : [ ],
+  "statements" : [ {
+    "kind" : "ExprStmt",
+    "location" : [ 1, 1, 1, 52 ],
+    "expr" : {
+      "kind" : "BinaryExpr",
+      "location" : [ 1, 1, 1, 52 ],
+      "left" : {
+        "kind" : "BinaryExpr",
+        "location" : [ 1, 1, 1, 23 ],
+        "left" : {
+          "kind" : "BinaryExpr",
+          "location" : [ 1, 1, 1, 9 ],
+          "left" : {
+            "kind" : "IntegerLiteral",
+            "location" : [ 1, 1, 1, 1 ],
+            "value" : 1
+          },
+          "operator" : "+",
+          "right" : {
+            "kind" : "BinaryExpr",
+            "location" : [ 1, 5, 1, 9 ],
+            "left" : {
+              "kind" : "IntegerLiteral",
+              "location" : [ 1, 5, 1, 5 ],
+              "value" : 2
+            },
+            "operator" : "*",
+            "right" : {
+              "kind" : "IntegerLiteral",
+              "location" : [ 1, 9, 1, 9 ],
+              "value" : 3
+            }
+          }
+        },
+        "operator" : ">",
+        "right" : {
+          "kind" : "BinaryExpr",
+          "location" : [ 1, 13, 1, 23 ],
+          "left" : {
+            "kind" : "BinaryExpr",
+            "location" : [ 1, 13, 1, 19 ],
+            "left" : {
+              "kind" : "IntegerLiteral",
+              "location" : [ 1, 13, 1, 14 ],
+              "value" : 13
+            },
+            "operator" : "//",
+            "right" : {
+              "kind" : "IntegerLiteral",
+              "location" : [ 1, 19, 1, 19 ],
+              "value" : 3
+            }
+          },
+          "operator" : "%",
+          "right" : {
+            "kind" : "IntegerLiteral",
+            "location" : [ 1, 23, 1, 23 ],
+            "value" : 2
+          }
+        }
+      },
+      "operator" : "or",
+      "right" : {
+        "kind" : "BinaryExpr",
+        "location" : [ 1, 28, 1, 52 ],
+        "left" : {
+          "kind" : "BinaryExpr",
+          "location" : [ 1, 28, 1, 33 ],
+          "left" : {
+            "kind" : "IntegerLiteral",
+            "location" : [ 1, 28, 1, 28 ],
+            "value" : 1
+          },
+          "operator" : "!=",
+          "right" : {
+            "kind" : "IntegerLiteral",
+            "location" : [ 1, 33, 1, 33 ],
+            "value" : 1
+          }
+        },
+        "operator" : "and",
+        "right" : {
+          "kind" : "BinaryExpr",
+          "location" : [ 1, 39, 1, 52 ],
+          "left" : {
+            "kind" : "BooleanLiteral",
+            "location" : [ 1, 39, 1, 43 ],
+            "value" : false
+          },
+          "operator" : "==",
+          "right" : {
+            "kind" : "BooleanLiteral",
+            "location" : [ 1, 48, 1, 52 ],
+            "value" : false
+          }
+        }
+      }
+    }
+  } ],
+  "errors" : {
+    "errors" : [ ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}

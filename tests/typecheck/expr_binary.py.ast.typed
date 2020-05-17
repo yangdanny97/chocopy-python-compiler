@@ -1,0 +1,185 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 1, 53 ],
+  "declarations" : [ ],
+  "statements" : [ {
+    "kind" : "ExprStmt",
+    "location" : [ 1, 1, 1, 52 ],
+    "expr" : {
+      "kind" : "BinaryExpr",
+      "location" : [ 1, 1, 1, 52 ],
+      "inferredType" : {
+        "kind" : "ClassValueType",
+        "className" : "bool"
+      },
+      "left" : {
+        "kind" : "BinaryExpr",
+        "location" : [ 1, 1, 1, 23 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "bool"
+        },
+        "left" : {
+          "kind" : "BinaryExpr",
+          "location" : [ 1, 1, 1, 9 ],
+          "inferredType" : {
+            "kind" : "ClassValueType",
+            "className" : "int"
+          },
+          "left" : {
+            "kind" : "IntegerLiteral",
+            "location" : [ 1, 1, 1, 1 ],
+            "inferredType" : {
+              "kind" : "ClassValueType",
+              "className" : "int"
+            },
+            "value" : 1
+          },
+          "operator" : "+",
+          "right" : {
+            "kind" : "BinaryExpr",
+            "location" : [ 1, 5, 1, 9 ],
+            "inferredType" : {
+              "kind" : "ClassValueType",
+              "className" : "int"
+            },
+            "left" : {
+              "kind" : "IntegerLiteral",
+              "location" : [ 1, 5, 1, 5 ],
+              "inferredType" : {
+                "kind" : "ClassValueType",
+                "className" : "int"
+              },
+              "value" : 2
+            },
+            "operator" : "*",
+            "right" : {
+              "kind" : "IntegerLiteral",
+              "location" : [ 1, 9, 1, 9 ],
+              "inferredType" : {
+                "kind" : "ClassValueType",
+                "className" : "int"
+              },
+              "value" : 3
+            }
+          }
+        },
+        "operator" : ">",
+        "right" : {
+          "kind" : "BinaryExpr",
+          "location" : [ 1, 13, 1, 23 ],
+          "inferredType" : {
+            "kind" : "ClassValueType",
+            "className" : "int"
+          },
+          "left" : {
+            "kind" : "BinaryExpr",
+            "location" : [ 1, 13, 1, 19 ],
+            "inferredType" : {
+              "kind" : "ClassValueType",
+              "className" : "int"
+            },
+            "left" : {
+              "kind" : "IntegerLiteral",
+              "location" : [ 1, 13, 1, 14 ],
+              "inferredType" : {
+                "kind" : "ClassValueType",
+                "className" : "int"
+              },
+              "value" : 13
+            },
+            "operator" : "//",
+            "right" : {
+              "kind" : "IntegerLiteral",
+              "location" : [ 1, 19, 1, 19 ],
+              "inferredType" : {
+                "kind" : "ClassValueType",
+                "className" : "int"
+              },
+              "value" : 3
+            }
+          },
+          "operator" : "%",
+          "right" : {
+            "kind" : "IntegerLiteral",
+            "location" : [ 1, 23, 1, 23 ],
+            "inferredType" : {
+              "kind" : "ClassValueType",
+              "className" : "int"
+            },
+            "value" : 2
+          }
+        }
+      },
+      "operator" : "or",
+      "right" : {
+        "kind" : "BinaryExpr",
+        "location" : [ 1, 28, 1, 52 ],
+        "inferredType" : {
+          "kind" : "ClassValueType",
+          "className" : "bool"
+        },
+        "left" : {
+          "kind" : "BinaryExpr",
+          "location" : [ 1, 28, 1, 33 ],
+          "inferredType" : {
+            "kind" : "ClassValueType",
+            "className" : "bool"
+          },
+          "left" : {
+            "kind" : "IntegerLiteral",
+            "location" : [ 1, 28, 1, 28 ],
+            "inferredType" : {
+              "kind" : "ClassValueType",
+              "className" : "int"
+            },
+            "value" : 1
+          },
+          "operator" : "!=",
+          "right" : {
+            "kind" : "IntegerLiteral",
+            "location" : [ 1, 33, 1, 33 ],
+            "inferredType" : {
+              "kind" : "ClassValueType",
+              "className" : "int"
+            },
+            "value" : 1
+          }
+        },
+        "operator" : "and",
+        "right" : {
+          "kind" : "BinaryExpr",
+          "location" : [ 1, 39, 1, 52 ],
+          "inferredType" : {
+            "kind" : "ClassValueType",
+            "className" : "bool"
+          },
+          "left" : {
+            "kind" : "BooleanLiteral",
+            "location" : [ 1, 39, 1, 43 ],
+            "inferredType" : {
+              "kind" : "ClassValueType",
+              "className" : "bool"
+            },
+            "value" : false
+          },
+          "operator" : "==",
+          "right" : {
+            "kind" : "BooleanLiteral",
+            "location" : [ 1, 48, 1, 52 ],
+            "inferredType" : {
+              "kind" : "ClassValueType",
+              "className" : "bool"
+            },
+            "value" : false
+          }
+        }
+      }
+    }
+  } ],
+  "errors" : {
+    "errors" : [ ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}

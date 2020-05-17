@@ -1,0 +1,108 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 9, 9 ],
+  "declarations" : [ {
+    "kind" : "FuncDef",
+    "location" : [ 1, 1, 4, 13 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 1, 5, 1, 9 ],
+      "name" : "set_x"
+    },
+    "params" : [ ],
+    "returnType" : {
+      "kind" : "ClassType",
+      "location" : [ 1, 16, 1, 18 ],
+      "className" : "int"
+    },
+    "declarations" : [ {
+      "kind" : "GlobalDecl",
+      "location" : [ 2, 5, 2, 12 ],
+      "variable" : {
+        "kind" : "Identifier",
+        "location" : [ 2, 12, 2, 12 ],
+        "name" : "x"
+      }
+    } ],
+    "statements" : [ {
+      "kind" : "AssignStmt",
+      "location" : [ 3, 5, 3, 9 ],
+      "targets" : [ {
+        "kind" : "Identifier",
+        "location" : [ 3, 5, 3, 5 ],
+        "name" : "x"
+      } ],
+      "value" : {
+        "kind" : "IntegerLiteral",
+        "location" : [ 3, 9, 3, 9 ],
+        "value" : 1
+      }
+    }, {
+      "kind" : "ReturnStmt",
+      "location" : [ 4, 5, 4, 12 ],
+      "value" : {
+        "kind" : "Identifier",
+        "location" : [ 4, 12, 4, 12 ],
+        "name" : "x"
+      }
+    } ]
+  }, {
+    "kind" : "VarDef",
+    "location" : [ 6, 1, 6, 9 ],
+    "var" : {
+      "kind" : "TypedVar",
+      "location" : [ 6, 1, 6, 5 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 6, 1, 6, 1 ],
+        "name" : "x"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 6, 3, 6, 5 ],
+        "className" : "int"
+      }
+    },
+    "value" : {
+      "kind" : "IntegerLiteral",
+      "location" : [ 6, 9, 6, 9 ],
+      "value" : 0
+    }
+  } ],
+  "statements" : [ {
+    "kind" : "ExprStmt",
+    "location" : [ 8, 1, 8, 7 ],
+    "expr" : {
+      "kind" : "CallExpr",
+      "location" : [ 8, 1, 8, 7 ],
+      "function" : {
+        "kind" : "Identifier",
+        "location" : [ 8, 1, 8, 5 ],
+        "name" : "set_x"
+      },
+      "args" : [ ]
+    }
+  }, {
+    "kind" : "ExprStmt",
+    "location" : [ 9, 1, 9, 8 ],
+    "expr" : {
+      "kind" : "CallExpr",
+      "location" : [ 9, 1, 9, 8 ],
+      "function" : {
+        "kind" : "Identifier",
+        "location" : [ 9, 1, 9, 5 ],
+        "name" : "print"
+      },
+      "args" : [ {
+        "kind" : "Identifier",
+        "location" : [ 9, 7, 9, 7 ],
+        "name" : "x"
+      } ]
+    }
+  } ],
+  "errors" : {
+    "errors" : [ ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}
