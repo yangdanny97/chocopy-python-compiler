@@ -11,5 +11,6 @@ class Identifier(Expr):
 
     def toJSON(self):
         d = super().toJSON(self)
+        d["name"] = self.name
         return d
 

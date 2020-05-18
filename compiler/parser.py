@@ -2,12 +2,13 @@ from ast import *
 from .AstNodes import *
 
 class ParseException(Exception):
+    # for AST structures that are legal in Python 3 but not in Chocopy
     def __init__(self, message, node):
         super().__init__(message + ". Line {:d} Col {:d}".format(node.lineno, node.col_offset))
 
 class Parser(NodeVisitor):
     def __init__(self):
-        pass
+        self.decl = True
 
     def getLocation(node):
         # get 4 item list corresponding to AST node location
@@ -18,7 +19,6 @@ class Parser(NodeVisitor):
     def visit_Module(self, node):
         location = self.getLocation(node)
         body = [self.visit(b) for b in node.body]
-        decl = True
         declarations = []
         statements = []
         for i in range(len(body)):
@@ -27,13 +27,11 @@ class Parser(NodeVisitor):
                 declarations.append(b)
             else:
                 statements.append(b)
-
             if not isinstance(b, Declaration):
-                decl = False
-            elif decl == False:
+                self.decl = False
+            elif self.decl == False:
                 raise ParseException("All declarations must come before statements", node.body[i])
-        # TODO errors
-        return Program(location, declarations, statements, [])
+        return Program(location, declarations, statements, []) # TODO errors
 
     def visit_FunctionDef(self, node):
         pass
@@ -113,6 +111,15 @@ class Parser(NodeVisitor):
     def visit_Index(self, node):
         pass
 
+    def visit_arguments(self, node):
+        pass
+
+    def visit_arg(self, node):
+        # type annotation is either Str(s) or Name(id)
+        pass
+
+    # operators
+
     def visit_And(self, node):
         return "and"
 
@@ -160,13 +167,6 @@ class Parser(NodeVisitor):
 
     def visit_Is(self, node):
         return "is"
-
-    def visit_arguments(self, node):
-        pass
-
-    def visit_arg(self, node):
-        # type annotation is either Str(s) or Name(id)
-        pass
 
     # unsupported nodes
 
@@ -347,7 +347,7 @@ class Parser(NodeVisitor):
     def visit_withitem(self, node):
         raise ParseException("Unsupported node", node)
 
-    # expression contexts
+    # expression contexts - do nothing
 
     def visit_Load(self, node):
         pass

@@ -1,5 +1,7 @@
 from .ClassValueType import ClassValueType
 
+# factories for types
+
 def ObjectType():
     return ClassValueType("object")
 
