@@ -8,7 +8,7 @@ class Expr(Node):
 
     def toJSON(self):
         d = super().toJSON(self)
-        if self.inferredType != None:
+        if self.inferredType is not None:
             d['inferredType'] = self.inferredType.toJSON()
         return d
 

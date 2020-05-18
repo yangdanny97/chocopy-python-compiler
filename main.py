@@ -19,24 +19,26 @@ def main():
     parser.add_argument('outfile', nargs='?', type=str, default=None)
     args = parser.parse_args()
 
-    if args.testall == True:
+    if args.testall:
+        run_all_tests()
+        return
+
+    if args.testparse:
         run_parse_tests()
         return
 
-    if args.testparse == True:
-        run_parse_tests()
-        return
-
-    if args.testtc == True:
+    if args.testtc:
         run_typecheck_tests()
         return
 
     infile = args.infile
     outfile = args.outfile
     if args.infile == None:
-        raise Exception("Must specify input file!")
+        print("Error: must specify input file")
+        parser.print_help()
+        return
 
-    if args.outfile == None:
+    if args.outfile is None:
         if args.typecheck:
             outfile = infile + ".ast.typed"
         else:

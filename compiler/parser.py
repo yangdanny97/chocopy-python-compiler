@@ -1,17 +1,39 @@
 from ast import *
+from .AstNodes import *
 
 class ParseException(Exception):
     def __init__(self, message, node):
-        super().__init__(message + " at line {} col {}".format(node.lineno, node.col_offset))
+        super().__init__(message + ". Line {:d} Col {:d}".format(node.lineno, node.col_offset))
 
 class Parser(NodeVisitor):
     def __init__(self):
         pass
 
+    def getLocation(node):
+        # get 4 item list corresponding to AST node location
+        return [node.lineno, node.col_offset, node.end_lineno, node.end_col_offset]
+
     # see https://greentreesnakes.readthedocs.io/en/latest/nodes.html
 
     def visit_Module(self, node):
-        pass
+        location = self.getLocation(node)
+        body = [self.visit(b) for b in node.body]
+        decl = True
+        declarations = []
+        statements = []
+        for i in range(len(body)):
+            b = body[i]
+            if isinstance(b, Declaration):
+                declarations.append(b)
+            else:
+                statements.append(b)
+
+            if not isinstance(b, Declaration):
+                decl = False
+            elif decl == False:
+                raise ParseException("All declarations must come before statements", node.body[i])
+        # TODO errors
+        return Program(location, declarations, statements, [])
 
     def visit_FunctionDef(self, node):
         pass
@@ -92,10 +114,10 @@ class Parser(NodeVisitor):
         pass
 
     def visit_And(self, node):
-        pass
+        return "and"
 
     def visit_Or(self, node):
-        pass
+        return "or"
 
     def visit_Add(self, node):
         return "+"
@@ -146,104 +168,186 @@ class Parser(NodeVisitor):
         # type annotation is either Str(s) or Name(id)
         pass
 
+    # unsupported nodes
+
     def visit_Expression(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
     
     def visit_AsyncFunctionDef(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_Delete(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_AsyncFor(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_AugAssign(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_AnnAssign(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_For(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_With(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_AsyncWith(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_Raise(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_Try(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_Assert(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_Import(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_ImportFrom(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_Break(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_Continue(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_Lambda(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_Dict(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_Set(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_Bytes(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_Ellipses(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_ListComp(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_SetComp(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_DictComp(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_GeneratorExp(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_Await(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_Yield(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_YieldFrom(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_Compare(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_FormattedValue(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_JoinedStr(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_Starred(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
 
     def visit_Tuple(self, node):
-        raise ParseException("Unsupported node ", node)
+        raise ParseException("Unsupported node", node)
+
+    def visit_AugLoad(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_AugStore(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_MatMult(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_Div(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_Slice(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_ExtSlice(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_Pow(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_LShift(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_RShift(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_BitOr(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_BitXor(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_BitAnd(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_UAdd(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_USub(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_IsNot(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_In(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_NotIn(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_ExceptHandlerattributes (self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_TypeIgnore(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_FunctionType(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_Suite(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_Interactive(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_alias(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_keyword(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_comprehension(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_withitem(self, node):
+        raise ParseException("Unsupported node", node)
+
+    # expression contexts
 
     def visit_Load(self, node):
         pass
@@ -253,81 +357,3 @@ class Parser(NodeVisitor):
 
     def visit_Del(self, node):
         pass
-
-    def visit_AugLoad(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_AugStore(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_MatMult(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_Div(self, node):
-        raise ParseException("Unsupported node ", node)
-
-     def visit_Slice(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_ExtSlice(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_Pow(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_LShift(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_RShift(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_BitOr(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_BitXor(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_BitAnd(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_UAdd(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_USub(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_IsNot(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_In(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_NotIn(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_ExceptHandlerattributes (self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_TypeIgnore(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_FunctionType(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_Suite(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_Interactive(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_alias(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_keyword(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_comprehension(self, node):
-        raise ParseException("Unsupported node ", node)
-
-    def visit_withitem(self, node):
-        raise ParseException("Unsupported node ", node)

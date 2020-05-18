@@ -1,5 +1,5 @@
-from AstNodes import *
-from Types import *
+from .AstNodes import *
+from .Types import *
 
 class TypeChecker:
     def __init__(self):

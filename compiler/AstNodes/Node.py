@@ -11,7 +11,9 @@ class Node:
 
     def toJSON(self):
         d = {}
-        d['kind'] = kind
-        d['location'] = location
+        d['kind'] = self.kind
+        d['location'] = self.location
+        if self.errorMsg is not None:
+            d['errorMsg'] = self.errorMsg
         return d
 
