@@ -4,7 +4,7 @@ from .Identifier import Identifier
 class CallExpr(Expr):
 
     def __init__(self, location:[int], function:Identifier, args:[Expr]):
-        super().__init__(self, location, "CallExpr")
+        super().__init__(location, "CallExpr")
         self.function = function
         self.args = args
 
@@ -14,7 +14,9 @@ class CallExpr(Expr):
         typechecker.CallExpr(self)
 
     def toJSON(self):
-        d = super().toJSON(self)
+        d = super().toJSON()
+        d["function"] = self.function.toJSON()
+        d["args"] = [a.toJSON() for a in self.args]
         return d
 
 

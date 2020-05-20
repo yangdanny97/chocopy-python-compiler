@@ -4,7 +4,7 @@ from .Expr import Expr
 class ExprStmt(Stmt):
 
     def __init__(self, location:[int], expr:Expr):
-        super().__init__(self, location, "ExprStmt")
+        super().__init__(location, "ExprStmt")
         self.expr = expr
 
     def typecheck(self, typechecker):
@@ -12,6 +12,7 @@ class ExprStmt(Stmt):
         typechecker.ExprStmt(self)
 
     def toJSON(self):
-        d = super().toJSON(self)
+        d = super().toJSON()
+        d["expr"] = self.expr.toJSON()
         return d
 

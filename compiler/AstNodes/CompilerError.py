@@ -3,7 +3,7 @@ from .Node import Node
 class CompilerError(Node):
 
     def __init__(self, location:[int], message:str, syntax:bool):
-        super().__init__(self, location, "CompilerError")
+        super().__init__(location, "CompilerError")
         self.message = message
         self.syntax = syntax
 
@@ -11,5 +11,7 @@ class CompilerError(Node):
         pass
 
     def toJSON(self):
-        d = super().toJSON(self)
+        d = super().toJSON()
+        d["message"] = self.message
+        d["syntax"] = self.syntax
         return d

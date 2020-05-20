@@ -7,7 +7,7 @@ from .Errors import Errors
 class Program(Node):
 
     def __init__(self, location:[int], declarations:[Declaration], statements:[Stmt], errors:Errors):
-        super().__init__(self, location, "Program")
+        super().__init__(location, "Program")
         self.declarations = declarations
         self.statements = statements
         self.errors = errors
@@ -16,9 +16,9 @@ class Program(Node):
         typechecker.Program(self)
 
     def toJSON(self):
-        d = super().toJSON(self)
-        d['declarations'] = declarations
-        d['statements'] = statements
-        d['errors'] = errors
+        d = super().toJSON()
+        d['declarations'] = [decl.toJSON() for d in self.declarations]
+        d['statements'] = [s.toJSON() for s in self.statements]
+        d['errors'] = [e.toJSON() for e in self.errors]
         return d
 

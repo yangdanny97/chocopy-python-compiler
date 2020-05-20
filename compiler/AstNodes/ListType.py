@@ -3,13 +3,14 @@ from .TypeAnnotation import TypeAnnotation
 class ListType(TypeAnnotation):
 
     def __init__(self, location:[int], elementType:TypeAnnotation):
-        super().__init__(self, location, "ListType")
+        super().__init__(location, "ListType")
         self.elementType = elementType
 
     def typecheck(self, typechecker):
         pass
 
     def toJSON(self):
-        d = super().toJSON(self)
+        d = super().toJSON()
+        d["elementType"] = self.elementType.toJSON()
         return d
 

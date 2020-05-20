@@ -5,7 +5,7 @@ from .Identifier import Identifier
 class ForStmt(Stmt):
 
     def __init__(self, location:[int], identifier:Identifier, iterable:Expr, body:[Stmt]):
-        super().__init__(self, location, "ForStmt")
+        super().__init__(location, "ForStmt")
         self.identifier = identifier
         self.iterable = iterable
         self.body = body
@@ -19,6 +19,9 @@ class ForStmt(Stmt):
         typechecker.exitScope()
 
     def toJSON(self):
-        d = super().toJSON(self)
+        d = super().toJSON()
+        d["identifier"] = self.identifier.toJSON()
+        d["iterable"] = self.iterable.toJSON()
+        d["body"] = [s.toJSON() for s in self.body]
         return d
 

@@ -4,7 +4,7 @@ from .Expr import Expr
 class IfStmt(Stmt):
 
     def __init__(self, location:[int], condition:Expr, thenBody:[Stmt], elseBody:[Stmt]):
-        super().__init__(self, location, "IfStmt")
+        super().__init__(location, "IfStmt")
         self.condition = condition
         self.thenBody = thenBody
         self.elseBody = elseBody
@@ -24,6 +24,9 @@ class IfStmt(Stmt):
         typechecker.exitScope()
 
     def toJSON(self):
-        d = super().toJSON(self)
+        d = super().toJSON()
+        d["condition"] = self.condition.toJSON()
+        d["thenBody"] = [s.toJSON() for s in self.thenBody]
+        d["elseBody"] = [s.toJSON() for s in self.elseBody]
         return d
 

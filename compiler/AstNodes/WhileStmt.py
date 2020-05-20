@@ -4,7 +4,7 @@ from .Expr import Expr
 class WhileStmt(Stmt):
 
     def __init__(self, location:[int], condition:Expr, body:[Stmt]):
-        super().__init__(self, location, "WhileStmt")
+        super().__init__(location, "WhileStmt")
         self.condition = condition
         self.body = body
 
@@ -17,6 +17,8 @@ class WhileStmt(Stmt):
         typechecker.exitScope()
 
     def toJSON(self):
-        d = super().toJSON(self)
+        d = super().toJSON()
+        d["condition"] = self.condition.toJSON()
+        d["body"] = [s.toJSON() for s in self.body]
         return d
 

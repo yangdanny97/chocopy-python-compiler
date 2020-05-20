@@ -3,7 +3,7 @@ from .Expr import Expr
 class UnaryExpr(Expr):
 
     def __init__(self, location:[int], operator:str, operand:Expr):
-        super().__init__(self, location, "UnaryExpr")
+        super().__init__(location, "UnaryExpr")
         self.operand = operand
         self.operator = operator
 
@@ -12,7 +12,9 @@ class UnaryExpr(Expr):
         typechecker.UnaryExpr(self)
 
     def toJSON(self):
-        d = super().toJSON(self)
+        d = super().toJSON()
+        d["operator"] = self.operator
+        d["operand"] = self.operand.toJSON()
         return d
 
 
