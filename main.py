@@ -2,6 +2,8 @@ import argparse
 import json
 from test import run_all_tests, run_parse_tests, run_typecheck_tests
 import compiler.chocopy
+from compiler.parser import Parser
+from compiler.typechecker import TypeChecker
 
 def main():
     parser = argparse.ArgumentParser(description='Chocopy frontend')
@@ -44,15 +46,30 @@ def main():
         else:
             outfile = infile + ".ast"
 
-    ast = chocopy.parse(infile)
+    astparser = Parser()
+    try:
+        ast = chocopy.parse(infile, astparser)
+    except SyntaxError as e:
+        print(e)
+        return
+    if len(astparser.errors) > 0:
+        for e in astparser.errors:
+            print(e)
+        return
     
+    tc = TypeChecker()
     if args.typecheck:
-        ast = chocopy.typecheck(ast)
+        ast = chocopy.typecheck(ast, tc)
     
     if args.output:
         ast_json = ast.dump()
         with open(outfile) as f:
             json.dump(ast_json, f)
+        return
+    elif len(tc.errors) > 0:
+        for e in astparser.errors:
+            print(e)
+        return
 
 if __name__ == "__main__":
     main()

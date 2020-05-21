@@ -22,6 +22,7 @@ class TypeChecker:
         self.NONE_TYPE = Types.NoneType()
         self.EMPTY_TYPE = Types.EmptyType()
         self.OBJECT_TYPE = Types.ObjectType()
+        self.errors = []
 
     def typecheck(node):
         node.typecheck(self)

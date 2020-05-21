@@ -9,10 +9,18 @@ class ParseException(Exception):
 class Parser(NodeVisitor):
     def __init__(self):
         self.decl = True
+        self.errors = []
 
-    def getLocation(node):
+    def getLocation(self, node):
         # get 4 item list corresponding to AST node location
         return [node.lineno, node.col_offset, node.end_lineno, node.end_col_offset]
+
+    def visit(self, node):
+        try:
+            return super().visit(node)
+        except ParseException as e:
+            self.errors.append(e)
+            return
 
     # see https://greentreesnakes.readthedocs.io/en/latest/nodes.html
     # and https://docs.python.org/3/library/ast.html
