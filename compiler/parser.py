@@ -8,8 +8,8 @@ class ParseException(Exception):
 
 class Parser(NodeVisitor):
     def __init__(self):
-        self.decl = True
         self.errors = []
+        self.inDecl = [False]
 
     def getLocation(self, node):
         # get 4 item list corresponding to AST node location
@@ -21,6 +21,10 @@ class Parser(NodeVisitor):
         except ParseException as e:
             self.errors.append(e)
             return
+    
+    def inDecl(self):
+        # return if visitor is inside a class or function declaration
+        return self.inDecl[-1]
 
     # see https://greentreesnakes.readthedocs.io/en/latest/nodes.html
     # and https://docs.python.org/3/library/ast.html
@@ -30,6 +34,7 @@ class Parser(NodeVisitor):
         body = [self.visit(b) for b in node.body]
         declarations = []
         statements = []
+        decl = True
         for i in range(len(body)):
             b = body[i]
             if isinstance(b, Declaration):
@@ -37,18 +42,22 @@ class Parser(NodeVisitor):
             else:
                 statements.append(b)
             if not isinstance(b, Declaration):
-                self.decl = False
-            elif self.decl == False:
+                decl = False
+            if isinstance(b, Declaration) and decl == False:
                 raise ParseException("All declarations must come before statements", node.body[i])
         return Program(location, declarations, statements, []) # TODO errors
 
     def visit_FunctionDef(self, node):
+        self.inDecl.append(True)
         location = self.getLocation(node)
         # TODO
+        self.inDecl.pop()
 
     def visit_ClassDef(self, node):
+        self.inDecl.append(True)
         location = self.getLocation(node)
         # TODO
+        self.inDecl.pop()
 
     def visit_Return(self, node):
         location = self.getLocation(node)
@@ -59,7 +68,12 @@ class Parser(NodeVisitor):
 
     def visit_Assign(self, node):
         location = self.getLocation(node)
-        # TODO
+        targets = [self.visit(t) for t in node.targets]
+        return AssignStmt(location, targets, self.visit(node.value))
+
+    def visit_AnnAssign(self, node):
+        # TODO turn into VarDef, must have initializing expr
+        location = self.getLocation(node)
 
     def visit_While(self, node):
         location = self.getLocation(node)
@@ -243,9 +257,6 @@ class Parser(NodeVisitor):
         raise ParseException("Unsupported node", node)
 
     def visit_AugAssign(self, node):
-        raise ParseException("Unsupported node", node)
-
-    def visit_AnnAssign(self, node):
         raise ParseException("Unsupported node", node)
 
     def visit_For(self, node):

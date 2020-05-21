@@ -7,22 +7,42 @@ class TypeChecker:
         # stack of hashtables representing scope
         # each table holds identifier->type mappings defined in that scppe
         self.symbolTable = [defaultdict(lambda: None)]
+
+        # standard library functions
+        self.symbolTable[0]["print"] = FuncType([Types.ObjectType()], Types.NoneType())
+        self.symbolTable[0]["input"] = FuncType([], Types.StrType())
+        self.symbolTable[0]["len"] = FuncType([Types.ObjectType()], Types.IntType())
+
         # type hierachy: dictionary of class->superclass mappings
-        self.classes = defaultdict(lambda: None)
+        self.superclasses = defaultdict(lambda: None)
+
         # set up default class hierarchy
-        self.classes["object"] = None
-        self.classes["int"] = "object"
-        self.classes["bool"] = "object"
-        self.classes["str"] = "object"
-        self.classes["<none>"] = "object"
-        self.classes["<empty>"] = "object"
+        self.superclasses["object"] = None
+        self.superclasses["int"] = "object"
+        self.superclasses["bool"] = "object"
+        self.superclasses["str"] = "object"
+        self.superclasses["<none>"] = "object"
+        self.superclasses["<empty>"] = "object"
+
+        # symbol tables for each class's methods
+        self.classes = defaultdict(lambda: {})
+
+        self.classes["object"] = {"__init__": FuncType([], Types.ObjectType())}
+        self.classes["int"] = {"__init__": FuncType([], Types.IntType())}
+        self.classes["bool"] = {"__init__": FuncType([], Types.BoolType())}
+        self.classes["str"] = {"__init__": FuncType([], Types.StrType())}
+
         self.INT_TYPE = Types.IntType()
         self.STR_TYPE = Types.StrType()
         self.BOOL_TYPE = Types.BoolType()
         self.NONE_TYPE = Types.NoneType()
         self.EMPTY_TYPE = Types.EmptyType()
         self.OBJECT_TYPE = Types.ObjectType()
-        self.errors = []
+
+        self.errors = [] # list of errors encountered
+        self.currentClass = None # name of current class body
+
+
 
     def typecheck(node):
         node.typecheck(self)
@@ -51,12 +71,12 @@ class TypeChecker:
             if curr == b:
                 return True
             else:
-                curr = self.classes[curr]
+                curr = self.superclasses[curr]
         return False
 
     def classExists(className:str)->bool:
         # we cannot check for None because it is a defaultdict
-        return className in classes
+        return className in self.superclasses
 
     def isSubtype(a:SymbolType, b:SymbolType)->bool:
         # return if a is a subtype of b
@@ -79,6 +99,8 @@ class TypeChecker:
             return self.canAssign(a.elementType, b.elementType)
         return False
 
+    def addType(name:str, t:SymbolType):
+        self.symbolTable[-1][name] = t
 
     # visit methods for each AST node
 
