@@ -15,6 +15,7 @@ class Parser(NodeVisitor):
         return [node.lineno, node.col_offset, node.end_lineno, node.end_col_offset]
 
     # see https://greentreesnakes.readthedocs.io/en/latest/nodes.html
+    # and https://docs.python.org/3/library/ast.html
 
     def visit_Module(self, node):
         location = self.getLocation(node)
@@ -34,89 +35,140 @@ class Parser(NodeVisitor):
         return Program(location, declarations, statements, []) # TODO errors
 
     def visit_FunctionDef(self, node):
-        pass
+        location = self.getLocation(node)
+        # TODO
 
     def visit_ClassDef(self, node):
-        pass
+        location = self.getLocation(node)
+        # TODO
 
     def visit_Return(self, node):
-        pass
+        location = self.getLocation(node)
+        if node.value == None:
+            return Return(location, None)
+        else:
+            return Return(location, self.visit(node.value))
 
     def visit_Assign(self, node):
-        pass
+        location = self.getLocation(node)
+        # TODO
 
     def visit_While(self, node):
-        pass
+        location = self.getLocation(node)
+        # TODO
 
     def visit_If(self, node):
-        pass
+        location = self.getLocation(node)
+        # TODO
 
     def visit_Global(self, node):
-        pass
+        location = self.getLocation(node)
+        if len(node.names) != 1:
+            raise ParseException("Only one identifier is allowed per global declaration", node)
+        # the ID starts 7 characters to the right
+        idLoc = [location[0], location[1] + 7, location[2], location[3]]
+        identifier = Identifier(idLoc, node.names[0])
+        return GlobalDecl(location, identifier)
 
     def visit_Nonlocal(self, node):
-        pass
+        location = self.getLocation(node)
+        if len(node.names) != 1:
+            raise ParseException("Only one identifier is allowed per nonlocal declaration", node)
+        # the ID starts 7 characters to the right
+        idLoc = [location[0], location[1] + 7, location[2], location[3]]
+        identifier = Identifier(idLoc, node.names[0])
+        return NonLocalDecl(location, identifier)
 
     def visit_Expr(self, node):
-        pass
+        # this is a Stmt that evaluates an Expr
+        location = self.getLocation(node)
+        return ExprStmt(location, self.visit(node.value))
 
     def visit_Pass(self, node):
-        pass
+        # removed by any AST constructors that take in [Stmt]
+        return None
 
     def visit_BoolOp(self, node):
-        pass
-
-    def visit_NamedExpr(self, node):
-        pass
+        location = self.getLocation(node)
+        # TODO
 
     def visit_BinOp(self, node):
-        pass
+        location = self.getLocation(node)
+        # TODO
 
     def visit_UnaryOp(self, node):
-        pass
+        location = self.getLocation(node)
+        # TODO
 
     def visit_IfExp(self, node):
-        pass
+        location = self.getLocation(node)
+        # TODO
 
     def visit_Call(self, node):
-        pass
+        location = self.getLocation(node)
+        # TODO
 
     def visit_Constant(self, node):
-        pass
+        # support for Python 3.8
+        location = self.getLocation(node)
+        if isinstance(node.value, int):
+            return IntegerLiteral(location, node.n)
+        elif isinstance(node.value, str) and node.kind == None:
+            return StringLiteral(location, node.value)
+        elif isinstance(node.value, bool):
+            return BooleanLiteral(location, node.value)
+        elif node.value == None:
+            return NoneLiteral(location)
+        else:
+            raise ParseError("Constant data type not supported", node)
 
     def visit_Attribute(self, node):
-        pass
+        location = self.getLocation(node)
+        # TODO
 
     def visit_Subscript(self, node):
-        pass
+        location = self.getLocation(node)
+        return IndexExpr(location, self.visit(node.value), self.visit(node.slice))
 
     def visit_Name(self, node):
-        pass
+        location = self.getLocation(node)
+        return Identifier(location, node.id)
 
     def visit_Num(self, node):
-        pass
+        location = self.getLocation(node)
+        if not isinstance(node.n, int):
+            raise ParseException("Only integers are allowed", node)
+        return IntegerLiteral(location, node.n)
 
     def visit_Str(self, node):
-        pass
+        location = self.getLocation(node)
+        return StringLiteral(location, node.n)
 
     def visit_List(self, node):
-        pass
+        location = self.getLocation(node)
 
     def visit_NameConstant(self, node):
-        pass
+        location = self.getLocation(node)
+        if node.value == None:
+            return NoneLiteral(location)
+        else:
+            return BooleanLiteral(location, node.value)
 
     def visit_Param(self, node):
-        pass
+        location = self.getLocation(node)
+        # TODO
 
     def visit_Index(self, node):
-        pass
+        return self.visit(node.value)
 
     def visit_arguments(self, node):
-        pass
+        location = self.getLocation(node)
+        # TODO
 
     def visit_arg(self, node):
         # type annotation is either Str(s) or Name(id)
-        pass
+        location = self.getLocation(node)
+        # TODO
 
     # operators
 
@@ -345,6 +397,9 @@ class Parser(NodeVisitor):
         raise ParseException("Unsupported node", node)
 
     def visit_withitem(self, node):
+        raise ParseException("Unsupported node", node)
+
+    def visit_NamedExpr(self, node):
         raise ParseException("Unsupported node", node)
 
     # expression contexts - do nothing

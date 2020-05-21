@@ -18,7 +18,7 @@ class FuncDef(Declaration):
         self.params = params
         self.returnType = returnType
         self.declarations = declarations
-        self.statements = statements
+        self.statements = [s for s in statements if s is not None]
 
     def typecheck(self, typechecker):
         typechecker.FuncDef(self)

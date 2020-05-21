@@ -8,7 +8,8 @@ class ReturnStmt(Stmt):
         self.value = value
 
     def typecheck(self, typechecker):
-        typechecker.typecheck(self.value)
+        if self.value != None:
+            typechecker.typecheck(self.value)
         typechecker.ReturnStmt(self)
 
     def toJSON(self):

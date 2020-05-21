@@ -8,7 +8,7 @@ class ForStmt(Stmt):
         super().__init__(location, "ForStmt")
         self.identifier = identifier
         self.iterable = iterable
-        self.body = body
+        self.body = [s for s in body if s is not None]
 
     def typecheck(self, typechecker):
         typechecker.typecheck(self.iterable)
