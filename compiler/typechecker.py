@@ -4,6 +4,12 @@ from collections import defaultdict
 
 class TypeChecker:
     def __init__(self):
+        # typechecker attributes and their chocopy typing judgement analogues:
+        # O : symbolTable
+        # M : classes
+        # C : currentClass
+        # R : expReturnType
+
         # stack of hashtables representing scope
         # each table holds identifier->type mappings defined in that scppe
         self.symbolTable = [defaultdict(lambda: None)]
@@ -40,9 +46,8 @@ class TypeChecker:
         self.OBJECT_TYPE = Types.ObjectType()
 
         self.errors = [] # list of errors encountered
-        self.currentClass = None # name of current class body
-
-
+        self.currentClass = None # name of current class
+        self.expReturnType = None # expected return type of current function
 
     def typecheck(node):
         node.typecheck(self)
@@ -98,9 +103,6 @@ class TypeChecker:
             and a.elementType == self.NONE_TYPE):
             return self.canAssign(a.elementType, b.elementType)
         return False
-
-    def addType(name:str, t:SymbolType):
-        self.symbolTable[-1][name] = t
 
     # visit methods for each AST node
 

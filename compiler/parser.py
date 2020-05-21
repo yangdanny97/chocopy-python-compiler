@@ -1,19 +1,41 @@
 from ast import *
 from .AstNodes import *
 
+
 class ParseException(Exception):
     # for AST structures that are legal in Python 3 but not in Chocopy
     def __init__(self, message, node):
-        super().__init__(message + ". Line {:d} Col {:d}".format(node.lineno, node.col_offset))
+        if node is not None:
+            super().__init__(
+                message + ". Line {:d} Col {:d}".format(node.lineno, node.col_offset))
+        else:
+            super().__init__(message + ".")
+
 
 class Parser(NodeVisitor):
     def __init__(self):
         self.errors = []
         self.inDecl = [False]
 
+    # collapse a list of >2 expressions separated by a
+    # left-associative operator into a BinaryExpr tree
+    def collapse(op: str, values: [Expr]) -> Expr:
+        current = BinaryExpr(getBetweenLocation(
+            values[0], values[1]), values[0], op, values[1])
+        for v in values[2:]:
+            current = BinaryExpr(getBetweenLocation(
+                values[0], v), current, op, v)
+        return current
+
     def getLocation(self, node):
         # get 4 item list corresponding to AST node location
         return [node.lineno, node.col_offset, node.end_lineno, node.end_col_offset]
+
+    def getBetweenLocationPy(self, left, right):
+        return [left.lineno, left.col_offset, right.end_lineno, right.end_col_offset]
+
+    def getBetweenLocation(self, left, right):
+        return left.location[:2] + right.location[2:]
 
     def visit(self, node):
         try:
@@ -21,7 +43,7 @@ class Parser(NodeVisitor):
         except ParseException as e:
             self.errors.append(e)
             return
-    
+
     def inDecl(self):
         # return if visitor is inside a class or function declaration
         return self.inDecl[-1]
@@ -44,8 +66,9 @@ class Parser(NodeVisitor):
             if not isinstance(b, Declaration):
                 decl = False
             if isinstance(b, Declaration) and decl == False:
-                raise ParseException("All declarations must come before statements", node.body[i])
-        return Program(location, declarations, statements, []) # TODO errors
+                raise ParseException(
+                    "All declarations must come before statements", node.body[i])
+        return Program(location, declarations, statements, [])  # TODO errors
 
     def visit_FunctionDef(self, node):
         self.inDecl.append(True)
@@ -73,6 +96,7 @@ class Parser(NodeVisitor):
 
     def visit_AnnAssign(self, node):
         # TODO turn into VarDef, must have initializing expr
+        # make sure init is Literal if not inDecl
         location = self.getLocation(node)
 
     def visit_While(self, node):
@@ -86,7 +110,8 @@ class Parser(NodeVisitor):
     def visit_Global(self, node):
         location = self.getLocation(node)
         if len(node.names) != 1:
-            raise ParseException("Only one identifier is allowed per global declaration", node)
+            raise ParseException(
+                "Only one identifier is allowed per global declaration", node)
         # the ID starts 7 characters to the right
         idLoc = [location[0], location[1] + 7, location[2], location[3]]
         identifier = Identifier(idLoc, node.names[0])
@@ -95,7 +120,8 @@ class Parser(NodeVisitor):
     def visit_Nonlocal(self, node):
         location = self.getLocation(node)
         if len(node.names) != 1:
-            raise ParseException("Only one identifier is allowed per nonlocal declaration", node)
+            raise ParseException(
+                "Only one identifier is allowed per nonlocal declaration", node)
         # the ID starts 7 characters to the right
         idLoc = [location[0], location[1] + 7, location[2], location[3]]
         identifier = Identifier(idLoc, node.names[0])
@@ -111,16 +137,18 @@ class Parser(NodeVisitor):
         return None
 
     def visit_BoolOp(self, node):
-        location = self.getLocation(node)
-        # TODO
+        values = [self.visit(v) for v in node.values]
+        op = self.visit(node.op)
+        return self.collapse(op, values)
 
     def visit_BinOp(self, node):
         location = self.getLocation(node)
-        # TODO
+        return BinaryExpr(location, self.visit(node.left),
+                          self.visit(node.op), self.visit(node.right))
 
     def visit_UnaryOp(self, node):
         location = self.getLocation(node)
-        # TODO
+        return UnaryExpr(location, self.visit(node.op), self.visit(node.operand))
 
     def visit_IfExp(self, node):
         location = self.getLocation(node)
@@ -175,10 +203,6 @@ class Parser(NodeVisitor):
             return NoneLiteral(location)
         else:
             return BooleanLiteral(location, node.value)
-
-    def visit_Param(self, node):
-        location = self.getLocation(node)
-        # TODO
 
     def visit_Index(self, node):
         return self.visit(node.value)
@@ -246,7 +270,7 @@ class Parser(NodeVisitor):
 
     def visit_Expression(self, node):
         raise ParseException("Unsupported node", node)
-    
+
     def visit_AsyncFunctionDef(self, node):
         raise ParseException("Unsupported node", node)
 
@@ -391,7 +415,7 @@ class Parser(NodeVisitor):
     def visit_NotIn(self, node):
         raise ParseException("Unsupported node", node)
 
-    def visit_ExceptHandlerattributes (self, node):
+    def visit_ExceptHandlerattributes(self, node):
         raise ParseException("Unsupported node", node)
 
     def visit_TypeIgnore(self, node):
@@ -430,4 +454,7 @@ class Parser(NodeVisitor):
         pass
 
     def visit_Del(self, node):
+        pass
+
+    def visit_Param(self, node):
         pass
