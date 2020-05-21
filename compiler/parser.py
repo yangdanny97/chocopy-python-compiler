@@ -29,9 +29,17 @@ class Parser(NodeVisitor):
 
     def getLocation(self, node):
         # get 4 item list corresponding to AST node location
+        if not node.end_lineno:
+            node.end_lineno = node.lineno
+        if not node.end_col_offset:
+            node.end_col_offset = node.col_offset
         return [node.lineno, node.col_offset, node.end_lineno, node.end_col_offset]
 
     def getBetweenLocationPy(self, left, right):
+        if not right.end_lineno:
+            right.end_lineno = right.lineno
+        if not right.end_col_offset:
+            right.end_col_offset = right.col_offset
         return [left.lineno, left.col_offset, right.end_lineno, right.end_col_offset]
 
     def getBetweenLocation(self, left, right):
@@ -47,6 +55,18 @@ class Parser(NodeVisitor):
     def inDecl(self):
         # return if visitor is inside a class or function declaration
         return self.inDecl[-1]
+
+    # process python AST nodes into chocopy type annotations
+    def getTypeAnnotation(self, node)->TypeAnnotation:
+        location = self.getLocation(node)
+        if isinstance(node, List):
+            if len(node.elts) > 1:
+                raise ParseException("Unsupported type annotation", node)
+            return ListType(location, self.getTypeAnnotation(node.elts[0]))
+        elif isinstance(node, Name):
+            return ClassType(location, node.id)
+        else:
+            raise ParseException("Unsupported type annotation", node)
 
     # see https://greentreesnakes.readthedocs.io/en/latest/nodes.html
     # and https://docs.python.org/3/library/ast.html
@@ -112,7 +132,7 @@ class Parser(NodeVisitor):
             else:
                 raise ParseException(
                     "Expected declaration or statement", node.body[i])
-        returns = self.visit(node.returns)
+        returns = self.getTypeAnnotation(node.returns)
         self.inDecl.pop()
         return FuncDef(location, identifier, arguments, returns, declarations, statements)
 
@@ -276,12 +296,22 @@ class Parser(NodeVisitor):
 
     def visit_arguments(self, node):
         location = self.getLocation(node)
-        # TODO
+        if node.vararg:
+            raise ParseException("Unsupported", node.vararg)
+        if node.kwarg:
+            raise ParseException("Unsupported", node.kwarg)
+        if node.defaults or node.kw_defaults:
+            raise ParseException("Default arguments are unsupported", node)
+        args = [self.visit(a) for a in (node.posonlyargs + node.args)]
+        return args
 
     def visit_arg(self, node):
         # type annotation is either Str(s) or Name(id)
         location = self.getLocation(node)
-        # TODO
+        identifier = Identifier([location[0], location[1], 
+            location[0], location[1] + len(node.arg) - 1], node.arg)
+        annotation = self.getTypeAnnotation(arg.annotation)
+        return TypedVar(location, identifier, annotation)
 
     # operators
 
