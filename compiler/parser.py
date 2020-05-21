@@ -122,7 +122,7 @@ class Parser(NodeVisitor):
         identifier = Identifier([location[0], location[1] + 6,
                                  location[0], location[1] + 6 + len(node.name)], node.name)
         if len(node.bases) > 1:
-            raise ParseException("Cannot have >1 superclass", bases[1])
+            raise ParseException("Multiple inheritance is unsupported", bases[1])
         base = self.visit(node.bases[0])
         if node.keywords:
             raise ParseException("Unsupported", node.keywords[0])
@@ -234,7 +234,7 @@ class Parser(NodeVisitor):
         elif node.value == None:
             return NoneLiteral(location)
         else:
-            raise ParseError("Constant data type not supported", node)
+            raise ParseError("Unsupported", node)
 
     def visit_Attribute(self, node):
         location = self.getLocation(node)
@@ -251,7 +251,7 @@ class Parser(NodeVisitor):
     def visit_Num(self, node):
         location = self.getLocation(node)
         if not isinstance(node.n, int):
-            raise ParseException("Only integers are allowed", node)
+            raise ParseException("Only integers are supported", node)
         return IntegerLiteral(location, node.n)
 
     def visit_Str(self, node):
@@ -260,13 +260,16 @@ class Parser(NodeVisitor):
 
     def visit_List(self, node):
         location = self.getLocation(node)
+        # TODO
 
     def visit_NameConstant(self, node):
         location = self.getLocation(node)
         if node.value == None:
             return NoneLiteral(location)
-        else:
+        elif isinstance(node.value, bool):
             return BooleanLiteral(location, node.value)
+        else:
+            raise ParseException("Unsupported", node)
 
     def visit_Index(self, node):
         return self.visit(node.value)
