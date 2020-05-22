@@ -18,7 +18,6 @@ class ParseException(Exception):
 class Parser(NodeVisitor):
     def __init__(self):
         self.errors = []
-        self.inDecl = [False]
 
     # reduce a list of >2 expressions separated by a
     # left-associative operator into a BinaryExpr tree
@@ -41,10 +40,6 @@ class Parser(NodeVisitor):
             self.errors.append(e)
             return
 
-    def inDecl(self):
-        # return if visitor is inside a class or function declaration
-        return self.inDecl[-1]
-
     # process python AST nodes into chocopy type annotations
     def getTypeAnnotation(self, node)->TypeAnnotation:
         location = self.getLocation(node)
@@ -54,6 +49,8 @@ class Parser(NodeVisitor):
             return ListType(location, self.getTypeAnnotation(node.elts[0]))
         elif isinstance(node, Name):
             return ClassType(location, node.id)
+        elif isinstance(node, Str):
+            return ClassType(location, node.s)
         else:
             raise ParseException("Unsupported type annotation", node)
 
@@ -88,10 +85,9 @@ class Parser(NodeVisitor):
             else:
                 raise ParseException(
                     "Expected declaration or statement", node.body[i])
-        return Program(location, declarations, statements, Errors([0,0], []))  # TODO errors
+        return Program(location, declarations, statements, Errors([0,0], []))
 
     def visit_FunctionDef(self, node):
-        self.inDecl.append(True)
         if node.decorator_list:
             raise ParseException("Unsupported", node.decorator_list[0])
         if node.returns is None:
@@ -121,11 +117,9 @@ class Parser(NodeVisitor):
                 raise ParseException(
                     "Expected declaration or statement", node.body[i])
         returns = self.getTypeAnnotation(node.returns)
-        self.inDecl.pop()
         return FuncDef(location, identifier, arguments, returns, declarations, statements)
 
     def visit_ClassDef(self, node):
-        self.inDecl.append(True)
         location = self.getLocation(node)
         identifier = Identifier([location[0], location[1] + 6], node.name)
         if len(node.bases) > 1:
@@ -146,7 +140,6 @@ class Parser(NodeVisitor):
                 if (isinstance(body[i], ClassDef) or isinstance(body[i], GlobalDecl) or isinstance(body[i], NonLocalDecl)):
                     raise ParseException(
                         "Expected attribute or method declaration", node.body[i])
-        self.inDecl.pop()
         return ClassDef(location, identifier, base, body)
 
     def visit_Return(self, node):
@@ -162,13 +155,18 @@ class Parser(NodeVisitor):
         return AssignStmt(location, targets, self.visit(node.value))
 
     def visit_AnnAssign(self, node):
-        # turn into VarDef, must have initializing expr
-        # make sure init is Literal if not inDecl
-        if not self.inDecl and not is_instance(node.target, Literal):
-            raise ParseException("Must be Literal if not inDecl")
+        if not node.value:
+            raise ParseException("Expected initializing value", node)
+        if not hasattr(node, "annotation") or not node.annotation:
+            raise ParseException("Missing type annotation", node)
+        if not node.simple:
+            raise ParseException("Expected variable", node.target)
         location = self.getLocation(node)
-        var = self.visit(node.target)
+        var = TypedVar(self.getLocation(node.target),
+                       self.visit(node.target), self.getTypeAnnotation(node.annotation))
         value = self.visit(node.value)
+        if not isinstance(value, Literal):
+            raise ParseException("Expected literal value", node.value)
         return VarDef(location, var, value)
 
     def visit_While(self, node):
@@ -263,7 +261,7 @@ class Parser(NodeVisitor):
             return StringLiteral(location, node.value)
         elif isinstance(node.value, bool):
             return BooleanLiteral(location, node.value)
-        elif node.value == None:
+        elif node.value is None:
             return NoneLiteral(location)
         else:
             raise ParseException("Unsupported", node)
@@ -325,8 +323,8 @@ class Parser(NodeVisitor):
 
     def visit_arg(self, node):
         # type annotation is either Str(s) or Name(id)
-        if not node.annotation:
-            raise ParseException("Why is annotation None :(", node)
+        if not hasattr(node, "annotation") or not node.annotation:
+            raise ParseException("Missing type annotation", node)
         location = self.getLocation(node)
         identifier = Identifier(location, node.arg)
         annotation = self.getTypeAnnotation(node.annotation)
@@ -382,7 +380,7 @@ class Parser(NodeVisitor):
     def visit_Is(self, node):
         return "is"
 
-    # Unsupporteds TODO improve error messages
+    # Unsupported node:  TODO improve error messages
 
     def visit_Expression(self, node):
         raise ParseException("Unsupported", node)
@@ -460,9 +458,6 @@ class Parser(NodeVisitor):
         raise ParseException("Unsupported", node)
 
     def visit_YieldFrom(self, node):
-        raise ParseException("Unsupported", node)
-
-    def visit_Compare(self, node):
         raise ParseException("Unsupported", node)
 
     def visit_FormattedValue(self, node):

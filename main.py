@@ -4,6 +4,7 @@ from test import run_all_tests, run_parse_tests, run_typecheck_tests
 from compiler.compiler import Compiler
 from compiler.parser import Parser
 from compiler.typechecker import TypeChecker
+from compiler.astnodes import Node
 
 def main():
     parser = argparse.ArgumentParser(description='Chocopy frontend')
@@ -50,24 +51,24 @@ def main():
 
     astparser = Parser()
     tree = compiler.parse(infile, astparser)
+
     if len(astparser.errors) > 0:
         for e in astparser.errors:
             print(e)
-        return
-    
-    tc = TypeChecker()
-    if args.typecheck:
+    elif args.typecheck:
+        tc = TypeChecker()
         tree = compiler.typecheck(tree, tc)
-    
+        if len(tc.errors) > 0:
+            for e in astparser.errors:
+                print(e)
+
     if args.output:
         ast_json = tree.toJSON()
         with open(outfile, "w") as f:
             json.dump(ast_json, f)
-        return
-    elif len(tc.errors) > 0:
-        for e in astparser.errors:
-            print(e)
-        return
+    else:
+        if isinstance(tree, Node):
+            print(json.dumps(tree.toJSON()))
 
 if __name__ == "__main__":
     main()
