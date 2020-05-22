@@ -13,6 +13,7 @@ def run_parse_tests(compiler: Compiler):
     total = 0
     n_passed = 0
     passed = True
+    print("Running tests in: tests/parse/")
     parser_tests_dir = (Path(__file__).parent / "tests/parse/").resolve()
     for test in parser_tests_dir.glob('*.py'):
         passed = run_parse_test(test, compiler)
@@ -21,6 +22,7 @@ def run_parse_tests(compiler: Compiler):
             print("Failed: " + test.name)
         else:
             n_passed += 1
+    print("Running tests in: tests/typecheck/")
     # typechecker tests should all successfully parse
     tc_tests_dir = (Path(__file__).parent / "tests/typecheck/").resolve()
     for test in tc_tests_dir.glob('*.py'):
@@ -79,10 +81,11 @@ def ast_equals(d1, d2)->bool:
         for k, v in d1.items():
             if k not in d2:
                 return False
-            # only check starting position of node
+            # only check starting line of node
             if k == "location":
                 try:
-                    return d1[k][:2] == d2[k][:2]
+                    if d1[k][0] != d2[k][0]:
+                        return False
                 except:
                     return False
             elif not ast_equals(v, d2[k]):

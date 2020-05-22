@@ -8,6 +8,7 @@ class Literal(Expr):
 
     def toJSON(self):
         d = super().toJSON()
-        d['value'] = self.value
+        if self.value is not None:
+            d['value'] = self.value
         return d
 

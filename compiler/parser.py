@@ -117,7 +117,7 @@ class Parser(NodeVisitor):
                     "Expected declaration or statement", node.body[i])
         returns = None
         if node.returns is None:
-            returns = ClassType(location, "<none>")
+            returns = ClassType(location, "<None>")
         else:
             returns = self.getTypeAnnotation(node.returns)
         return FuncDef(location, identifier, arguments, returns, declarations, statements)
@@ -148,7 +148,7 @@ class Parser(NodeVisitor):
     def visit_Return(self, node):
         location = self.getLocation(node)
         if node.value == None:
-            return ReturnStmt(location, NoneLiteral(location))
+            return ReturnStmt(location, None)
         else:
             return ReturnStmt(location, self.visit(node.value))
 
@@ -255,7 +255,11 @@ class Parser(NodeVisitor):
         if node.keywords:
             raise ParseException("Keyword args are not supported", node)
         arguments = [self.visit(a) for a in node.args]
-        return CallExpr(location, function, arguments)
+        if isinstance(function, MemberExpr):
+            return MethodCallExpr(location, function, arguments)
+        if isinstance(function, Identifier):
+            return CallExpr(location, function, arguments)
+        raise ParseException("Invalid receiver of call", node.func)
 
     def visit_Constant(self, node):
         # support for Python 3.8
@@ -283,7 +287,7 @@ class Parser(NodeVisitor):
     def visit_Attribute(self, node):
         location = self.getLocation(node)
         obj = self.visit(node.value)
-        member = StringLiteral(location, node.attr)
+        member = Identifier(location, node.attr)
         return MemberExpr(location, obj, member)
 
     def visit_Subscript(self, node):

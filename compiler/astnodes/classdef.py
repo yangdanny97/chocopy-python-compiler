@@ -18,8 +18,8 @@ class ClassDef(Declaration):
     def toJSON(self):
         d = super().toJSON()
         d["name"] = self.name.toJSON()
-        d["superclass"] = self.superclass.toJSON()
-        d["declaration"] = [decl.toJSON() for decl in self.declarations]
+        d["superClass"] = self.superclass.toJSON()
+        d["declarations"] = [decl.toJSON() for decl in self.declarations]
         return d
 
 
