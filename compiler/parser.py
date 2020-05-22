@@ -148,7 +148,7 @@ class Parser(NodeVisitor):
     def visit_Return(self, node):
         location = self.getLocation(node)
         if node.value == None:
-            return ReturnStmt(location, None)
+            return ReturnStmt(location, NoneLiteral(location))
         else:
             return ReturnStmt(location, self.visit(node.value))
 

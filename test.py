@@ -21,6 +21,15 @@ def run_parse_tests(compiler: Compiler):
             print("Failed: " + test.name)
         else:
             n_passed += 1
+    # typechecker tests should all successfully parse
+    tc_tests_dir = (Path(__file__).parent / "tests/typecheck/").resolve()
+    for test in tc_tests_dir.glob('*.py'):
+        passed = run_parse_test(test, compiler, False)
+        total += 1
+        if not passed:
+            print("Failed: " + test.name)
+        else:
+            n_passed += 1
     print("\nPassed {:d} out of {:d} parser test cases\n".format(n_passed, total))
 
 def run_typecheck_tests(compiler: Compiler):
@@ -37,11 +46,12 @@ def run_typecheck_tests(compiler: Compiler):
             n_passed += 1
     print("\nPassed {:d} out of {:d} typechecker test cases\n".format(n_passed, total))
 
-def run_parse_test(test, compiler: Compiler)->bool:
+def run_parse_test(test, compiler: Compiler, bad=True)->bool:
+    # if bad=True, then test cases prefixed with bad are expected to fail
     astparser = Parser()
     ast = compiler.parse(test, astparser)
     # check that parsing error exists
-    if test.name.startswith("bad"):
+    if bad and test.name.startswith("bad"):
         return len(astparser.errors) > 0
     if len(astparser.errors) > 0:
         return False
