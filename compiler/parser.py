@@ -45,14 +45,14 @@ class Parser(NodeVisitor):
         location = self.getLocation(node)
         if isinstance(node, List):
             if len(node.elts) > 1:
-                raise ParseException("Unsupported type annotation 1", node)
+                raise ParseException("Unsupported List type annotation", node)
             return ListType(location, self.getTypeAnnotation(node.elts[0]))
         elif isinstance(node, Name):
             return ClassType(location, node.id)
         elif isinstance(node, Str):
             return ClassType(location, node.s)
         else:
-            raise ParseException("Unsupported type annotation 2", node)
+            raise ParseException("Unsupported type annotation", node)
 
     # see https://greentreesnakes.readthedocs.io/en/latest/nodes.html
     # and https://docs.python.org/3/library/ast.html
@@ -85,14 +85,13 @@ class Parser(NodeVisitor):
             else:
                 raise ParseException(
                     "Expected declaration or statement", node.body[i])
+        if declarations:
+            location = declarations[0].location
         return Program(location, declarations, statements, Errors([0,0], []))
 
     def visit_FunctionDef(self, node):
         if node.decorator_list:
             raise ParseException("Unsupported decorator list", node.decorator_list[0])
-        if node.returns is None:
-            raise ParseException(
-                "Return type must be annotated", node)
         location = self.getLocation(node)
         identifier = Identifier([location[0], location[1] + 4], node.name)
         arguments = self.visit(node.args)
@@ -116,7 +115,11 @@ class Parser(NodeVisitor):
             else:
                 raise ParseException(
                     "Expected declaration or statement", node.body[i])
-        returns = self.getTypeAnnotation(node.returns)
+        returns = None
+        if node.returns is None:
+            returns = ClassType(location, "<none>")
+        else:
+            returns = self.getTypeAnnotation(node.returns)
         return FuncDef(location, identifier, arguments, returns, declarations, statements)
 
     def visit_ClassDef(self, node):
@@ -136,7 +139,7 @@ class Parser(NodeVisitor):
         else:
             for i in range(len(body)):
                 if not isinstance(body[i], Declaration):
-                    raise ParseException("Expected declaration, but got " + str(type(body[i])) + " on item " + str(i), node.body[i])
+                    raise ParseException("Expected declaration", node.body[i])
                 if (isinstance(body[i], ClassDef) or isinstance(body[i], GlobalDecl) or isinstance(body[i], NonLocalDecl)):
                     raise ParseException(
                         "Expected attribute or method declaration", node.body[i])
@@ -249,6 +252,8 @@ class Parser(NodeVisitor):
     def visit_Call(self, node):
         location = self.getLocation(node)
         function = self.visit(node.func)
+        if node.keywords:
+            raise ParseException("Keyword args are not supported", node)
         arguments = [self.visit(a) for a in node.args]
         return CallExpr(location, function, arguments)
 
