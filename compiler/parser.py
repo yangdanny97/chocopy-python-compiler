@@ -162,10 +162,14 @@ class Parser(NodeVisitor):
         return AssignStmt(location, targets, self.visit(node.value))
 
     def visit_AnnAssign(self, node):
-        # TODO turn into VarDef, must have initializing expr
+        # turn into VarDef, must have initializing expr
         # make sure init is Literal if not inDecl
+        if not self.inDecl and not is_instance(node.target, Literal):
+            raise ParseException("Must be Literal if not inDecl")
         location = self.getLocation(node)
-        raise ParseException("TODO", node)
+        var = self.visit(node.target)
+        value = self.visit(node.value)
+        return VarDef(location, var, value)
 
     def visit_While(self, node):
         location = self.getLocation(node)
@@ -262,12 +266,13 @@ class Parser(NodeVisitor):
         elif node.value == None:
             return NoneLiteral(location)
         else:
-            raise ParseError("Unsupported", node)
+            raise ParseException("Unsupported", node)
 
     def visit_Attribute(self, node):
         location = self.getLocation(node)
-        # TODO
-        raise ParseException("TODO", node)
+        obj = self.visit(node.value)
+        member = StringLiteral(location, node.attr)
+        return MemberExpr(location, obj, member)
 
     def visit_Subscript(self, node):
         location = self.getLocation(node)
@@ -320,9 +325,11 @@ class Parser(NodeVisitor):
 
     def visit_arg(self, node):
         # type annotation is either Str(s) or Name(id)
+        if not node.annotation:
+            raise ParseException("Why is annotation None :(", node)
         location = self.getLocation(node)
         identifier = Identifier(location, node.arg)
-        annotation = None # self.getTypeAnnotation(arg.annotation)
+        annotation = self.getTypeAnnotation(node.annotation)
         return TypedVar(location, identifier, annotation)
 
     # operators
