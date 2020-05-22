@@ -289,8 +289,8 @@ class Parser(NodeVisitor):
 
     def visit_List(self, node):
         location = self.getLocation(node)
-        # TODO
-        raise ParseException("TODO", node)
+        elements = [self.visit(e) for e in node.elts]
+        return ListExpr(location, elements)
 
     def visit_NameConstant(self, node):
         location = self.getLocation(node)
