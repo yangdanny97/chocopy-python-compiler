@@ -8,8 +8,8 @@ class Program(Node):
 
     def __init__(self, location:[int], declarations:[Declaration], statements:[Stmt], errors:Errors):
         super().__init__(location, "Program")
-        self.declarations = declarations
-        self.statements = statements
+        self.declarations = [d for d in declarations if d is not None]
+        self.statements = [s for s in statements if s is not None]
         self.errors = errors
 
     def typecheck(self, typechecker):
