@@ -9,8 +9,7 @@ def run_all_tests():
     run_typecheck_tests()
 
 def run_parse_tests():
-    print("Running parser tests...")
-    print("")
+    print("Running parser tests...\n")
     total = 0
     n_passed = 0
     passed = True
@@ -25,13 +24,10 @@ def run_parse_tests():
             print("Failed: " + test.name)
         else:
             n_passed += 1
-    print("")
-    print("Passed {:d} out of {:d} cases".format(n_passed, total))
-    print("")
+    print("\nPassed {:d} out of {:d} parser test cases\n".format(n_passed, total))
 
 def run_typecheck_tests():
-    print("Running typecheck tests...")
-    print("")
+    print("Running typecheck tests...\n")
     total = 0
     n_passed = 0
     tc_tests_dir = (Path(__file__).parent / "tests/typecheck/").resolve()
@@ -42,13 +38,14 @@ def run_typecheck_tests():
             print("Failed: " + test.name)
         else:
             n_passed += 1
-    print("")
-    print("Passed {:d} out of {:d} cases".format(n_passed, total))
-    print("")
+    print("\nPassed {:d} out of {:d} typechecker test cases\n".format(n_passed, total))
 
 def run_parse_test(test):
     parser = Parser()
     ast = chocopy.parse(test, parser)
+    # check that parsing error exists
+    if test.name.startswith("bad"):
+        return len(parser.errors) > 0
     if len(parser.errors) > 0:
         return False
     ast_json = ast.toJSON()

@@ -17,9 +17,9 @@ class Parser(NodeVisitor):
         self.errors = []
         self.inDecl = [False]
 
-    # collapse a list of >2 expressions separated by a
+    # reduce a list of >2 expressions separated by a
     # left-associative operator into a BinaryExpr tree
-    def collapse(self, op: str, values: [Expr]) -> Expr:
+    def binaryReduce(self, op: str, values: [Expr]) -> Expr:
         current = BinaryExpr(getBetweenLocation(
             values[0], values[1]), values[0], op, values[1])
         for v in values[2:]:
@@ -223,7 +223,7 @@ class Parser(NodeVisitor):
     def visit_BoolOp(self, node):
         values = [self.visit(v) for v in node.values]
         op = self.visit(node.op)
-        return self.collapse(op, values)
+        return self.binaryReduce(op, values)
 
     def visit_BinOp(self, node):
         location = self.getLocation(node)
