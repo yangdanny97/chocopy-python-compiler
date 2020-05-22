@@ -26,5 +26,6 @@ The input file should have extension `.py`. If the output file is not provided, 
 - `--test-tc` - run typechecking tests
 
 ## Differences from the reference implementation:
-- The reference implementation represents a node's location as a four item list of \[start line, start col, end line, end col]. Python's parser does not always provide the end line/end column of a node; although this compiler still outputs each node's location as a four item list for compatibility reasons, only the first two values will be meaningful.
+
+The reference implementation represents a node's location as a four item list of \[start line, start col, end line, end col]. Python's parser does not always provide the end line/end column of a node, and the starting column sometimes differs from the reference implementation's parser (a handful of edge cases which do not impact the usefulness of error messages). Although this compiler still outputs each node's location as a four item list for compatibility reasons, only the starting line number for the node is guaranteed to match the reference implementation.
 
