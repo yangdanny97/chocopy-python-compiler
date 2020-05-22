@@ -1,4 +1,4 @@
-from .TypeAnnotation import TypeAnnotation
+from .typeannotation import TypeAnnotation
 
 class ListType(TypeAnnotation):
 

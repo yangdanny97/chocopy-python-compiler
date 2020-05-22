@@ -1,6 +1,6 @@
-from .Node import Node
-from .Identifier import Identifier
-from .TypeAnnotation import TypeAnnotation
+from .node import Node
+from .identifier import Identifier
+from .typeannotation import TypeAnnotation
 
 class TypedVar(Node):
 

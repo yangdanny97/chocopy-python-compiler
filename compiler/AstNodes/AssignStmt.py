@@ -1,5 +1,5 @@
-from .Stmt import Stmt
-from .Expr import Expr
+from .stmt import Stmt
+from .expr import Expr
 
 class AssignStmt(Stmt):
 

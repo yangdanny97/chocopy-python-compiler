@@ -1,7 +1,7 @@
-from .Node import Node
-from .Declaration import Declaration
-from .Stmt import Stmt
-from .Errors import Errors
+from .node import Node
+from .declaration import Declaration
+from .stmt import Stmt
+from .errors import Errors
 
 # root AST for source file
 class Program(Node):
@@ -19,6 +19,6 @@ class Program(Node):
         d = super().toJSON()
         d['declarations'] = [decl.toJSON() for d in self.declarations]
         d['statements'] = [s.toJSON() for s in self.statements]
-        d['errors'] = [e.toJSON() for e in self.errors]
+        d['errors'] = self.errors.toJSON()
         return d
 

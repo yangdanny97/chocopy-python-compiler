@@ -1,4 +1,4 @@
-from .ValueType import ValueType
+from .valuetype import ValueType
 
 class ListValueType(ValueType):
     

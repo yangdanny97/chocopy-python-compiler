@@ -1,5 +1,5 @@
-from .Declaration import Declaration
-from .Identifier import Identifier
+from .declaration import Declaration
+from .identifier import Identifier
 
 class ClassDef(Declaration):
 
@@ -7,7 +7,7 @@ class ClassDef(Declaration):
         super().__init__(location, "ClassDef")
         self.name = name
         self.superclass = superclass
-        self.declarations = declaration
+        self.declarations = declarations
 
     def typecheck(self, typechecker):
         # TODO

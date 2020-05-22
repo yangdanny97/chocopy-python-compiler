@@ -1,5 +1,5 @@
-from .Node import Node
-from .CompilerError import CompilerError
+from .node import Node
+from .compilererror import CompilerError
 
 class Errors(Node):
 

@@ -1,9 +1,36 @@
-import os, sys
-
-path = os.path.dirname(os.path.abspath(__file__))
-
-for py in [f[:-3] for f in os.listdir(path) if f.endswith('.py') and f != '__init__.py']:
-    mod = __import__('.'.join([__name__, py]), fromlist=[py])
-    classes = [getattr(mod, x) for x in dir(mod) if isinstance(getattr(mod, x), type)]
-    for cls in classes:
-        setattr(sys.modules[__name__], cls.__name__, cls)
+from .assignstmt import AssignStmt
+from .declaration import Declaration
+from .identifier import Identifier
+from .literal import Literal
+from .returnstmt import ReturnStmt
+from .whilestmt import WhileStmt
+from .binaryexpr import BinaryExpr
+from .errors import Errors
+from .ifexpr import IfExpr
+from .memberexpr import MemberExpr
+from .stmt import Stmt
+from .booleanliteral import BooleanLiteral
+from .expr import Expr
+from .ifstmt import IfStmt
+from .methodcallexpr import MethodCallExpr
+from .stringliteral import StringLiteral
+from .callexpr import CallExpr
+from .exprstmt import ExprStmt
+from .indexexpr import IndexExpr
+from .node import Node
+from .typeannotation import TypeAnnotation
+from .classdef import ClassDef
+from .forstmt import ForStmt
+from .integerliteral import IntegerLiteral
+from .nonlocaldecl import NonLocalDecl
+from .typedvar import TypedVar
+from .classtype import ClassType
+from .funcdef import FuncDef
+from .listexpr import ListExpr
+from .noneliteral import NoneLiteral
+from .unaryexpr import UnaryExpr
+from .compilererror import CompilerError
+from .globaldecl import GlobalDecl
+from .listtype import ListType
+from .program import Program
+from .vardef import VarDef

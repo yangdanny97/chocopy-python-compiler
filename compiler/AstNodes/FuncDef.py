@@ -1,8 +1,8 @@
-from .Declaration import Declaration
-from .Identifier import Identifier
-from .TypedVar import TypedVar
-from .TypeAnnotation import TypeAnnotation
-from .Stmt import Stmt
+from .declaration import Declaration
+from .identifier import Identifier
+from .typedvar import TypedVar
+from .typeannotation import TypeAnnotation
+from .stmt import Stmt
 
 class FuncDef(Declaration):
 

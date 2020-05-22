@@ -1,6 +1,6 @@
-from .Literal import Literal
+from .literal import Literal
 
-class BooleanLiteral(Literal):
+class IntegerLiteral(Literal):
 
     def __init__(self, location:[int], value:int):
         super().__init__(location, "IntegerLiteral")

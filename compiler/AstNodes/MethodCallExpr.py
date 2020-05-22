@@ -1,5 +1,5 @@
-from .Expr import Expr
-from .MemberExpr import MemberExpr
+from .expr import Expr
+from .memberexpr import MemberExpr
 
 class MethodCallExpr(Expr):
 
