@@ -49,6 +49,8 @@ class TypeChecker:
         self.currentClass = None # name of current class
         self.expReturnType = None # expected return type of current function
 
+        self.program = None
+
     def typecheck(node):
         node.typecheck(self)
 
@@ -104,9 +106,14 @@ class TypeChecker:
             return self.canAssign(a.elementType, b.elementType)
         return False
 
+    def addError(node:Node, message:str):
+        node.errorMsg = message
+        self.program.errors.errors.append(CompilerError(node.location, message))
+
     # visit methods for each AST node
 
     def Program(node:Program):
+        self.program = node
         pass
     
     def AssignStmt(node:AssignStmt):

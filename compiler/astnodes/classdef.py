@@ -10,10 +10,7 @@ class ClassDef(Declaration):
         self.declarations = declarations
 
     def typecheck(self, typechecker):
-        # TODO
         typechecker.ClassDef(self)
-        for d in self.declarations:
-            typechecker.typecheck(d)
 
     def toJSON(self):
         d = super().toJSON()

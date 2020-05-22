@@ -88,6 +88,15 @@ def ast_equals(d1, d2)->bool:
                         return False
                 except:
                     return False
+            # check number of errors, not the messages
+            elif k == "errors":
+                try:
+                    if len(d1[k]["errors"]) != len(d2[k]["errors"]):
+                        return False
+                except:
+                    return False
+            elif k == "errorMsg":
+                pass
             elif not ast_equals(v, d2[k]):
                 return False
         for k in d2.keys():

@@ -22,7 +22,6 @@ class FuncDef(Declaration):
 
     def typecheck(self, typechecker):
         typechecker.FuncDef(self)
-        # TODO
 
     def toJSON(self):
         d = super().toJSON()
