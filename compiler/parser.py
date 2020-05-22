@@ -101,11 +101,27 @@ class Parser(NodeVisitor):
 
     def visit_While(self, node):
         location = self.getLocation(node)
-        # TODO
+        if node.orelse:
+            raise ParseException("Cannot have else in while", node)
+        condition = self.visit(node.test)
+        body = [self.visit(b) for b in node.body]
+        return WhileStmt(location, condition, body)
+
+    def visit_For(self, node):
+        location = self.getLocation(node)
+        if node.orelse:
+            raise ParseException("Cannot have else in for", node)
+        identifier = self.visit(node.target)
+        iterable = self.visit(node.iter)
+        body = [self.visit(b) for b in node.body]
+        return ForStmt(location, identifier, iterable, body)
 
     def visit_If(self, node):
         location = self.getLocation(node)
-        # TODO
+        condition = self.visit(node.test)
+        then_body = [self.visit(b) for b in node.body]
+        else_body = [self.visit(o) for o on node.orelse] 
+        return IfStmt(location, condition, then_body, else_body)
 
     def visit_Global(self, node):
         location = self.getLocation(node)
@@ -152,7 +168,10 @@ class Parser(NodeVisitor):
 
     def visit_IfExp(self, node):
         location = self.getLocation(node)
-        # TODO
+        condition = self.visit(node.test)
+        then_body = self.visit(node.body)
+        else_body = self.visit(node.orelse)
+        return IfExpr(location, condition, then_body, else_body)
 
     def visit_Call(self, node):
         location = self.getLocation(node)
@@ -281,9 +300,6 @@ class Parser(NodeVisitor):
         raise ParseException("Unsupported node", node)
 
     def visit_AugAssign(self, node):
-        raise ParseException("Unsupported node", node)
-
-    def visit_For(self, node):
         raise ParseException("Unsupported node", node)
 
     def visit_With(self, node):
