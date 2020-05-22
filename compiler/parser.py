@@ -50,12 +50,14 @@ class Parser(NodeVisitor):
         location = self.getLocation(node)
         if isinstance(node, List):
             if len(node.elts) > 1:
-                raise ParseException("Unsupported type annotation", node)
+                raise ParseException("Unsupported type annotation 1", node)
             return ListType(location, self.getTypeAnnotation(node.elts[0]))
         elif isinstance(node, Name):
             return ClassType(location, node.id)
+        elif isinstance(node, Str):
+            return ClassType(location, node.s)
         else:
-            raise ParseException("Unsupported type annotation", node)
+            raise ParseException("Unsupported type annotation 2", node)
 
     # see https://greentreesnakes.readthedocs.io/en/latest/nodes.html
     # and https://docs.python.org/3/library/ast.html
@@ -93,7 +95,7 @@ class Parser(NodeVisitor):
     def visit_FunctionDef(self, node):
         self.inDecl.append(True)
         if node.decorator_list:
-            raise ParseException("Unsupported", node.decorator_list[0])
+            raise ParseException("Unsupported decorator list", node.decorator_list[0])
         if node.returns is None:
             raise ParseException(
                 "Return type must be annotated", node)
@@ -132,9 +134,9 @@ class Parser(NodeVisitor):
             raise ParseException("Multiple inheritance is unsupported", bases[1])
         base = self.visit(node.bases[0])
         if node.keywords:
-            raise ParseException("Unsupported", node.keywords[0])
+            raise ParseException("Unsupported keywords", node.keywords[0])
         if node.decorator_list:
-            raise ParseException("Unsupported", node.decorator_list[0])
+            raise ParseException("Unsupported decorator list", node.decorator_list[0])
         body = [self.visit(b) for b in node.body]
         # allow class bodies that only contain a single pass
         if len(body) == 1 and body[0] == None:
@@ -142,7 +144,7 @@ class Parser(NodeVisitor):
         else:
             for i in range(len(body)):
                 if not isinstance(body[i], Declaration):
-                    raise ParseException("Expected declaration", node.body[i])
+                    raise ParseException("Expected declaration, but got " + str(type(body[i])) + " on item " + str(i), node.body[i])
                 if (isinstance(body[i], ClassDef) or isinstance(body[i], GlobalDecl) or isinstance(body[i], NonLocalDecl)):
                     raise ParseException(
                         "Expected attribute or method declaration", node.body[i])
@@ -266,7 +268,16 @@ class Parser(NodeVisitor):
         elif node.value == None:
             return NoneLiteral(location)
         else:
-            raise ParseException("Unsupported", node)
+            raise ParseException("Unsupported constant", node)
+            
+    def visit_Compare(self, node):
+        if len(node.ops) > 1 or len(node.comparators) > 1:
+            raise ParseException("Unsupported compare between > 2 things", node)
+        location = self.getLocation(node)
+        left = self.visit(node.left)
+        operator = self.visit(node.ops[0])
+        right = self.visit(node.comparators[0])
+        return BinaryExpr(location, left, operator, right)
 
     def visit_Attribute(self, node):
         location = self.getLocation(node)
@@ -304,16 +315,16 @@ class Parser(NodeVisitor):
         elif isinstance(node.value, bool):
             return BooleanLiteral(location, node.value)
         else:
-            raise ParseException("Unsupported", node)
+            raise ParseException("Unsupported name constant", node)
 
     def visit_Index(self, node):
         return self.visit(node.value)
 
     def visit_arguments(self, node):
         if node.vararg:
-            raise ParseException("Unsupported", node.vararg)
+            raise ParseException("Unsupported vararg", node.vararg)
         if node.kwarg:
-            raise ParseException("Unsupported", node.kwarg)
+            raise ParseException("Unsupported kwarg", node.kwarg)
         if node.defaults or node.kw_defaults:
             raise ParseException("Default arguments are unsupported", node)
         args = []
@@ -460,9 +471,6 @@ class Parser(NodeVisitor):
         raise ParseException("Unsupported", node)
 
     def visit_YieldFrom(self, node):
-        raise ParseException("Unsupported", node)
-
-    def visit_Compare(self, node):
         raise ParseException("Unsupported", node)
 
     def visit_FormattedValue(self, node):

@@ -12,5 +12,5 @@ class GlobalDecl(Declaration):
 
     def toJSON(self):
         d = super().toJSON()
-        d["variable"] - self.variable.toJSON()
+        d["variable"] = self.variable.toJSON()
         return d
