@@ -17,9 +17,9 @@ class Parser(NodeVisitor):
         self.errors = []
         self.inDecl = [False]
 
-    # collapse a list of >2 expressions separated by a
+    # reduce a list of >2 expressions separated by a
     # left-associative operator into a BinaryExpr tree
-    def collapse(op: str, values: [Expr]) -> Expr:
+    def binaryReduce(self, op: str, values: [Expr]) -> Expr:
         current = BinaryExpr(getBetweenLocation(
             values[0], values[1]), values[0], op, values[1])
         for v in values[2:]:
@@ -29,9 +29,17 @@ class Parser(NodeVisitor):
 
     def getLocation(self, node):
         # get 4 item list corresponding to AST node location
+        if not node.end_lineno:
+            node.end_lineno = node.lineno
+        if not node.end_col_offset:
+            node.end_col_offset = node.col_offset
         return [node.lineno, node.col_offset, node.end_lineno, node.end_col_offset]
 
     def getBetweenLocationPy(self, left, right):
+        if not right.end_lineno:
+            right.end_lineno = right.lineno
+        if not right.end_col_offset:
+            right.end_col_offset = right.col_offset
         return [left.lineno, left.col_offset, right.end_lineno, right.end_col_offset]
 
     def getBetweenLocation(self, left, right):
@@ -48,11 +56,25 @@ class Parser(NodeVisitor):
         # return if visitor is inside a class or function declaration
         return self.inDecl[-1]
 
+    # process python AST nodes into chocopy type annotations
+    def getTypeAnnotation(self, node)->TypeAnnotation:
+        location = self.getLocation(node)
+        if isinstance(node, List):
+            if len(node.elts) > 1:
+                raise ParseException("Unsupported type annotation", node)
+            return ListType(location, self.getTypeAnnotation(node.elts[0]))
+        elif isinstance(node, Name):
+            return ClassType(location, node.id)
+        else:
+            raise ParseException("Unsupported type annotation", node)
+
     # see https://greentreesnakes.readthedocs.io/en/latest/nodes.html
     # and https://docs.python.org/3/library/ast.html
 
     def visit_Module(self, node):
         location = self.getLocation(node)
+        if node.type_ignores:
+            raise ParseException("Cannot ignore type", node)
         body = [self.visit(b) for b in node.body]
         declarations = []
         statements = []
@@ -60,27 +82,89 @@ class Parser(NodeVisitor):
         for i in range(len(body)):
             b = body[i]
             if isinstance(b, Declaration):
+                if isinstance(b, VarDef):
+                    if not isinstance(b.value, Literal):
+                        raise ParseException(
+                            "Global variables can only be initialized with literals", node.body[i])
+                if (isinstance(body[i], GlobalDecl) or isinstance(body[i], NonLocalDecl)):
+                    raise ParseException(
+                        "Expected function, class, or variable declaration", node.body[i])
+                if decl == False:
+                    raise ParseException(
+                        "All declarations must come before statements", node.body[i])
                 declarations.append(b)
-            else:
+            elif b is None or isinstance(b, Stmt):
                 statements.append(b)
-            if not isinstance(b, Declaration):
                 decl = False
-            if isinstance(b, Declaration) and decl == False:
+            else:
                 raise ParseException(
-                    "All declarations must come before statements", node.body[i])
+                    "Expected declaration or statement", node.body[i])
         return Program(location, declarations, statements, [])  # TODO errors
 
     def visit_FunctionDef(self, node):
         self.inDecl.append(True)
+        if node.decorator_list:
+            raise ParseException("Unsupported", node.decorator_list[0])
+        if node.returns is None:
+            raise ParseException(
+                "Return type must be annotated", node)
         location = self.getLocation(node)
-        # TODO
+        identifier = Identifier([location[0], location[1] + 4,
+                                 location[0], location[1] + 4 + len(node.name)], node.name)
+        arguments = [self.visit(a) for a in node.arguments]
+        body = [self.visit(b) for b in node.body]
+        declarations = []
+        statements = []
+        decl = True
+        for i in range(len(body)):
+            b = body[i]
+            if isinstance(b, Declaration):
+                if isinstance(b, ClassDef):
+                    raise ParseException(
+                        "Inner classes are unsupported", node.body[i])
+                if decl == False:
+                    raise ParseException(
+                        "All declarations must come before statements", node.body[i])
+                declarations.append(b)
+            elif b is None or isinstance(b, Stmt):
+                statements.append(b)
+                decl = False
+            else:
+                raise ParseException(
+                    "Expected declaration or statement", node.body[i])
+        returns = self.getTypeAnnotation(node.returns)
         self.inDecl.pop()
+        return FuncDef(location, identifier, arguments, returns, declarations, statements)
 
     def visit_ClassDef(self, node):
         self.inDecl.append(True)
         location = self.getLocation(node)
-        # TODO
+        identifier = Identifier([location[0], location[1] + 6,
+                                 location[0], location[1] + 6 + len(node.name)], node.name)
+        if len(node.bases) > 1:
+            raise ParseException("Multiple inheritance is unsupported", bases[1])
+        base = self.visit(node.bases[0])
+        if node.keywords:
+            raise ParseException("Unsupported", node.keywords[0])
+        if node.starargs:
+            raise ParseException("Unsupported", node.starargs)
+        if node.kwargs:
+            raise ParseException("Unsupported", node.kwargs)
+        if node.decorator_list:
+            raise ParseException("Unsupported", node.decorator_list[0])
+        body = [self.visit(b) for b in node.body]
+        # allow class bodies that only contain a single pass
+        if len(body) == 1 and body[0] == None:
+            body = []
+        else:
+            for i in range(len(body)):
+                if not isinstance(body[i], Declaration):
+                    raise ParseException("Expected declaration", node.body[i])
+                if (isinstance(body[i], ClassDef) or isinstance(body[i], GlobalDecl) or isinstance(body[i], NonLocalDecl)):
+                    raise ParseException(
+                        "Expected attribute or method declaration", node.body[i])
         self.inDecl.pop()
+        return ClassDef(location, identifier, base, body)
 
     def visit_Return(self, node):
         location = self.getLocation(node)
@@ -155,7 +239,7 @@ class Parser(NodeVisitor):
     def visit_BoolOp(self, node):
         values = [self.visit(v) for v in node.values]
         op = self.visit(node.op)
-        return self.collapse(op, values)
+        return self.binaryReduce(op, values)
 
     def visit_BinOp(self, node):
         location = self.getLocation(node)
@@ -189,7 +273,7 @@ class Parser(NodeVisitor):
         elif node.value == None:
             return NoneLiteral(location)
         else:
-            raise ParseError("Constant data type not supported", node)
+            raise ParseError("Unsupported", node)
 
     def visit_Attribute(self, node):
         location = self.getLocation(node)
@@ -206,7 +290,7 @@ class Parser(NodeVisitor):
     def visit_Num(self, node):
         location = self.getLocation(node)
         if not isinstance(node.n, int):
-            raise ParseException("Only integers are allowed", node)
+            raise ParseException("Only integers are supported", node)
         return IntegerLiteral(location, node.n)
 
     def visit_Str(self, node):
@@ -215,25 +299,38 @@ class Parser(NodeVisitor):
 
     def visit_List(self, node):
         location = self.getLocation(node)
+        # TODO
 
     def visit_NameConstant(self, node):
         location = self.getLocation(node)
         if node.value == None:
             return NoneLiteral(location)
-        else:
+        elif isinstance(node.value, bool):
             return BooleanLiteral(location, node.value)
+        else:
+            raise ParseException("Unsupported", node)
 
     def visit_Index(self, node):
         return self.visit(node.value)
 
     def visit_arguments(self, node):
         location = self.getLocation(node)
-        # TODO
+        if node.vararg:
+            raise ParseException("Unsupported", node.vararg)
+        if node.kwarg:
+            raise ParseException("Unsupported", node.kwarg)
+        if node.defaults or node.kw_defaults:
+            raise ParseException("Default arguments are unsupported", node)
+        args = [self.visit(a) for a in (node.posonlyargs + node.args)]
+        return args
 
     def visit_arg(self, node):
         # type annotation is either Str(s) or Name(id)
         location = self.getLocation(node)
-        # TODO
+        identifier = Identifier([location[0], location[1], 
+            location[0], location[1] + len(node.arg) - 1], node.arg)
+        annotation = self.getTypeAnnotation(arg.annotation)
+        return TypedVar(location, identifier, annotation)
 
     # operators
 
@@ -285,181 +382,181 @@ class Parser(NodeVisitor):
     def visit_Is(self, node):
         return "is"
 
-    # unsupported nodes
+    # Unsupporteds
 
     def visit_Expression(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_AsyncFunctionDef(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Delete(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_AsyncFor(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_AugAssign(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_With(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_AsyncWith(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Raise(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Try(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Assert(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Import(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_ImportFrom(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Break(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Continue(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Lambda(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Dict(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Set(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Bytes(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Ellipses(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_ListComp(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_SetComp(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_DictComp(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_GeneratorExp(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Await(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Yield(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_YieldFrom(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Compare(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_FormattedValue(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_JoinedStr(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Starred(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Tuple(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_AugLoad(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_AugStore(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_MatMult(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Div(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Slice(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_ExtSlice(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Pow(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_LShift(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_RShift(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_BitOr(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_BitXor(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_BitAnd(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_UAdd(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_USub(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_IsNot(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_In(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_NotIn(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_ExceptHandlerattributes(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_TypeIgnore(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_FunctionType(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Suite(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_Interactive(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_alias(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_keyword(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_comprehension(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_withitem(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     def visit_NamedExpr(self, node):
-        raise ParseException("Unsupported node", node)
+        raise ParseException("Unsupported", node)
 
     # expression contexts - do nothing
 
