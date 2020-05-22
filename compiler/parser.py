@@ -204,7 +204,7 @@ class Parser(NodeVisitor):
         location = self.getLocation(node)
         condition = self.visit(node.test)
         then_body = [self.visit(b) for b in node.body]
-        else_body = [self.visit(o) for o on node.orelse] 
+        else_body = [self.visit(o) for o in node.orelse] 
         return IfStmt(location, condition, then_body, else_body)
 
     def visit_Global(self, node):
@@ -259,7 +259,9 @@ class Parser(NodeVisitor):
 
     def visit_Call(self, node):
         location = self.getLocation(node)
-        # TODO
+        function = self.visit(node.func)
+        arguments = [self.visit(a) for a in node.args]
+        return CallExpr(location, function, arguments)
 
     def visit_Constant(self, node):
         # support for Python 3.8
