@@ -1,7 +1,7 @@
 from .astnodes import *
 from .types import *
 from .typechecker import TypeChecker
-from .parser import Parser, ParseException
+from .parser import Parser, ParseError
 import ast
 from pathlib import Path
 
@@ -23,7 +23,7 @@ class Compiler:
         except SyntaxError as e:
             e.filename = fname
             message = "Syntax Error: {}. Line {:d} Col {:d}".format(str(e), e.lineno, e.offset)
-            astparser.errors.append(ParseException(message))
+            astparser.errors.append(ParseError(message))
             return None
 
 

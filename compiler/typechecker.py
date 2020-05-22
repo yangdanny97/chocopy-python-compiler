@@ -107,8 +107,10 @@ class TypeChecker:
         return False
 
     def addError(node:Node, message:str):
+        message = "Semantic Error: {}. Line {:d} Col {:d}".format(message, node.location[0], node.location[1])
         node.errorMsg = message
         self.program.errors.errors.append(CompilerError(node.location, message))
+        self.errors.append(message)
 
     # visit methods for each AST node
 
