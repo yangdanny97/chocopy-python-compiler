@@ -1,6 +1,6 @@
-from .Declaration import Declaration
-from .Expr import Expr
-from .TypedVar import TypedVar
+from .declaration import Declaration
+from .expr import Expr
+from .typedvar import TypedVar
 
 class VarDef(Declaration):
 

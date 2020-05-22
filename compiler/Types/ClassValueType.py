@@ -1,4 +1,4 @@
-from .ValueType import ValueType
+from .valuetype import ValueType
 
 class ClassValueType(ValueType):
     def __init__(self, className:str):

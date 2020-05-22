@@ -1,5 +1,5 @@
-from .AstNodes import *
-from .Types import *
+from .astnodes import *
+from .types import *
 from collections import defaultdict
 
 class TypeChecker:
@@ -15,9 +15,9 @@ class TypeChecker:
         self.symbolTable = [defaultdict(lambda: None)]
 
         # standard library functions
-        self.symbolTable[0]["print"] = FuncType([Types.ObjectType()], Types.NoneType())
-        self.symbolTable[0]["input"] = FuncType([], Types.StrType())
-        self.symbolTable[0]["len"] = FuncType([Types.ObjectType()], Types.IntType())
+        self.symbolTable[0]["print"] = FuncType([ObjectType()], NoneType())
+        self.symbolTable[0]["input"] = FuncType([], StrType())
+        self.symbolTable[0]["len"] = FuncType([ObjectType()], IntType())
 
         # type hierachy: dictionary of class->superclass mappings
         self.superclasses = defaultdict(lambda: None)
@@ -33,17 +33,17 @@ class TypeChecker:
         # symbol tables for each class's methods
         self.classes = defaultdict(lambda: {})
 
-        self.classes["object"] = {"__init__": FuncType([], Types.ObjectType())}
-        self.classes["int"] = {"__init__": FuncType([], Types.IntType())}
-        self.classes["bool"] = {"__init__": FuncType([], Types.BoolType())}
-        self.classes["str"] = {"__init__": FuncType([], Types.StrType())}
+        self.classes["object"] = {"__init__": FuncType([], ObjectType())}
+        self.classes["int"] = {"__init__": FuncType([], IntType())}
+        self.classes["bool"] = {"__init__": FuncType([], BoolType())}
+        self.classes["str"] = {"__init__": FuncType([], StrType())}
 
-        self.INT_TYPE = Types.IntType()
-        self.STR_TYPE = Types.StrType()
-        self.BOOL_TYPE = Types.BoolType()
-        self.NONE_TYPE = Types.NoneType()
-        self.EMPTY_TYPE = Types.EmptyType()
-        self.OBJECT_TYPE = Types.ObjectType()
+        self.INT_TYPE = IntType()
+        self.STR_TYPE = StrType()
+        self.BOOL_TYPE = BoolType()
+        self.NONE_TYPE = NoneType()
+        self.EMPTY_TYPE = EmptyType()
+        self.OBJECT_TYPE = ObjectType()
 
         self.errors = [] # list of errors encountered
         self.currentClass = None # name of current class
@@ -134,16 +134,16 @@ class TypeChecker:
         pass
 
     def BooleanLiteral(node:BooleanLiteral):
-        node.inferredType = Types.BoolType()
+        node.inferredType = BoolType()
 
     def ExprStmt(node:ExprStmt):
         pass
 
     def IntegerLiteral(node:IntegerLiteral):
-        node.inferredType = Types.IntType()
+        node.inferredType = IntType()
 
     def NoneLiteral(node:NoneLiteral):
-        node.inferredType = Types.NoneType()
+        node.inferredType = NoneType()
 
     def VarDef(node:VarDef):
         pass
@@ -156,7 +156,7 @@ class TypeChecker:
 
     def ListExpr(node:ListExpr):
         if len(elements) == 0:
-            node.inferredType = ListValueType(Types.EmptyType())
+            node.inferredType = ListValueType(EmptyType())
         # TODO
 
     def WhileStmt(node:WhileStmt):
@@ -190,7 +190,7 @@ class TypeChecker:
         pass
 
     def StringLiteral(node:StringLiteral):
-        node.inferredType = Types.StrType()
+        node.inferredType = StrType()
 
     def IfExpr(node:IfExpr):
         pass

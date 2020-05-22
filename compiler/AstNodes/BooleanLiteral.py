@@ -1,4 +1,4 @@
-from .Literal import Literal
+from .literal import Literal
 
 class BooleanLiteral(Literal):
 

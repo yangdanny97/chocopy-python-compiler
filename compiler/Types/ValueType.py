@@ -1,4 +1,4 @@
-from .SymbolType import SymbolType
+from .symboltype import SymbolType
 
 class ValueType(SymbolType):
     def isValueType():

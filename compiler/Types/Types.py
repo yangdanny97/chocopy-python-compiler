@@ -1,4 +1,4 @@
-from .ClassValueType import ClassValueType
+from .classvaluetype import ClassValueType
 
 # factories for types
 

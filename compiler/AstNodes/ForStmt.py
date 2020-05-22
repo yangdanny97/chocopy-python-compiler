@@ -1,6 +1,6 @@
-from .Stmt import Stmt
-from .Expr import Expr
-from .Identifier import Identifier
+from .stmt import Stmt
+from .expr import Expr
+from .identifier import Identifier
 
 class ForStmt(Stmt):
 

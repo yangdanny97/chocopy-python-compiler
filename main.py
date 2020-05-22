@@ -1,7 +1,7 @@
 import argparse
 import json
 from test import run_all_tests, run_parse_tests, run_typecheck_tests
-import compiler.chocopy
+from compiler.compiler import Compiler
 from compiler.parser import Parser
 from compiler.typechecker import TypeChecker
 
@@ -21,16 +21,18 @@ def main():
     parser.add_argument('outfile', nargs='?', type=str, default=None)
     args = parser.parse_args()
 
+    compiler = Compiler()
+
     if args.testall:
-        run_all_tests()
+        run_all_tests(compiler)
         return
 
     if args.testparse:
-        run_parse_tests()
+        run_parse_tests(compiler)
         return
 
     if args.testtc:
-        run_typecheck_tests()
+        run_typecheck_tests(compiler)
         return
 
     infile = args.infile
@@ -47,11 +49,7 @@ def main():
             outfile = infile + ".ast"
 
     astparser = Parser()
-    try:
-        ast = chocopy.parse(infile, astparser)
-    except SyntaxError as e:
-        print(e)
-        return
+    tree = compiler.parse(infile, astparser)
     if len(astparser.errors) > 0:
         for e in astparser.errors:
             print(e)
@@ -59,11 +57,11 @@ def main():
     
     tc = TypeChecker()
     if args.typecheck:
-        ast = chocopy.typecheck(ast, tc)
+        tree = compiler.typecheck(tree, tc)
     
     if args.output:
-        ast_json = ast.dump()
-        with open(outfile) as f:
+        ast_json = tree.toJSON()
+        with open(outfile, "w") as f:
             json.dump(ast_json, f)
         return
     elif len(tc.errors) > 0:

@@ -1,5 +1,5 @@
-from .Declaration import Declaration
-from .Identifier import Identifier
+from .declaration import Declaration
+from .identifier import Identifier
 
 class GlobalDecl(Declaration):
 
