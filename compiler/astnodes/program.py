@@ -17,7 +17,7 @@ class Program(Node):
 
     def toJSON(self):
         d = super().toJSON()
-        d['declarations'] = [decl.toJSON() for d in self.declarations]
+        d['declarations'] = [d.toJSON() for d in self.declarations]
         d['statements'] = [s.toJSON() for s in self.statements]
         d['errors'] = self.errors.toJSON()
         return d
