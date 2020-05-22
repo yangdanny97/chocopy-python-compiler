@@ -479,10 +479,10 @@ class Parser(NodeVisitor):
         raise ParseException("Unsupported", node)
 
     def visit_MatMult(self, node):
-        raise ParseException("Unsupported: @")
+        raise ParseException("Unsupported operator: @")
 
     def visit_Div(self, node):
-        raise ParseException("Unsupported: /")
+        raise ParseException("Unsupported operator: /")
 
     def visit_Slice(self, node):
         raise ParseException("Unsupported slice")
@@ -491,37 +491,37 @@ class Parser(NodeVisitor):
         raise ParseException("Unsupported slice")
 
     def visit_Pow(self, node):
-        raise ParseException("Unsupported: **")
+        raise ParseException("Unsupported operator: **")
 
     def visit_LShift(self, node):
-        raise ParseException("Unsupported: <<")
+        raise ParseException("Unsupported operator: <<")
 
     def visit_RShift(self, node):
-        raise ParseException("Unsupported: >>")
+        raise ParseException("Unsupported operator: >>")
 
     def visit_BitOr(self, node):
-        raise ParseException("Unsupported: |")
+        raise ParseException("Unsupported operator: |")
 
     def visit_BitXor(self, node):
-        raise ParseException("Unsupported: ^")
+        raise ParseException("Unsupported operator: ^")
 
     def visit_BitAnd(self, node):
-        raise ParseException("Unsupported: &")
+        raise ParseException("Unsupported operator: &")
 
     def visit_UAdd(self, node):
-        raise ParseException("Unsupported: unary +")
+        raise ParseException("Unsupported operator: unary +")
 
     def visit_Invert(self, node):
-        raise ParseException("Unsupported: ~")
+        raise ParseException("Unsupported operator: ~")
 
     def visit_IsNot(self, node):
-        raise ParseException("Unsupported: is not")
+        raise ParseException("Unsupported operator: is not")
 
     def visit_In(self, node):
-        raise ParseException("Unsupported: in")
+        raise ParseException("Unsupported operator: in")
 
     def visit_NotIn(self, node):
-        raise ParseException("Unsupported: not in")
+        raise ParseException("Unsupported operator: not in")
 
     def visit_ExceptHandlerattributes(self, node):
         raise ParseException("Unsupported", node)
