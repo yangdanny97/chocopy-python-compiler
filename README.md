@@ -1,7 +1,6 @@
-# Chocopy-python-frontend
-Frontend/typechecker for Chocopy, built in Python.
+# chocopy-python-frontend
 
-[Chocopy](https://chocopy.org/) is a subset of Python 3.6 that is used for Berkeley's compilers course. 
+A compiler frontend/typechecker for Chocopy, built in Python. [Chocopy](https://chocopy.org/) is a subset of Python 3.6 that is used for Berkeley's compilers course. 
 
 This compiler frontend has the same functionality as the first 2 passes (parsing & typechecking) Chocopy's reference compiler implementation, and outputs the AST in a JSON format that is compatible with the reference implementation. 
 
@@ -17,7 +16,8 @@ Invoke `main.py` with the appropriate flags, plus the input file (required) and 
 
 The input file should have extension `.py`. If the output file is not provided, then the AST JSON will be dumped to a file of the same name/location as the input file, with extension `.py.ast`.
 
-Flags:
+**Flags:**
+
 - `-h` - show help
 - `-t` - do not typecheck the AST
 - `-o` - do not output the AST as a JSON
