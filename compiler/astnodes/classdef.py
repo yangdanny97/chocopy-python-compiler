@@ -1,5 +1,7 @@
 from .declaration import Declaration
 from .identifier import Identifier
+from .vardef import VarDef
+from .funcdef import FuncDef
 
 class ClassDef(Declaration):
 
@@ -7,6 +9,11 @@ class ClassDef(Declaration):
         super().__init__(location, "ClassDef")
         self.name = name
         self.superclass = superclass
+        for d in declarations:
+            if isinstance(d, VarDef):
+                d.isAttr = True
+            if isinstance(d, FuncDef):
+                d.isMethod = True
         self.declarations = declarations
 
     def typecheck(self, typechecker):

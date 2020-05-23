@@ -12,13 +12,14 @@ class FuncDef(Declaration):
     #         STATEMENTS
 
     def __init__(self, location:[int], name:Identifier, params:[TypedVar], returnType:TypeAnnotation, 
-        declarations:[Declaration], statements:[Stmt]):
+        declarations:[Declaration], statements:[Stmt], isMethod:bool = False):
         super().__init__(location, "FuncDef")
         self.name = name
         self.params = params
         self.returnType = returnType
         self.declarations = declarations
         self.statements = [s for s in statements if s is not None]
+        self.isMethod = isMethod
 
     def typecheck(self, typechecker):
         typechecker.FuncDef(self)

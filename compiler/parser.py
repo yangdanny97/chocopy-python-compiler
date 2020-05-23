@@ -27,7 +27,7 @@ class Parser(NodeVisitor):
             current = BinaryExpr(values[0].location, current, op, v)
         return current
 
-    def getLocation(self, node)->[int]:
+    def getLocation(self, node) -> [int]:
         # input is Python AST node
         # get 2 item list corresponding to AST node starting location
         # make columns 1-indexed
@@ -41,7 +41,7 @@ class Parser(NodeVisitor):
             return
 
     # process python AST nodes into chocopy type annotations
-    def getTypeAnnotation(self, node)->TypeAnnotation:
+    def getTypeAnnotation(self, node) -> TypeAnnotation:
         location = self.getLocation(node)
         if isinstance(node, List):
             if len(node.elts) > 1:
@@ -58,7 +58,7 @@ class Parser(NodeVisitor):
     # and https://docs.python.org/3/library/ast.html
 
     def visit_Module(self, node):
-        location = [1,1]
+        location = [1, 1]
         if hasattr(node, "type_ignores") and node.type_ignores:
             raise ParseError("Cannot ignore type", node)
         body = [self.visit(b) for b in node.body]
@@ -87,11 +87,12 @@ class Parser(NodeVisitor):
                     "Expected declaration or statement", node.body[i])
         if declarations:
             location = declarations[0].location
-        return Program(location, declarations, statements, Errors([0,0], []))
+        return Program(location, declarations, statements, Errors([0, 0], []))
 
     def visit_FunctionDef(self, node):
         if node.decorator_list:
-            raise ParseError("Unsupported decorator list", node.decorator_list[0])
+            raise ParseError("Unsupported decorator list",
+                             node.decorator_list[0])
         location = self.getLocation(node)
         identifier = Identifier([location[0], location[1] + 4], node.name)
         arguments = self.visit(node.args)
@@ -127,11 +128,15 @@ class Parser(NodeVisitor):
         identifier = Identifier([location[0], location[1] + 6], node.name)
         if len(node.bases) > 1:
             raise ParseError("Multiple inheritance is unsupported", bases[1])
+        if len(node.bases) == 0:
+            node.bases = [
+                ClassType([location[0], location[1] + 6 + len(node.name)], "object")]
         base = self.visit(node.bases[0])
         if node.keywords:
             raise ParseError("Unsupported keywords", node.keywords[0])
         if node.decorator_list:
-            raise ParseError("Unsupported decorator list", node.decorator_list[0])
+            raise ParseError("Unsupported decorator list",
+                             node.decorator_list[0])
         body = [self.visit(b) for b in node.body]
         # allow class bodies that only contain a single pass
         if len(body) == 1 and body[0] == None:
@@ -193,7 +198,7 @@ class Parser(NodeVisitor):
         location = self.getLocation(node)
         condition = self.visit(node.test)
         then_body = [self.visit(b) for b in node.body]
-        else_body = [self.visit(o) for o in node.orelse] 
+        else_body = [self.visit(o) for o in node.orelse]
         return IfStmt(location, condition, then_body, else_body)
 
     def visit_Global(self, node):
@@ -274,7 +279,7 @@ class Parser(NodeVisitor):
             return NoneLiteral(location)
         else:
             raise ParseError("Unsupported constant", node)
-            
+
     def visit_Compare(self, node):
         if len(node.ops) > 1 or len(node.comparators) > 1:
             raise ParseError("Unsupported compare between > 2 things", node)

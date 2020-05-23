@@ -4,10 +4,11 @@ from .typedvar import TypedVar
 
 class VarDef(Declaration):
 
-    def __init__(self, location:[int], var:[TypedVar], value:Expr):
+    def __init__(self, location:[int], var:[TypedVar], value:Expr, isAttr:bool=False):
         super().__init__(location, "VarDef")
         self.var = var
         self.value = value
+        self.isAttr = isAttr
 
     def typecheck(self, typechecker):
         typechecker.typecheck(self.value)
