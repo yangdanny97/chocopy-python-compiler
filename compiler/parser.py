@@ -127,11 +127,12 @@ class Parser(NodeVisitor):
         location = self.getLocation(node)
         identifier = Identifier([location[0], location[1] + 6], node.name)
         if len(node.bases) > 1:
-            raise ParseError("Multiple inheritance is unsupported", bases[1])
+            raise ParseError("Multiple inheritance is unsupported", node.bases[1])
+        base = None
         if len(node.bases) == 0:
-            node.bases = [
-                ClassType([location[0], location[1] + 6 + len(node.name)], "object")]
-        base = self.visit(node.bases[0])
+            base = ClassType([location[0], location[1] + 7 + len(node.name)], "object")
+        else:
+            base = self.visit(node.bases[0])
         if node.keywords:
             raise ParseError("Unsupported keywords", node.keywords[0])
         if node.decorator_list:
@@ -183,6 +184,9 @@ class Parser(NodeVisitor):
             raise ParseError("Cannot have else in while", node)
         condition = self.visit(node.test)
         body = [self.visit(b) for b in node.body]
+        for s in body:
+            if isinstance(s, Declaration):
+                raise ParseError("Illegal declaration", node)
         return WhileStmt(location, condition, body)
 
     def visit_For(self, node):
@@ -192,13 +196,21 @@ class Parser(NodeVisitor):
         identifier = self.visit(node.target)
         iterable = self.visit(node.iter)
         body = [self.visit(b) for b in node.body]
+        for s in body:
+            if isinstance(s, Declaration):
+                raise ParseError("Illegal declaration", node)
         return ForStmt(location, identifier, iterable, body)
 
     def visit_If(self, node):
         location = self.getLocation(node)
         condition = self.visit(node.test)
         then_body = [self.visit(b) for b in node.body]
+        if not node.orelse:
+            node.orelse = []
         else_body = [self.visit(o) for o in node.orelse]
+        for s in then_body + else_body:
+            if isinstance(s, Declaration):
+                raise ParseError("Illegal declaration", node)
         return IfStmt(location, condition, then_body, else_body)
 
     def visit_Global(self, node):

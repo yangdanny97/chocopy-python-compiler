@@ -8,7 +8,7 @@ That means that you can parse and typecheck the Chocopy file with this compiler,
 
 The implementation uses Python's `ast` module, and is designed to work with Python 3.6 - it _should_ be compatible with updates to Python's parser made in Python 3.8, but it has not been tested in that version.
 
-The test cases are taken from test suites included in the PA1 and PA2 release code for CS164.
+Most of the test cases are taken from test suites included in the PA1 and PA2 release code for CS164, with some additional tests written for more complete coverage.
 
 ## Usage
 
@@ -28,4 +28,6 @@ The input file should have extension `.py`. If the output file is not provided, 
 ## Differences from the reference implementation:
 
 The reference implementation represents a node's location as a four item list of \[start line, start col, end line, end col]. Python's parser does not always provide the end line/end column of a node, and the starting column sometimes differs from the reference implementation's parser (a handful of edge cases which do not impact the usefulness of error messages). Although this compiler still outputs each node's location as a four item list for compatibility reasons, only the starting line number for the node is guaranteed to match the reference implementation.
+
+The exact error messages from typechecking do not necessarily match the reference implementation, but the total number of messages and nodes that the messages are attached to will match.
 
