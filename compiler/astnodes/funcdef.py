@@ -32,3 +32,6 @@ class FuncDef(Declaration):
         d["statements"] = [s.toJSON() for s in self.statements]
         return d
 
+    def getIdentifier(self):
+        return self.name
+

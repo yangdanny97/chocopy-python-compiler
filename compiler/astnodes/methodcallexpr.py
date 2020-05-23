@@ -11,7 +11,7 @@ class MethodCallExpr(Expr):
     def typecheck(self, typechecker):
         for a in self.args:
             typechecker.typecheck(a)
-        typechecker.MethodCallExpr(self)
+        return typechecker.MethodCallExpr(self)
 
     def toJSON(self):
         d = super().toJSON()

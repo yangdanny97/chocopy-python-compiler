@@ -19,4 +19,7 @@ class ClassDef(Declaration):
         d["declarations"] = [decl.toJSON() for decl in self.declarations]
         return d
 
+    def getIdentifier(self):
+        return self.name
+
 

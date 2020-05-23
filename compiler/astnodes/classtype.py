@@ -7,7 +7,7 @@ class ClassType(TypeAnnotation):
         self.className = className
 
     def typecheck(self, typechecker):
-        typechecker.ClassType(self)
+        return typechecker.ClassType(self)
 
     def toJSON(self):
         d = super().toJSON()

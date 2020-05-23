@@ -10,7 +10,7 @@ class ReturnStmt(Stmt):
     def typecheck(self, typechecker):
         if self.value is not None:
             typechecker.typecheck(self.value)
-        typechecker.ReturnStmt(self)
+        return typechecker.ReturnStmt(self)
 
     def toJSON(self):
         d = super().toJSON()

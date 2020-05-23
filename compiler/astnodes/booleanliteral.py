@@ -7,6 +7,6 @@ class BooleanLiteral(Literal):
         self.value = value
 
     def typecheck(self, typechecker):
-        typechecker.BooleanLiteral(self)
+        return typechecker.BooleanLiteral(self)
 
 

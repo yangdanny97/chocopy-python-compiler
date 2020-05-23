@@ -10,7 +10,7 @@ class IndexExpr(Expr):
     def typecheck(self, typechecker):
         typechecker.typecheck(self.list)
         typechecker.typecheck(self.index)
-        typechecker.IndexExpr(self)
+        return typechecker.IndexExpr(self)
 
     def toJSON(self):
         d = super().toJSON()

@@ -7,9 +7,6 @@ class CompilerError(Node):
         self.message = message
         self.syntax = syntax
 
-    def typecheck(self, typechecker):
-        pass
-
     def toJSON(self):
         d = super().toJSON()
         d["message"] = self.message

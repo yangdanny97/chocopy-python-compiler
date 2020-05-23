@@ -13,7 +13,7 @@ class Program(Node):
         self.errors = errors
 
     def typecheck(self, typechecker):
-        typechecker.Program(self)
+        return typechecker.Program(self)
 
     def toJSON(self):
         d = super().toJSON()

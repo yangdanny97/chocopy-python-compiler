@@ -9,7 +9,6 @@ class ExprStmt(Stmt):
 
     def typecheck(self, typechecker):
         typechecker.typecheck(self.expr)
-        typechecker.ExprStmt(self)
 
     def toJSON(self):
         d = super().toJSON()

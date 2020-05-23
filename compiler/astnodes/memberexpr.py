@@ -9,8 +9,7 @@ class MemberExpr(Expr):
 
     def typecheck(self, typechecker):
         typechecker.typecheck(self.object)
-        typechecker.typecheck(self.member)
-        typechecker.MemberExpr(self)
+        return typechecker.MemberExpr(self)
 
     def toJSON(self):
         d = super().toJSON()

@@ -7,4 +7,4 @@ class NoneLiteral(Literal):
         self.value = None
 
     def typecheck(self, typechecker):
-        typechecker.NoneLiteral(self)
+        return typechecker.NoneLiteral(self)

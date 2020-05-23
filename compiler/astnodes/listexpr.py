@@ -9,7 +9,7 @@ class ListExpr(Expr):
     def typecheck(self, typechecker):
         for e in self.elements:
             typechecker.typecheck(e)
-        typechecker.ListExpr(self)
+        return typechecker.ListExpr(self)
 
     def toJSON(self):
         d = super().toJSON()

@@ -12,7 +12,7 @@ class AssignStmt(Stmt):
         for t in self.targets:
             typechecker.typecheck(t)
         typechecker.typecheck(self.value)
-        typechecker.AssignStmt(self)
+        return typechecker.AssignStmt(self)
 
     def toJSON(self):
         d = super().toJSON()

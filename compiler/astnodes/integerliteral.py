@@ -7,4 +7,4 @@ class IntegerLiteral(Literal):
         self.value = value
 
     def typecheck(self, typechecker):
-        typechecker.IntegerLiteral(self)
+        return typechecker.IntegerLiteral(self)

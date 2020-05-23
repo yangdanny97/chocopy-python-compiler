@@ -7,7 +7,7 @@ class ListType(TypeAnnotation):
         self.elementType = elementType
 
     def typecheck(self, typechecker):
-        pass
+        return TypeChecker.ListType(self)
 
     def toJSON(self):
         d = super().toJSON()

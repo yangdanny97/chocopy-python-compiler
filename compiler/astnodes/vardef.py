@@ -12,10 +12,13 @@ class VarDef(Declaration):
     def typecheck(self, typechecker):
         typechecker.typecheck(self.var)
         typechecker.typecheck(self.value)
-        typechecker.VarDef(self)
+        return typechecker.VarDef(self)
 
     def toJSON(self):
         d = super().toJSON()
         d["var"] = self.var.toJSON()
         d["value"] = self.value.toJSON()
         return d
+
+    def getIdentifier(self):
+        return self.var.identifier

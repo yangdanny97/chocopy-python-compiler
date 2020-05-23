@@ -9,7 +9,7 @@ class UnaryExpr(Expr):
 
     def typecheck(self, typechecker):
         typechecker.typecheck(self.operand)
-        typechecker.UnaryExpr(self)
+        return typechecker.UnaryExpr(self)
 
     def toJSON(self):
         d = super().toJSON()

@@ -11,7 +11,7 @@ class CallExpr(Expr):
     def typecheck(self, typechecker):
         for a in self.args:
             typechecker.typecheck(a)
-        typechecker.CallExpr(self)
+        return typechecker.CallExpr(self)
 
     def toJSON(self):
         d = super().toJSON()

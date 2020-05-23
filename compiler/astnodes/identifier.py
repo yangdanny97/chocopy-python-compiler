@@ -7,7 +7,7 @@ class Identifier(Expr):
         self.name = name
 
     def typecheck(self, typechecker):
-        typechecker.Identifier(self)
+        return typechecker.Identifier(self)
 
     def toJSON(self):
         d = super().toJSON()

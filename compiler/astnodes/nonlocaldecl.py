@@ -14,3 +14,6 @@ class NonLocalDecl(Declaration):
         d = super().toJSON()
         d["variable"] = self.variable.toJSON()
         return d
+
+    def getIdentifier(self):
+        return self.variable

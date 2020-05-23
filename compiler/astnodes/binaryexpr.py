@@ -11,7 +11,7 @@ class BinaryExpr(Expr):
     def typecheck(self, typechecker):
         typechecker.typecheck(self.left)
         typechecker.typecheck(self.right)
-        typechecker.BinaryExpr(self)
+        return typechecker.BinaryExpr(self)
 
     def toJSON(self):
         d = super().toJSON()

@@ -12,7 +12,7 @@ class IfExpr(Expr):
         typechecker.typecheck(self.condition)
         typechecker.typecheck(self.thenExpr)
         typechecker.typecheck(self.elseExpr)
-        typechecker.IfExpr(self)
+        return typechecker.IfExpr(self)
 
     def toJSON(self):
         d = super().toJSON()
