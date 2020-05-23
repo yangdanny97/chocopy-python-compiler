@@ -27,8 +27,8 @@ class TypeChecker:
         self.superclasses["int"] = "object"
         self.superclasses["bool"] = "object"
         self.superclasses["str"] = "object"
-        self.superclasses["<none>"] = "object"
-        self.superclasses["<empty>"] = "object"
+        self.superclasses["<None>"] = "object"
+        self.superclasses["<Empty>"] = "object"
 
         # symbol tables for each class's methods
         self.classes = defaultdict(lambda: {})
@@ -67,8 +67,24 @@ class TypeChecker:
                 return table[var]
         return None
 
+    def getLocalType(self, var:str):
+        # get the type of an identifier in the current scope, or None if not found
+        # ignore global variables
+        for table in self.symbolTable[1:][::-1]:
+            if var in table:
+                return table[var]
+        return None
+
     def addType(self, var:str, t:SymbolType):
         self.symbolTable[-1][var] = t
+
+    def isGlobal(self, var:str)->bool:
+        # return if the name was defined in the global scope
+        return self.symbolTable[0][var] is not None
+
+    def isGlobal(self, var:str)->bool:
+        # return if the name was defined in the global scope
+        return self.symbolTable[0][var] is not None
 
     def defInCurrentScope(self, var:str)->bool:
         # return if the name was defined in the current scope
@@ -102,6 +118,13 @@ class TypeChecker:
             return None
         return self.classes[className][attrName]
 
+    def getAttrOrMethod(self, className:str, name:str):
+        if name not in self.classes[className]:
+            if self.superclasses[className] is None:
+                return None
+            return self.getAttrOrMethod(self.superclasses[className], name)
+        return self.classes[className][name]
+
     def classExists(self, className:str)->bool:
         # we cannot check for None because it is a defaultdict
         return className in self.classes
@@ -133,22 +156,126 @@ class TypeChecker:
         self.program.errors.errors.append(CompilerError(node.location, message))
         self.errors.append(message)
 
-    # visit methods for each AST node
+    # DEFINITIONS
 
     def Program(self, node:Program):
         self.program = node
         for d in self.declarations:
+            if isinstance(d, ClassDef):
+                if self.classExists(className):
+                    self.addError(node.name, "Classes cannot shadow other classes: {}".format(node.name))
+                    continue
+                self.classes[className] = {}
+        for d in self.declarations:
             identifier = d.getIdentifier()
             name = identifier.name
-            if self.defInCurrentScope(name):
-                self.addError(identifier, "Duplicate declaration of identifier in same scope: {}".format(name))
+            if self.defInCurrentScope(name) or self.classExists(name):
+                self.addError(identifier, "Duplicate declaration of identifier: {}".format(name))
+                continue
             dType = d.typecheck(self)
             if dType is not None:
                 self.addType(name, dType)
         for s in self.statements:
             s.typecheck(self)
     
+    def VarDef(self, node:VarDef):
+        varName = node.getIdentifier().name
+        annotationType = self.typecheck(node.var.type)
+        if not canAssign(node.value.inferredType, annotationType):
+            self.addError(node, "Expected {}, got {}".format(str(annotationType), str(node.value.inferredType)))
+            # TODO is this attached to the right node? do we return anything special
+        return annotationType
+
+    def ClassDef(self, node:ClassDef):
+        className = node.name.name
+        self.currentClass = className
+        superclass = node.superclass.name
+        if not self.classExists(superclass):
+            self.addError(node.superclass, "Unknown superclass: {}".format(node.name))
+        if superclass in ["int", "bool", "str", className]:
+            self.addError(node.superclass, "Illegal superclass: {}".format(node.name))
+        self.superclasses[className, superclass]
+        for d in node.declarations:
+            if isinstance(d, FuncDef):
+                funcName = d.getIdentifier().name
+                if self.getAttrOrMethod(className, funcName):
+                    self.addError(node.getIdentifier(),
+                                "Cannot redefine method: {}".format(funcName))
+                    continue
+                # TODO ignore "self" argument type
+                if self.getAttrOrMethod(className, funcName) != funcType and funcName != "__init__":
+                    self.addError(node.getIdentifier(
+                    ), "Redefined method doesn't match superclass signature: {}".format(funcName))
+                    continue
+                self.classes[className][funcName] = FuncType([t for t in self.typecheck(
+                            d.params)], self.typecheck(d.returnType))
+            if isinstance(d, VarDef):
+                attrName = d.getIdentifier().name
+                if self.getAttrOrMethod(className, attrName):
+                    self.addError(node.getIdentifier(),
+                                "Cannot redefine attribute: {}".format(funcName))
+                    continue
+                self.classes[className][attrName] = self.typecheck(d.var)
+        for d in node.declarations:
+            node.typecheck(self)
+        self.currentClass = None
+        return None
+
+    def FuncDef(self, node: FuncDef):
+        funcName = node.getIdentifier().name
+        rType = self.typecheck(d.returnType)
+        funcType = FuncType([t for to in self.typecheck(
+                            d.params)], rType)
+        self.expReturnType = rType
+        if self.currentClass is None:
+            if self.classExists(funcName):
+                self.addError(node.getIdentifier(),
+                              "Functions cannot shadow classes: {}".format(funcName))
+                return
+            if self.defInCurrentScope(funcName) and isinstance(self.getType(funcName), FuncType):
+                self.addError(node.getIdentifier(
+                ), "Cannot redefine function in same scope: {}".format(funcName))
+                return
+        else:
+            if (len(node.params) == 0 or node.params[0].identifier.name != "self" or
+                    (not isinstance(funcType.parameters[0], ClassValueType)) or
+                    funcType.parameters[0].className != self.currentClass):
+                self.addError(
+                    node, "Missing self argument in method: {}".format(funcName))
+                return
+        for p in node.params:
+            t = self.typecheck(p)
+            if self.defInCurrentScope(p.identifier.name) or self.classExists(name):
+                self.addError(p.identifier, "Duplicate parameter name: {}".format(name))
+                continue
+            if t is not None:
+                self.addType(p.identifier.name, t)
+        for d in node.declarations:
+            identifier = d.getIdentifier()
+            name = identifier.name
+            if self.defInCurrentScope(name) or self.classExists(name):
+                self.addError(identifier, "Duplicate declaration of identifier: {}".format(name))
+                continue
+            dType = d.typecheck(self)
+            if dType is not None:
+                self.addType(name, dType)
+        for s in node.statements:
+            self.typecheck(s)
+        if len(s) > 0 and not isinstance(s[-1], ReturnStmt) and self.expReturnType != self.NONE_TYPE:
+            self.addError(s[-1], "Expected return statement")
+        self.expReturnType = None
+        return funcType
+
+    # STATEMENTS AND EXPRESSIONS
+
+    def NonLocalDecl(self, node:NonLocalDecl):
+        pass
+
+    def GlobalDecl(self, node:GlobalDecl):
+        pass
+
     def AssignStmt(self, node:AssignStmt):
+        # variables can only be assigned to if they're defined in current scope
         pass
 
     def Errors(self, node:Errors):
@@ -157,43 +284,14 @@ class TypeChecker:
     def IfStmt(self, node:IfStmt):
         pass
 
-    def TypedVar(self, node:TypedVar):
-        return self.typecheck(node.type)
-
     def BinaryExpr(self, node:BinaryExpr):
         pass
 
     def IndexExpr(self, node:IndexExpr):
         pass
 
-    def NonLocalDecl(self, node:NonLocalDecl):
-        pass
-
     def UnaryExpr(self, node:UnaryExpr):
         pass
-
-    def BooleanLiteral(self, node:BooleanLiteral):
-        node.inferredType = BoolType()
-        return node.inferredType
-
-    def IntegerLiteral(self, node:IntegerLiteral):
-        node.inferredType = IntType()
-        return node.inferredType
-
-    def NoneLiteral(self, node:NoneLiteral):
-        node.inferredType = NoneType()
-        return node.inferredType
-
-    def VarDef(self, node:VarDef):
-        varName = node.getIdentifier().name
-        if self.currentClass is None:
-            if self.classExists(varName):
-                self.addError(node.getIdentifier(), "Cannot shadow classes: {}".format(varName))
-                return
-        else:
-            pass
-        # TODO check init
-        return self.typecheck(node.var.type)
 
     def CallExpr(self, node:CallExpr):
         pass
@@ -209,89 +307,54 @@ class TypeChecker:
     def WhileStmt(self, node:WhileStmt):
         pass
 
-    def ClassDef(self, node:ClassDef):
-        className = node.name.name
-        self.currentClass = className
-        superclass = node.superclass.name
-        if not self.classExists(superclass):
-            self.addError(node.superclass, "Unknown superclass: {}".format(node.name))
-        if superclass in ["int", "bool", "str"]:
-            self.addError(node.superclass, "Illegal superclass: {}".format(node.name))
-        if self.classExists(superclass):
-            self.addError(node.name, "Class is already defined: {}".format(node.name))
-        self.superclasses[className, superclass]
-        self.classes[className] = {}
-        for d in node.declarations:
-            if isinstance(d, FuncDef):
-                funcName = d.getIdentifier().name
-                if funcName in self.classes[self.currentClass]:
-                    self.addError(node.getIdentifier(),
-                                "Cannot redefine method: {}".format(funcName))
-                    continue
-                if self.classes[self.currentClass][funcName] != funcType and funcName != "__init__":
-                    self.addError(node.getIdentifier(
-                    ), "Redefined method doesn't match superclass signature: {}".format(funcName))
-                    continue
-                self.classes[className][funcName] = FuncType([t for t in self.typecheck(
-                            d.params)], self.typecheck(d.returnType))
-            if isinstance(d, VarDef):
-                pass
-                # TODO
-        for d in node.declarations:
-            node.typecheck(self)
-        self.currentClass = None
-
-    def FuncDef(self, node: FuncDef):
-        funcName = node.getIdentifier().name
-        funcType = FuncType([t for to in self.typecheck(
-                            d.params)], self.typecheck(d.returnType))
-        if self.currentClass is None:
-            if self.classExists(funcName):
-                self.addError(node.getIdentifier(),
-                              "Cannot shadow classes: {}".format(funcName))
-                return
-            if self.defInCurrentScope(funcName) and isinstance(self.getType(funcName), FuncType):
-                self.addError(node.getIdentifier(
-                ), "Cannot redefine function in same scope: {}".format(funcName))
-                return
-        else:
-            if (len(node.params) == 0 or node.params[0].identifier.name != "self" or
-                    (not isinstance(funcType.parameters[0], ClassValueType)) or
-                    funcType.parameters[0].className != self.currentClass):
-                self.addError(
-                    node, "Missing self argument in method: {}".format(funcName))
-                return
-        # TODO check function body
-        return 
-
     def ReturnStmt(self, node:ReturnStmt):
-        pass
-
-    def GlobalDecl(self, node:GlobalDecl):
-        pass
+        if self.expReturnType is None:
+            self.addError(node, "Return statement outside of function definition")
+        elif node.value.inferredType != self.expReturnType:
+            self.addError(node, "Expected {}, got {}".format(str(self.expReturnType), str(node.value.inferredType)))
+        return
 
     def Identifier(self, node:Identifier):
-        varType = self.getType(node.name)
-        if varType is not None and isinstance(varType, ValueType) {
-            node.inferredType = varType;
-        } else {
-            self.addError(node, "Not a variable: {:s}".format(node.name))
+        varType = self.getLocalType(node.name)
+        if varType is not None and isinstance(varType, ValueType):
+            node.inferredType = varType
+        else:
+            self.addError(node, "Not a variable: {}".format(node.name))
             node.inferredType = self.OBJECT_TYPE
-        }
         return node.inferredType
 
     def MemberExpr(self, node:MemberExpr):
         pass
-
-    def StringLiteral(self, node:StringLiteral):
-        node.inferredType = StrType()
-        return node.inferredType
 
     def IfExpr(self, node:IfExpr):
         pass
 
     def MethodCallExpr(self, node:MethodCallExpr):
         pass
+
+    # LITERALS
+
+    def BooleanLiteral(self, node:BooleanLiteral):
+        node.inferredType = BoolType()
+        return node.inferredType
+
+    def IntegerLiteral(self, node:IntegerLiteral):
+        node.inferredType = IntType()
+        return node.inferredType
+
+    def NoneLiteral(self, node:NoneLiteral):
+        node.inferredType = NoneType()
+        return node.inferredType
+    
+    def StringLiteral(self, node:StringLiteral):
+        node.inferredType = StrType()
+        return node.inferredType
+    
+    # TYPES
+
+    def TypedVar(self, node:TypedVar):
+        # return the type of the annotaton
+        return self.typecheck(node.type)
 
     def ListType(self, node:ListType):
         return ListValueType(node.elementType.typecheck(self))
@@ -302,7 +365,4 @@ class TypeChecker:
             return ClassValueType(node.className)
         else:
             return self.OBJECT_TYPE
-
-    def TypeAnnotation(self, node:TypeAnnotation):
-        pass
 

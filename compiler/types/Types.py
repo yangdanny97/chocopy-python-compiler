@@ -15,7 +15,7 @@ def BoolType():
     return ClassValueType("bool")
 
 def NoneType():
-    return ClassValueType("<none>")
+    return ClassValueType("<None>")
 
 def EmptyType():
-    return ClassValueType("<empty>")
+    return ClassValueType("<Empty>")

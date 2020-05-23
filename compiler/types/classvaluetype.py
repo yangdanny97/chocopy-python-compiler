@@ -11,3 +11,6 @@ class ClassValueType(ValueType):
 
     def isSpecialType():
         return className in ["int", "str", "bool"]
+    
+    def __str__():
+        return self.className

@@ -10,7 +10,6 @@ class VarDef(Declaration):
         self.value = value
 
     def typecheck(self, typechecker):
-        typechecker.typecheck(self.var)
         typechecker.typecheck(self.value)
         return typechecker.VarDef(self)
 

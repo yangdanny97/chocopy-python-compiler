@@ -12,3 +12,6 @@ class ListValueType(ValueType):
 
     def isListType():
         return True
+
+    def __str__():
+        return "[{}]".format(str(self.elementType))
