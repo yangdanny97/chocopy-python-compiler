@@ -9,10 +9,8 @@ class ParseError(Exception):
             if hasattr(node, "lineno"):
                 super().__init__(
                     message + ". Line {:d} Col {:d}".format(node.lineno, node.col_offset))
-            else:
-                super().__init__(message + ".")
-        else:
-            super().__init__(message + ".")
+                return
+        super().__init__(message + ".")
 
 
 class Parser(NodeVisitor):
