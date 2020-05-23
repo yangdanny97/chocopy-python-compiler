@@ -281,12 +281,12 @@ class Parser(NodeVisitor):
     def visit_Constant(self, node):
         # support for Python 3.8
         location = self.getLocation(node)
-        if isinstance(node.value, int):
+        if isinstance(node.value, bool):
+            return BooleanLiteral(location, node.value)
+        elif isinstance(node.value, int):
             return IntegerLiteral(location, node.value)
         elif isinstance(node.value, str) and node.kind == None:
             return StringLiteral(location, node.value)
-        elif isinstance(node.value, bool):
-            return BooleanLiteral(location, node.value)
         elif node.value is None:
             return NoneLiteral(location)
         else:
