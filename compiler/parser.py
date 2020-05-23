@@ -115,6 +115,8 @@ class Parser(NodeVisitor):
                 raise ParseError(
                     "Expected declaration or statement", node.body[i])
         returns = None
+        if node.name == "__init__" and node.returns is not None:
+            raise ParseError("__init__ cannot have a return type", node)
         if node.returns is None:
             returns = ClassType(location, "<None>")
         else:

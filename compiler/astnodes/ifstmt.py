@@ -11,15 +11,10 @@ class IfStmt(Stmt):
 
     def typecheck(self, typechecker):
         typechecker.typecheck(self.condition)
-        typechecker.enterScope()
         for s in self.thenBody:
             typechecker.typecheck(s)
-        typechecker.exitScope()
-
-        typechecker.enterScope()
         for s in self.elseBody:
             typechecker.typecheck(s)
-        typechecker.exitScope()
         return typechecker.IfExpr(self)
 
     def toJSON(self):

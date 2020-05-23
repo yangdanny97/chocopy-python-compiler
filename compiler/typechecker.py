@@ -61,6 +61,8 @@ class TypeChecker:
     def exitScope(self):
         self.symbolTable.pop()
 
+    # SYMBOL TABLE LOOKUPS
+
     def getType(self, var: str):
         # get the type of an identifier in the current scope, or None if not found
         for table in self.symbolTable[::-1]:
@@ -94,15 +96,7 @@ class TypeChecker:
         # return if the name was defined in the current scope
         return self.symbolTable[-1][var] is not None
 
-    def isSubClass(self, a: str, b: str) -> bool:
-        # return if a is the same class or subclass of b
-        curr = a
-        while curr is not None:
-            if curr == b:
-                return True
-            else:
-                curr = self.superclasses[curr]
-        return False
+    # CLASSES
 
     def getMethod(self, className: str, methodName: str):
         if methodName not in self.classes[className]:
@@ -133,6 +127,18 @@ class TypeChecker:
         # we cannot check for None because it is a defaultdict
         return className in self.classes
 
+    # TYPE HIERARCHY UTILS
+
+    def isSubClass(self, a: str, b: str) -> bool:
+        # return if a is the same class or subclass of b
+        curr = a
+        while curr is not None:
+            if curr == b:
+                return True
+            else:
+                curr = self.superclasses[curr]
+        return False
+
     def isSubtype(self, a: SymbolType, b: SymbolType) -> bool:
         # return if a is a subtype of b
         if b == self.OBJECT_TYPE:
@@ -154,6 +160,8 @@ class TypeChecker:
             return self.canAssign(a.elementType, b.elementType)
         return False
 
+    # ERROR HANDLING
+
     def addError(self, node: Node, message: str):
         message = "Semantic Error: {}. Line {:d} Col {:d}".format(
             message, node.location[0], node.location[1])
@@ -162,7 +170,7 @@ class TypeChecker:
             CompilerError(node.location, message))
         self.errors.append(message)
 
-    # DEFINITIONS
+    # DECLARATIONS (returns type of declaration, besides Program)
 
     def Program(self, node: Program):
         self.program = node
@@ -279,14 +287,17 @@ class TypeChecker:
             dType = d.typecheck(self)
             if dType is not None:
                 self.addType(name, dType)
+        hasReturn = False
         for s in node.statements:
             self.typecheck(s)
-        if len(s) > 0 and not isinstance(s[-1], ReturnStmt) and self.expReturnType != self.NONE_TYPE:
-            self.addError(s[-1], "Expected return statement")
+            if s.isReturn:
+                hasReturn = True
+        if not hasReturn and self.expReturnType != self.NONE_TYPE:
+            self.addError(node.statements[-1], "Expected return statement")
         self.expReturnType = None
         return funcType
 
-    # STATEMENTS AND EXPRESSIONS
+    # STATEMENTS (returns None) AND EXPRESSIONS (returns inferred type)
 
     def NonLocalDecl(self, node: NonLocalDecl):
         if self.expReturnType is None:
@@ -316,42 +327,43 @@ class TypeChecker:
 
     def AssignStmt(self, node: AssignStmt):
         # variables can only be assigned to if they're defined in current scope
-        pass
-
-    def Errors(self, node: Errors):
-        pass
+        pass # TODO
 
     def IfStmt(self, node: IfStmt):
-        pass
+        # isReturn=True if there's >=1 statement in BOTH branches that have isReturn=True
+        # if a branch is empty, isReturn=False 
+        pass # TODO
 
     def BinaryExpr(self, node: BinaryExpr):
-        pass
+        return node.inferredType # TODO
 
     def IndexExpr(self, node: IndexExpr):
-        pass
+        return node.inferredType # TODO
 
     def UnaryExpr(self, node: UnaryExpr):
-        pass
+        return node.inferredType # TODO
 
     def CallExpr(self, node: CallExpr):
-        pass
+        return node.inferredType # TODO
 
     def ForStmt(self, node: ForStmt):
-        pass
+        # set isReturn=True if any statement in body has isReturn=True
+        return node.inferredType # TODO
 
     def ListExpr(self, node: ListExpr):
         if len(elements) == 0:
             node.inferredType = ListValueType(EmptyType())
-        # TODO
+        return node.inferredType # TODO
 
     def WhileStmt(self, node: WhileStmt):
-        pass
+        # set isReturn=True if any statement in body has isReturn=True
+        pass # TODO
 
     def ReturnStmt(self, node: ReturnStmt):
         if self.expReturnType is None:
             self.addError(
                 node, "Return statement outside of function definition")
-        elif node.value.inferredType != self.expReturnType:
+        elif not self.canAssign(node.value.inferredType, self.expReturnType):
             self.addError(node, "Expected {}, got {}".format(
                 str(self.expReturnType), str(node.value.inferredType)))
         return
@@ -366,13 +378,13 @@ class TypeChecker:
         return node.inferredType
 
     def MemberExpr(self, node: MemberExpr):
-        pass
+        return node.inferredType # TODO
 
     def IfExpr(self, node: IfExpr):
-        pass
+        return node.inferredType # TODO
 
     def MethodCallExpr(self, node: MethodCallExpr):
-        pass
+        return node.inferredType # TODO
 
     # LITERALS
 

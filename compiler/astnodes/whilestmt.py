@@ -10,10 +10,8 @@ class WhileStmt(Stmt):
 
     def typecheck(self, typechecker):
         typechecker.typecheck(self.condition)
-        typechecker.enterScope()
         for s in self.body:
             typechecker.typecheck(s)
-        typechecker.exitScope()
         return typechecker.WhileStmt(self)
 
     def toJSON(self):

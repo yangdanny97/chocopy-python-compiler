@@ -12,10 +12,8 @@ class ForStmt(Stmt):
 
     def typecheck(self, typechecker):
         typechecker.typecheck(self.iterable)
-        typechecker.enterScope()
         for s in self.body:
             typechecker.typecheck(s)
-        typechecker.exitScope()
         return typechecker.ForStmt(self)
 
     def toJSON(self):

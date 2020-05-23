@@ -6,6 +6,7 @@ class ReturnStmt(Stmt):
     def __init__(self, location:[int], value:Expr):
         super().__init__(location, "ReturnStmt")
         self.value = value
+        self.isReturn = True
 
     def typecheck(self, typechecker):
         if self.value is not None:
