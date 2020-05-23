@@ -75,16 +75,19 @@ class TypeChecker:
                 return table[var]
         return None
 
+    def getNonLocalType(self, var:str):
+        # get the type of an identifier outside the current scope, or None if not found
+        # ignore global variables
+        for table in self.symbolTable[1:-1][::-1]:
+            if var in table:
+                return table[var]
+        return None
+
+    def getGlobal(self, var:str):
+        return self.symbolTable[0][var]
+
     def addType(self, var:str, t:SymbolType):
         self.symbolTable[-1][var] = t
-
-    def isGlobal(self, var:str)->bool:
-        # return if the name was defined in the global scope
-        return self.symbolTable[0][var] is not None
-
-    def isGlobal(self, var:str)->bool:
-        # return if the name was defined in the global scope
-        return self.symbolTable[0][var] is not None
 
     def defInCurrentScope(self, var:str)->bool:
         # return if the name was defined in the current scope
@@ -269,10 +272,28 @@ class TypeChecker:
     # STATEMENTS AND EXPRESSIONS
 
     def NonLocalDecl(self, node:NonLocalDecl):
-        pass
+        if self.expReturnType is None:
+            self.addError(node, "Nonlocal decl outside of function")
+            return
+        identifier = node.identifier
+        name = identifier.name
+        t = self.getNonLocalType(name)
+        if t is None or not isinstance(t, ValueType):
+            self.addError(identifier, "Unknown nonlocal variable: {}".format(name))
+            return
+        return t
 
     def GlobalDecl(self, node:GlobalDecl):
-        pass
+        if self.expReturnType is None:
+            self.addError(node, "Global decl outside of function")
+            return
+        identifier = node.identifier
+        name = identifier.name
+        t = self.getGlobal(name)
+        if t is None or not isinstance(t, ValueType):
+            self.addError(identifier, "Unknown global variable: {}".format(name))
+            return
+        return t
 
     def AssignStmt(self, node:AssignStmt):
         # variables can only be assigned to if they're defined in current scope
