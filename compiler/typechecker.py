@@ -370,7 +370,8 @@ class TypeChecker:
         # if a branch is empty, isReturn=False 
         if node.condition.inferredType != self.BOOL_TYPE:
             self.addError(node.condition, "Expected {}, got {}".format(
-                str(self.BOOL_TYPE), str(node.condition.inferredType)))
+                str(self.BOOL_TYPE), str(node.condition.inferredType))
+            return
         thenBody = False
         elseBody = False
         for s in node.thenBody:
@@ -442,13 +443,16 @@ class TypeChecker:
         if isinstance(iterType, ListValueType):
             if self.canAssign(iterType.elementType, node.identifier.inferredType):
                 self.addError(node.condition, "Expected {}, got {}".format(
-                    str(node.identifier.inferredType), str(iterType.elementType)))
+                    str(node.identifier.inferredType), str(iterType.elementType))
+                    return
         elif self.STR_TYPE == iterType:
             if self.canAssign(self.STR_TYPE, node.identifier.inferredType):
                 self.addError(node.condition, "Expected {}, got {}".format(
-                    str(node.identifier.inferredType), str(self.STR_TYPE)))
+                    str(node.identifier.inferredType), str(self.STR_TYPE))
+                    return
         else:
-            self.addError(node.condition, "Expected iterable, got {}".format(str(node.condition.inferredType)))
+            self.addError(node.condition, "Expected iterable, got {}".format(str(node.condition.inferredType))
+            return
         for s in node.body:
             if s.isReturn:
                 node.isReturn = True
@@ -461,7 +465,8 @@ class TypeChecker:
     def WhileStmt(self, node: WhileStmt):
         if node.condition.inferredType != self.BOOL_TYPE:
             self.addError(node.condition, "Expected {}, got {}".format(
-                str(self.BOOL_TYPE), str(node.condition.inferredType)))
+                str(self.BOOL_TYPE), str(node.condition.inferredType))
+            return
         for s in node.body:
             if s.isReturn:
                 node.isReturn = True
