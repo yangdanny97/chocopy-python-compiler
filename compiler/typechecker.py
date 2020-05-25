@@ -380,7 +380,7 @@ class TypeChecker:
 
     def ListExpr(self, node: ListExpr):
         if len(elements) == 0:
-            node.inferredType = ListValueType(EmptyType())
+            node.inferredType = self.EMPTY_TYPE
         return node.inferredType # TODO
 
     def WhileStmt(self, node: WhileStmt):
