@@ -415,7 +415,7 @@ class Parser(NodeVisitor):
     def visit_Is(self, node):
         return "is"
 
-    # Unsupported node:  TODO improve error messages
+    # Unsupported node: TODO improve error messages
 
     def visit_Expression(self, node):
         raise ParseError("Unsupported", node)

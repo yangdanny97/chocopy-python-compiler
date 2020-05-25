@@ -11,6 +11,7 @@ class ForStmt(Stmt):
         self.body = [s for s in body if s is not None]
 
     def typecheck(self, typechecker):
+        typechecker.typecheck(self.identifier)
         typechecker.typecheck(self.iterable)
         for s in self.body:
             typechecker.typecheck(s)

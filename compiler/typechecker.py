@@ -332,7 +332,19 @@ class TypeChecker:
     def IfStmt(self, node: IfStmt):
         # isReturn=True if there's >=1 statement in BOTH branches that have isReturn=True
         # if a branch is empty, isReturn=False 
-        pass # TODO
+        if node.condition.inferredType != self.BOOL_TYPE:
+            self.addError(node.condition, "Expected {}, got {}".format(
+                str(self.BOOL_TYPE), str(node.condition.inferredType))
+            return
+        thenBody = False
+        elseBody = False
+        for s in node.thenBody:
+            if s.isReturn:
+                thenBody = True
+        for s in node.elseBody:
+            if s.isReturn:
+                elseBody = True
+        node.isReturn = (thenBody and elseBody)
 
     def BinaryExpr(self, node: BinaryExpr):
         return node.inferredType # TODO
@@ -348,7 +360,23 @@ class TypeChecker:
 
     def ForStmt(self, node: ForStmt):
         # set isReturn=True if any statement in body has isReturn=True
-        return node.inferredType # TODO
+        iterType = node.iterable.inferredType
+        if isinstance(iterType, ListValueType):
+            if self.canAssign(iterType.elementType, node.identifier.inferredType):
+            self.addError(node.condition, "Expected {}, got {}".format(
+                str(node.identifier.inferredType), str(iterType.elementType))
+                return
+        elif self.STR_TYPE == iterType:
+            if self.canAssign(self.STR_TYPE, node.identifier.inferredType):
+            self.addError(node.condition, "Expected {}, got {}".format(
+                str(node.identifier.inferredType), str(self.STR_TYPE))
+                return
+        else:
+            self.addError(node.condition, "Expected iterable, got {}".format(str(node.condition.inferredType))
+            return
+        for s in node.body:
+            if s.isReturn:
+                node.isReturn = True
 
     def ListExpr(self, node: ListExpr):
         if len(elements) == 0:
@@ -356,8 +384,13 @@ class TypeChecker:
         return node.inferredType # TODO
 
     def WhileStmt(self, node: WhileStmt):
-        # set isReturn=True if any statement in body has isReturn=True
-        pass # TODO
+        if node.condition.inferredType != self.BOOL_TYPE:
+            self.addError(node.condition, "Expected {}, got {}".format(
+                str(self.BOOL_TYPE), str(node.condition.inferredType))
+            return
+        for s in node.body:
+            if s.isReturn:
+                node.isReturn = True
 
     def ReturnStmt(self, node: ReturnStmt):
         if self.expReturnType is None:
