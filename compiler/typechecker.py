@@ -363,14 +363,14 @@ class TypeChecker:
         iterType = node.iterable.inferredType
         if isinstance(iterType, ListValueType):
             if self.canAssign(iterType.elementType, node.identifier.inferredType):
-            self.addError(node.condition, "Expected {}, got {}".format(
-                str(node.identifier.inferredType), str(iterType.elementType))
-                return
+                self.addError(node.condition, "Expected {}, got {}".format(
+                    str(node.identifier.inferredType), str(iterType.elementType))
+                    return
         elif self.STR_TYPE == iterType:
             if self.canAssign(self.STR_TYPE, node.identifier.inferredType):
-            self.addError(node.condition, "Expected {}, got {}".format(
-                str(node.identifier.inferredType), str(self.STR_TYPE))
-                return
+                self.addError(node.condition, "Expected {}, got {}".format(
+                    str(node.identifier.inferredType), str(self.STR_TYPE))
+                    return
         else:
             self.addError(node.condition, "Expected iterable, got {}".format(str(node.condition.inferredType))
             return
@@ -396,6 +396,9 @@ class TypeChecker:
         if self.expReturnType is None:
             self.addError(
                 node, "Return statement outside of function definition")
+        elif node.value is None and not self.canAssign(self.NONE_TYPE, self.expReturnType):
+            self.addError(node, "Expected {}, got {}".format(
+                str(self.expReturnType), str(node.value.inferredType)))
         elif not self.canAssign(node.value.inferredType, self.expReturnType):
             self.addError(node, "Expected {}, got {}".format(
                 str(self.expReturnType), str(node.value.inferredType)))
