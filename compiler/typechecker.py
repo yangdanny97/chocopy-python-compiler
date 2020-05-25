@@ -207,9 +207,10 @@ class TypeChecker:
         # add all classnames before checking globals/functions/class decl bodies
         for d in self.declarations:
             if isinstance(d, ClassDef):
+                className = d.name
                 if self.classExists(className):
                     self.addError(
-                        node.name, "Classes cannot shadow other classes: {}".format(node.name))
+                        d.name, "Classes cannot shadow other classes: {}".format(d.name))
                     continue
                 self.classes[className] = {}
         for d in self.declarations:
@@ -357,7 +358,12 @@ class TypeChecker:
 
     def AssignStmt(self, node: AssignStmt):
         # variables can only be assigned to if they're defined in current scope
-        pass # TODO
+        if len(node.targets > 1) and node.value.inferredType == ListValueType(self.NONE_TYPE):
+            self.addError(node.value, "Multiple assignment of [<None>] is forbidden")
+        else:
+            for t in node.targets:
+                if not self.canAssign(t.inferredType, node.value.inferredType):
+                    self.addError(t, "Cannot assign {} to {}".format(t.inferredType, node.value.inferredType))
 
     def IfStmt(self, node: IfStmt):
         # isReturn=True if there's >=1 statement in BOTH branches that have isReturn=True
