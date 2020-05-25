@@ -207,12 +207,14 @@ class TypeChecker:
         # add all classnames before checking globals/functions/class decl bodies
         for d in self.declarations:
             if isinstance(d, ClassDef):
-                className = d.name
-                if self.classExists(className):
+                if self.classExists(d.name):
                     self.addError(
-                        d.name, "Classes cannot shadow other classes: {}".format(d.name))
+                        d.name, "Classes cannot shadow other classes: {}".format(node.name))
                     continue
-                self.classes[className] = {}
+                self.classes[d.name] = {}
+                # add superclass w/o typechecking to set up type hierarchy ASAP
+                # if there's a problem it will be caught later (I think)
+                self.superclasses[d.name] = d.superclass.name
         for d in self.declarations:
             identifier = d.getIdentifier()
             name = identifier.name
@@ -245,7 +247,6 @@ class TypeChecker:
         if superclass in ["int", "bool", "str", className]:
             self.addError(node.superclass,
                           "Illegal superclass: {}".format(node.name))
-        self.superclasses[className] = superclass
         # add all attrs and methods before checking method bodies
         for d in node.declarations:
             if isinstance(d, FuncDef):  # methods
