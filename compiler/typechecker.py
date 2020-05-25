@@ -54,7 +54,6 @@ class TypeChecker:
 
     def typecheck(self, node):
         node.typecheck(self)
-
     def enterScope(self):
         self.symbolTable.append(defaultdict(lambda: None))
 
@@ -384,7 +383,50 @@ class TypeChecker:
         node.isReturn = (thenBody and elseBody)
 
     def BinaryExpr(self, node: BinaryExpr):
-        return node.inferredType # TODO
+        operator = node.operator
+
+        # concatenation and addition
+        if operator == "+":
+            if node.left.inferredType == node.right.inferredType and \
+                node.left.inferredType in {self.STRING_TYPE, self.LIST_TYPE, self.INT_TYPE}:
+                return node.left.inferredType
+            else:
+                self.addError("Cannot use + operator on types {} and {}".format(
+                    node.left.inferredType, node.right.inferredType))
+        
+        # other arithmetic operators
+        if operator in {"-", "*", "//", "%"}:
+            if node.left.inferredType == self.INT_TYPE and node.right.inferredType == self.INT_TYPE:
+                return self.INT_TYPE
+            else:
+                self.addError(node.operator, "Cannot use operator {} on types {} and {}".format(
+                    node.operator, node.left.inferredType, node.right.inferredType))
+
+        # relational operators
+        if operator in {"<", "<=", ">", ">="}:
+            if node.left.inferredType == self.INT_TYPE and node.right.inferredType == self.INT_TYPE:
+                return self.BOOL_TYPE
+            else:
+                self.addError(node.operator, "Cannot use operator {} on types {} and {}".format(
+                    node.operator, node.left.inferredType, node.right.inferredType))
+        if operator in {"==", "!="}:
+            if node.left.inferredType == node.right.inferredType and \
+                    node.left.inferredType in {self.INT_TYPE, self.BOOL_TYPE, self.STRING_TYPE}:
+                return self.BOOL_TYPE
+            else:
+                self.addError(node.operator, "Cannot use operator {} on types {} and {}".format(
+                    node.operator, node.left.inferredType, node.right.inferredType))
+        if operator == "is":
+            static_types = {self.INT_TYPE, self.BOOL_TYPE, self.STRING_TYPE}
+            if node.left.inferredType not in static_types and node.right.inferredType not in static_types:
+                return self.BOOL_TYPE
+            else:
+                self.addError(node.operator, "Cannot use operator {} on types {} and {}".format(
+                    node.operator, node.left.inferredType, node.right.inferredType))
+
+        # logical operators
+        if operator in {"and", "or"}:
+           return self.BOOL_TYPE 
 
     def IndexExpr(self, node: IndexExpr):
         return node.inferredType # TODO
