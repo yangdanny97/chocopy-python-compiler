@@ -139,7 +139,7 @@ class TypeChecker:
                 curr = self.superclasses[curr]
         return False
 
-    def isSubtype(self, a: SymbolType, b: SymbolType) -> bool:
+    def isSubtype(self, a: ValueType, b: ValueType) -> bool:
         # return if a is a subtype of b
         if b == self.OBJECT_TYPE:
             return True
@@ -147,7 +147,7 @@ class TypeChecker:
             return self.isSubClass(a.className, b.className)
         return a == b
 
-    def canAssign(self, a: SymbolType, b: SymbolType) -> bool:
+    def canAssign(self, a: ValueType, b: ValueType) -> bool:
         # return if value of type a can be assigned/passed to type b (ex: b = a)
         if self.isSubtype(a, b):
             return True
@@ -159,6 +159,36 @@ class TypeChecker:
                 and a.elementType == self.NONE_TYPE):
             return self.canAssign(a.elementType, b.elementType)
         return False
+
+    def join(self, a: ValueType, b: ValueType):
+        # return closest mutual ancestor on typing tree
+        if self.canAssign(a, b):
+            return b
+        if self.canAssign(b, a):
+            return a
+        if isinstance(b, ListValueType) and isinstance(a, ListValueType):
+            return ListValueType(self.join(b.elementType, a.elementType))
+        # if only 1 of the types is a list then the closest ancestor is object
+        if isinstance(b, ListValueType) or isinstance(a, ListValueType):
+            return self.OBJECT_TYPE
+        # for 2 classes that aren't related by subtyping
+        # find paths from A & B to root of typing tree
+        aAncestors = []
+        bAncestors = []
+        while self.superclasses[a] is not None:
+            aAncestors.append(self.superclasses[a])
+            a = self.superclasses[a]
+        while self.superclasses[b] is not None:
+            aAncestors.append(self.superclasses[b])
+            b = self.superclasses[b]
+        # reverse lists to find lowest common ancestor
+        aAncestors = aAncestors[::-1]
+        bAncestors = bAncestors[::-1]
+        for i in range(min(len(aAncestors), len(bAncestors))):
+            if aAncestors[i] != bAncestors[i]:
+                return aAncestors[i-1]
+        # this really shouldn't be returned
+        return self.OBJECT_TYPE
 
     # ERROR HANDLING
 
@@ -214,7 +244,7 @@ class TypeChecker:
         if superclass in ["int", "bool", "str", className]:
             self.addError(node.superclass,
                           "Illegal superclass: {}".format(node.name))
-        self.superclasses[className, superclass]
+        self.superclasses[className] = superclass
         # add all attrs and methods before checking method bodies
         for d in node.declarations:
             if isinstance(d, FuncDef):  # methods
