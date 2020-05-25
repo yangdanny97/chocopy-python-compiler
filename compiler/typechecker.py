@@ -432,7 +432,13 @@ class TypeChecker:
         return node.inferredType # TODO
 
     def UnaryExpr(self, node: UnaryExpr):
-        return node.inferredType # TODO
+        if node.operator == "-":
+            if node.operand.inferredType == self.INT_TYPE:
+                return self.INT_TYPE
+            else:
+                self.addError(node.operator, "Cannot use operator - on type {}".format(node.operand.inferredType))
+        if node.operator == "not":
+            return self.BOOL_TYPE
 
     def CallExpr(self, node: CallExpr):
         return node.inferredType # TODO
