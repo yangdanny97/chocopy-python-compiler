@@ -10,7 +10,7 @@ class TypedVar(Node):
         self.type = typ
 
     def typecheck(self, typechecker):
-        typechecker.TypedVar(self)
+        return typechecker.TypedVar(self)
 
     def toJSON(self):
         d = super().toJSON()
