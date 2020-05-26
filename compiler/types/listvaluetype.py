@@ -15,3 +15,12 @@ class ListValueType(ValueType):
 
     def __str__(self):
         return "[{}]".format(str(self.elementType))
+
+    def __hash__(self):
+        return str(self).__hash__()
+
+    def toJSON(self):
+        return {
+            "kind": "ListValueType",
+            "elementType": self.elementType.toJSON()
+        }

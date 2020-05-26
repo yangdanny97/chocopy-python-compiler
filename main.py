@@ -57,7 +57,7 @@ def main():
             print(e)
     elif args.typecheck:
         tc = TypeChecker()
-        tree = compiler.typecheck(tree, tc)
+        compiler.typecheck(tree, tc)
         if len(tc.errors) > 0:
             for e in astparser.errors:
                 print(e)

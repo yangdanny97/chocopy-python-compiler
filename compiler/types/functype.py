@@ -18,3 +18,10 @@ class FuncType(SymbolType):
 
     def isFuncType():
         return True
+
+    def __hash__(self):
+        paramStr = ",".join([str(t) for t in self.parameters])
+        return (F"[{paramStr}]->{self.returnType}").__hash__()
+
+    def toJSON(self):
+        raise Exception("unsupported")

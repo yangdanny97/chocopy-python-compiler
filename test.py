@@ -68,7 +68,7 @@ def run_typecheck_test(test, compiler: Compiler)->bool:
     if len(astparser.errors) > 0:
         return False
     tc = TypeChecker()
-    ast = compiler.typecheck(ast, tc)
+    compiler.typecheck(ast, tc)
     if len(tc.errors) > 0:
         return False
     ast_json = ast.toJSON()

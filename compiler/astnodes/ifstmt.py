@@ -15,7 +15,7 @@ class IfStmt(Stmt):
             typechecker.typecheck(s)
         for s in self.elseBody:
             typechecker.typecheck(s)
-        return typechecker.IfExpr(self)
+        return typechecker.IfStmt(self)
 
     def toJSON(self):
         d = super().toJSON()

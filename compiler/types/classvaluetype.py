@@ -14,3 +14,12 @@ class ClassValueType(ValueType):
     
     def __str__(self):
         return self.className
+
+    def __hash__(self):
+        return str(self).__hash__()
+
+    def toJSON(self):
+        return {
+            "kind": "ClassValueType",
+            "className": self.className
+        }

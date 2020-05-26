@@ -15,3 +15,6 @@ class SymbolType:
 
     def isSpecialType():
         return False
+
+    def toJSON(self):
+        raise Exception("unsupported")
