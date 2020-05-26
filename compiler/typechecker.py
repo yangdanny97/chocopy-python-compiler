@@ -54,6 +54,7 @@ class TypeChecker:
 
     def typecheck(self, node):
         node.typecheck(self)
+
     def enterScope(self):
         self.symbolTable.append(defaultdict(lambda: None))
 
@@ -192,8 +193,7 @@ class TypeChecker:
     # ERROR HANDLING
 
     def addError(self, node: Node, message: str):
-        message = "Semantic Error: {}. Line {:d} Col {:d}".format(
-            message, node.location[0], node.location[1])
+        message = F"Semantic Error: {message}. Line {node.location[0]} Col {node.location[1]}"
         node.errorMsg = message
         self.program.errors.errors.append(
             CompilerError(node.location, message))
@@ -204,35 +204,34 @@ class TypeChecker:
     def Program(self, node: Program):
         self.program = node
         # add all classnames before checking globals/functions/class decl bodies
-        for d in self.declarations:
+        for d in node.declarations:
             if isinstance(d, ClassDef):
                 if self.classExists(d.name):
                     self.addError(
-                        d.name, "Classes cannot shadow other classes: {}".format(node.name))
+                        d.name, F"Classes cannot shadow other classes: {d.name}")
                     continue
                 self.classes[d.name] = {}
                 # add superclass w/o typechecking to set up type hierarchy ASAP
                 # if there's a problem it will be caught later (I think)
                 self.superclasses[d.name] = d.superclass.name
-        for d in self.declarations:
+        for d in node.declarations:
             identifier = d.getIdentifier()
-            name = identifier.name
-            if self.defInCurrentScope(name) or self.classExists(name):
+            if self.defInCurrentScope(identifier.name) or self.classExists(identifier.name):
                 self.addError(
-                    identifier, "Duplicate declaration of identifier: {}".format(name))
+                    identifier, F"Duplicate declaration of identifier: {name}")
                 continue
             dType = d.typecheck(self)
             if dType is not None:
                 self.addType(name, dType)
-        for s in self.statements:
+        for s in node.statements:
             s.typecheck(self)
 
     def VarDef(self, node: VarDef):
         varName = node.getIdentifier().name
         annotationType = self.typecheck(node.var.type)
-        if not canAssign(node.value.inferredType, annotationType):
-            self.addError(node, "Expected {}, got {}".format(
-                str(annotationType), str(node.value.inferredType)))
+        if not self.canAssign(node.value.inferredType, annotationType):
+            self.addError(
+                node, F"Expected {annotationType}, got {node.value.inferredType}")
             # TODO is this attached to the right node? do we return anything special
         return annotationType
 
@@ -242,27 +241,27 @@ class TypeChecker:
         superclass = node.superclass.name
         if not self.classExists(superclass):
             self.addError(node.superclass,
-                          "Unknown superclass: {}".format(node.name))
+                          F"Unknown superclass: {node.name}")
         if superclass in ["int", "bool", "str", className]:
             self.addError(node.superclass,
-                          "Illegal superclass: {}".format(node.name))
+                          F"Illegal superclass: {node.name}")
         # add all attrs and methods before checking method bodies
         for d in node.declarations:
             if isinstance(d, FuncDef):  # methods
                 funcName = d.getIdentifier().name
-                if self.classes[className][funcName]:
+                if funcName in self.classes[className]:
                     self.addError(node.getIdentifier(),
-                                  "Duplicate declaration of identifier: {}".format(funcName))
+                                  F"Duplicate declaration of identifier: {funcName}")
                     continue
                 t = self.getAttrOrMethod(className, funcName)
                 if not isinstance(t, FuncType):
                     self.addError(node.getIdentifier(
-                    ), "Method name shadows attribute: {}".format(funcName))
+                    ), F"Method name shadows attribute: {funcName}")
                     continue
                 if funcName != "__init__":  # for all methods besides constructor, check signatures match
                     if not t.methodEquals(funcType):  # excluding self argument
                         self.addError(node.getIdentifier(
-                        ), "Redefined method doesn't match superclass signature: {}".format(funcName))
+                        ), F"Redefined method doesn't match superclass signature: {funcName}")
                         continue
                 self.classes[className][funcName] = FuncType([t for t in self.typecheck(
                     d.params)], self.typecheck(d.returnType))
@@ -270,11 +269,11 @@ class TypeChecker:
                 attrName = d.getIdentifier().name
                 if self.getAttrOrMethod(className, attrName):
                     self.addError(node.getIdentifier(),
-                                  "Cannot redefine attribute: {}".format(funcName))
+                                  F"Cannot redefine attribute: {funcName}")
                     continue
                 self.classes[className][attrName] = self.typecheck(d.var)
         for d in node.declarations:
-            node.typecheck(self)
+            d.typecheck(self)
         self.currentClass = None
         return None
 
@@ -287,24 +286,24 @@ class TypeChecker:
         if not node.isMethod:  # top level function decl OR nested function
             if self.classExists(funcName):
                 self.addError(node.getIdentifier(),
-                              "Functions cannot shadow classes: {}".format(funcName))
+                              F"Functions cannot shadow classes: {funcName}")
                 return
             if self.defInCurrentScope(funcName):
                 self.addError(node.getIdentifier(
-                ), "Duplicate declaration of identifier: {}".format(funcName))
+                ), F"Duplicate declaration of identifier: {funcName}")
                 return
         else:  # method decl
             if (len(node.params) == 0 or node.params[0].identifier.name != "self" or
                     (not isinstance(funcType.parameters[0], ClassValueType)) or
                     funcType.parameters[0].className != self.currentClass):
                 self.addError(
-                    node, "Missing self argument in method: {}".format(funcName))
+                    node, F"Missing self argument in method: {funcName}")
                 return
         for p in node.params:
             t = self.typecheck(p)
             if self.defInCurrentScope(p.identifier.name) or self.classExists(name):
                 self.addError(
-                    p.identifier, "Duplicate parameter name: {}".format(name))
+                    p.identifier, F"Duplicate parameter name: {name}")
                 continue
             if t is not None:
                 self.addType(p.identifier.name, t)
@@ -313,7 +312,7 @@ class TypeChecker:
             name = identifier.name
             if self.defInCurrentScope(name) or self.classExists(name):
                 self.addError(
-                    identifier, "Duplicate declaration of identifier: {}".format(name))
+                    identifier, F"Duplicate declaration of identifier: {name}")
                 continue
             dType = d.typecheck(self)
             if dType is not None:
@@ -339,7 +338,7 @@ class TypeChecker:
         t = self.getNonLocalType(name)
         if t is None or not isinstance(t, ValueType):
             self.addError(
-                identifier, "Unknown nonlocal variable: {}".format(name))
+                identifier, F"Unknown nonlocal variable: {name}")
             return
         return t
 
@@ -352,25 +351,27 @@ class TypeChecker:
         t = self.getGlobal(name)
         if t is None or not isinstance(t, ValueType):
             self.addError(
-                identifier, "Unknown global variable: {}".format(name))
+                identifier, F"Unknown global variable: {name}")
             return
         return t
 
     def AssignStmt(self, node: AssignStmt):
         # variables can only be assigned to if they're defined in current scope
-        if len(node.targets > 1) and node.value.inferredType == ListValueType(self.NONE_TYPE):
-            self.addError(node.value, "Multiple assignment of [<None>] is forbidden")
+        if len(node.targets) > 1 and node.value.inferredType == ListValueType(self.NONE_TYPE):
+            self.addError(
+                node.value, "Multiple assignment of [<None>] is forbidden")
         else:
             for t in node.targets:
-                if not self.canAssign(t.inferredType, node.value.inferredType):
-                    self.addError(t, "Cannot assign {} to {}".format(t.inferredType, node.value.inferredType))
+                if not self.canAssign(node.value.inferredType, t.inferredType):
+                    self.addError(
+                        t, F"Cannot assign {node.value.inferredType} to {t.inferredType}")
 
     def IfStmt(self, node: IfStmt):
         # isReturn=True if there's >=1 statement in BOTH branches that have isReturn=True
-        # if a branch is empty, isReturn=False 
+        # if a branch is empty, isReturn=False
         if node.condition.inferredType != self.BOOL_TYPE:
-            self.addError(node.condition, "Expected {}, got {}".format(
-                str(self.BOOL_TYPE), str(node.condition.inferredType)))
+            self.addError(
+                node.condition, F"Expected {self.BOOL_TYPE}, got {node.condition.inferredType}")
             return
         thenBody = False
         elseBody = False
@@ -382,147 +383,171 @@ class TypeChecker:
                 elseBody = True
         node.isReturn = (thenBody and elseBody)
 
+    def binopError(self, node):
+        self.addError(node.operator, "Cannot use operator {} on types {} and {}".format(
+            node.operator, node.left.inferredType, node.right.inferredType))
+
     def BinaryExpr(self, node: BinaryExpr):
         operator = node.operator
+        static_types = {self.INT_TYPE, self.BOOL_TYPE, self.STRING_TYPE}
+        leftType = node.left.inferredType
+        rightType = node.right.inferredType
 
         # concatenation and addition
         if operator == "+":
-            if node.left.inferredType == node.right.inferredType and \
-                node.left.inferredType in {self.STRING_TYPE, self.LIST_TYPE, self.INT_TYPE}:
-                return node.left.inferredType
+            if leftType == rightType and \
+                leftType in {self.STRING_TYPE, self.LIST_TYPE, self.INT_TYPE}:
+                node.inferredType = leftType
+                return leftType
             else:
-                self.addError("Cannot use + operator on types {} and {}".format(
-                    node.left.inferredType, node.right.inferredType))
-        
+                self.binopError(node)
+
         # other arithmetic operators
         if operator in {"-", "*", "//", "%"}:
-            if node.left.inferredType == self.INT_TYPE and node.right.inferredType == self.INT_TYPE:
+            if leftType == self.INT_TYPE and rightType == self.INT_TYPE:
+                node.inferredType = self.INT_TYPE
                 return self.INT_TYPE
             else:
-                self.addError(node.operator, "Cannot use operator {} on types {} and {}".format(
-                    node.operator, node.left.inferredType, node.right.inferredType))
+                self.binopError(node)
 
         # relational operators
         if operator in {"<", "<=", ">", ">="}:
-            if node.left.inferredType == self.INT_TYPE and node.right.inferredType == self.INT_TYPE:
+            if leftType == self.INT_TYPE and rightType == self.INT_TYPE:
+                node.inferredType = self.BOOL_TYPE
                 return self.BOOL_TYPE
             else:
-                self.addError(node.operator, "Cannot use operator {} on types {} and {}".format(
-                    node.operator, node.left.inferredType, node.right.inferredType))
+                self.binopError(node)
         if operator in {"==", "!="}:
-            if node.left.inferredType == node.right.inferredType and \
-                    node.left.inferredType in {self.INT_TYPE, self.BOOL_TYPE, self.STRING_TYPE}:
+            if leftType == rightType and \
+                    leftType in static_types:
+                node.inferredType = self.BOOL_TYPE
                 return self.BOOL_TYPE
             else:
-                self.addError(node.operator, "Cannot use operator {} on types {} and {}".format(
-                    node.operator, node.left.inferredType, node.right.inferredType))
+                self.binopError(node)
         if operator == "is":
-            static_types = {self.INT_TYPE, self.BOOL_TYPE, self.STRING_TYPE}
-            if node.left.inferredType not in static_types and node.right.inferredType not in static_types:
+            if leftType not in static_types and rightType not in static_types:
+                node.inferredType = self.BOOL_TYPE
                 return self.BOOL_TYPE
             else:
-                self.addError(node.operator, "Cannot use operator {} on types {} and {}".format(
-                    node.operator, node.left.inferredType, node.right.inferredType))
+                self.binopError(node)
 
         # logical operators
         if operator in {"and", "or"}:
-           return self.BOOL_TYPE 
+            if leftType == self.BOOL_TYPE and rightType == self.BOOL_TYPE:
+                node.inferredType = self.BOOL_TYPE
+                return self.BOOL_TYPE
+            else:
+                self.binopError(node)
+
+        node.inferredType = self.OBJECT_TYPE
+        return self.OBJECT_TYPE
 
     def IndexExpr(self, node: IndexExpr):
-        return node.inferredType # TODO
+        return node.inferredType  # TODO
 
     def UnaryExpr(self, node: UnaryExpr):
+        operandType = node.operand.inferredType
         if node.operator == "-":
-            if node.operand.inferredType == self.INT_TYPE:
+            if operandType == self.INT_TYPE:
+                node.inferredType = self.INT_TYPE
                 return self.INT_TYPE
             else:
-                self.addError(node.operator, "Cannot use operator - on type {}".format(node.operand.inferredType))
+                self.addError(
+                    node.operator, F"Expected int, got {operandType}")
         if node.operator == "not":
-            return self.BOOL_TYPE
+            if operandType == self.BOOL_TYPE:
+                node.inferredType = self.BOOL_TYPE
+                return self.BOOL_TYPE
+            else:
+                self.addError(
+                    node.operator, F"Expected bool, got {operandType}")
+
+        node.inferredType = self.OBJECT_TYPE
+        return self.OBJECT_TYPE
 
     def CallExpr(self, node: CallExpr):
-        return node.inferredType # TODO
+        return node.inferredType  # TODO
 
     def ForStmt(self, node: ForStmt):
         # set isReturn=True if any statement in body has isReturn=True
         iterType = node.iterable.inferredType
         if isinstance(iterType, ListValueType):
             if self.canAssign(iterType.elementType, node.identifier.inferredType):
-                self.addError(node.condition, "Expected {}, got {}".format(
-                    str(node.identifier.inferredType), str(iterType.elementType)))
+                self.addError(
+                    node.condition, F"Expected {iterType.elementType}, got {node.identifier.inferredType}")
                 return
         elif self.STR_TYPE == iterType:
             if self.canAssign(self.STR_TYPE, node.identifier.inferredType):
-                self.addError(node.condition, "Expected {}, got {}".format(
-                    str(node.identifier.inferredType), str(self.STR_TYPE)))
+                self.addError(node.condition, F"Expected {self.STR_TYPE}, got {node.identifier.inferredType}")
                 return
         else:
-            self.addError(node.condition, "Expected iterable, got {}".format(str(node.condition.inferredType)))
+            self.addError(
+                node.condition, F"Expected iterable, got {node.condition.inferredType}")
             return
         for s in node.body:
             if s.isReturn:
-                node.isReturn = True
+                node.isReturn=True
 
     def ListExpr(self, node: ListExpr):
-        if len(elements) == 0:
+        if len(node.elements) == 0:
             node.inferredType = self.EMPTY_TYPE
-        return node.inferredType # TODO
+        return node.inferredType  # TODO
 
     def WhileStmt(self, node: WhileStmt):
         if node.condition.inferredType != self.BOOL_TYPE:
-            self.addError(node.condition, "Expected {}, got {}".format(
-                str(self.BOOL_TYPE), str(node.condition.inferredType)))
+            self.addError(
+                node.condition, F"Expected {self.BOOL_TYPE}, got {node.condition.inferredType}")
             return
         for s in node.body:
             if s.isReturn:
-                node.isReturn = True
+                node.isReturn=True
 
     def ReturnStmt(self, node: ReturnStmt):
         if self.expReturnType is None:
             self.addError(
                 node, "Return statement outside of function definition")
         elif node.value is None and not self.canAssign(self.NONE_TYPE, self.expReturnType):
-            self.addError(node, "Expected {}, got {}".format(
-                str(self.expReturnType), str(node.value.inferredType)))
+            self.addError(
+                node, F"Expected {self.expReturnType}, got {node.value.inferredType}")
         elif not self.canAssign(node.value.inferredType, self.expReturnType):
-            self.addError(node, "Expected {}, got {}".format(
-                str(self.expReturnType), str(node.value.inferredType)))
+            self.addError(
+                node, F"Expected {self.expReturnType}, got {node.value.inferredType}")
         return
 
     def Identifier(self, node: Identifier):
-        varType = self.getLocalType(node.name)
+        varType=self.getLocalType(node.name)
         if varType is not None and isinstance(varType, ValueType):
-            node.inferredType = varType
+            node.inferredType=varType
         else:
-            self.addError(node, "Not a variable: {}".format(node.name))
-            node.inferredType = self.OBJECT_TYPE
+            self.addError(node, F"Not a variable: {node.name}")
+            node.inferredType=self.OBJECT_TYPE
         return node.inferredType
 
     def MemberExpr(self, node: MemberExpr):
-        return node.inferredType # TODO
+        return node.inferredType  # TODO
 
     def IfExpr(self, node: IfExpr):
-        return node.inferredType # TODO
+        return node.inferredType  # TODO
 
     def MethodCallExpr(self, node: MethodCallExpr):
-        return node.inferredType # TODO
+        return node.inferredType  # TODO
 
     # LITERALS
 
     def BooleanLiteral(self, node: BooleanLiteral):
-        node.inferredType = BoolType()
+        node.inferredType=BoolType()
         return node.inferredType
 
     def IntegerLiteral(self, node: IntegerLiteral):
-        node.inferredType = IntType()
+        node.inferredType=IntType()
         return node.inferredType
 
     def NoneLiteral(self, node: NoneLiteral):
-        node.inferredType = NoneType()
+        node.inferredType=NoneType()
         return node.inferredType
 
     def StringLiteral(self, node: StringLiteral):
-        node.inferredType = StrType()
+        node.inferredType=StrType()
         return node.inferredType
 
     # TYPES
@@ -535,8 +560,8 @@ class TypeChecker:
         return ListValueType(node.elementType.typecheck(self))
 
     def ClassType(self, node: ClassType):
-        if not self.classExists(node.name):
-            self.addError(node, "Unknown class: {}".format(node.name))
+        if not self.classExists(node.className):
+            self.addError(node, F"Unknown class: {node.className}")
             return ClassValueType(node.className)
         else:
             return self.OBJECT_TYPE

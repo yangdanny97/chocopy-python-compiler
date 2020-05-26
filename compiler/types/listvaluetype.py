@@ -6,12 +6,12 @@ class ListValueType(ValueType):
         self.elementType = elementType
 
     def __eq__(self, other):
-        if isinstance(other, ListType):
+        if isinstance(other, ListValueType):
             return self.elementType == other.elementType
         return False
 
     def isListType():
         return True
 
-    def __str__():
+    def __str__(self):
         return "[{}]".format(str(self.elementType))
