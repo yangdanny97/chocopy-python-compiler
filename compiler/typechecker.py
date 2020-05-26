@@ -445,7 +445,17 @@ class TypeChecker:
         return self.OBJECT_TYPE
 
     def IndexExpr(self, node: IndexExpr):
-        return node.inferredType  # TODO
+        # it is not possible to index into [<None>] and [<Empty>]
+        if node.lst.inferredType == self.NONE_TYPE or node.lst.inferredType == self.EMPTY_TYPE:
+            self.addError(node, "It is not possible to index into [<None>] and [<Empty>]")
+        # indexing into a string returns a new string
+        if node.lst.inferredType == self.STRING_TYPE:
+            node.inferredType = self.STRING_TYPE
+            return node.inferredType
+        # indexing into a list of type T returns a value of type T
+        if node.lst.inferredType == self.LIST_TYPE:
+            node.inferredType = node.lst.elements[0].inferredType
+            return node.inferredType
 
     def UnaryExpr(self, node: UnaryExpr):
         operandType = node.operand.inferredType
