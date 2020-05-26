@@ -53,7 +53,7 @@ class TypeChecker:
         self.program = None
 
     def typecheck(self, node):
-        node.typecheck(self)
+        return node.typecheck(self)
 
     def enterScope(self):
         self.symbolTable.append(defaultdict(lambda: None))
@@ -224,19 +224,18 @@ class TypeChecker:
                 self.addError(
                     identifier, F"Duplicate declaration of identifier: {identifier.name}")
                 continue
-            dType = d.typecheck(self)
+            dType = self.typecheck(d)
             if dType is not None:
-                self.addType(name, dType)
+                self.addType(identifier.name, dType)
         for s in node.statements:
-            s.typecheck(self)
+            self.typecheck(s)
 
     def VarDef(self, node: VarDef):
         varName = node.getIdentifier().name
-        annotationType = self.typecheck(node.var.type)
+        annotationType = self.typecheck(node.var)
         if not self.canAssign(node.value.inferredType, annotationType):
             self.addError(
                 node, F"Expected {annotationType}, got {node.value.inferredType}")
-            # TODO is this attached to the right node? do we return anything special
         return annotationType
 
     def ClassDef(self, node: ClassDef):
@@ -318,7 +317,7 @@ class TypeChecker:
                 self.addError(
                     identifier, F"Duplicate declaration of identifier: {name}")
                 continue
-            dType = d.typecheck(self)
+            dType = self.typecheck(d)
             if dType is not None:
                 self.addType(name, dType)
         hasReturn = False
@@ -337,7 +336,7 @@ class TypeChecker:
         if self.expReturnType is None:
             self.addError(node, "Nonlocal decl outside of function")
             return
-        identifier = node.identifier
+        identifier = node.getIdentifier()
         name = identifier.name
         t = self.getNonLocalType(name)
         if t is None or not isinstance(t, ValueType):
@@ -350,7 +349,7 @@ class TypeChecker:
         if self.expReturnType is None:
             self.addError(node, "Global decl outside of function")
             return
-        identifier = node.identifier
+        identifier = node.getIdentifier()
         name = identifier.name
         t = self.getGlobal(name)
         if t is None or not isinstance(t, ValueType):
@@ -484,12 +483,12 @@ class TypeChecker:
         if isinstance(iterType, ListValueType):
             if self.canAssign(iterType.elementType, node.identifier.inferredType):
                 self.addError(
-                    node.condition, F"Expected {iterType.elementType}, got {node.identifier.inferredType}")
+                    node.identifier, F"Expected {iterType.elementType}, got {node.identifier.inferredType}")
                 return
         elif self.STR_TYPE == iterType:
             if self.canAssign(self.STR_TYPE, node.identifier.inferredType):
                 self.addError(
-                    node.condition, F"Expected {self.STR_TYPE}, got {node.identifier.inferredType}")
+                    node.identifier, F"Expected {self.STR_TYPE}, got {node.identifier.inferredType}")
                 return
         else:
             self.addError(
@@ -517,16 +516,21 @@ class TypeChecker:
         if self.expReturnType is None:
             self.addError(
                 node, "Return statement outside of function definition")
-        elif node.value is None and not self.canAssign(self.NONE_TYPE, self.expReturnType):
-            self.addError(
-                node, F"Expected {self.expReturnType}, got {node.value.inferredType}")
+        elif node.value is None:
+            if  not self.canAssign(self.NONE_TYPE, self.expReturnType):
+                self.addError(
+                    node, F"Expected {self.expReturnType}, got {self.NONE_TYPE}")
         elif not self.canAssign(node.value.inferredType, self.expReturnType):
             self.addError(
                 node, F"Expected {self.expReturnType}, got {node.value.inferredType}")
         return
 
     def Identifier(self, node: Identifier):
-        varType = self.getLocalType(node.name)
+        varType = None
+        if self.expReturnType is None and self.currentClass is None:
+            varType = self.getGlobal(node.name)
+        else:
+            varType = self.getLocalType(node.name)
         if varType is not None and isinstance(varType, ValueType):
             node.inferredType = varType
         else:
@@ -568,11 +572,11 @@ class TypeChecker:
         return self.typecheck(node.type)
 
     def ListType(self, node: ListType):
-        return ListValueType(node.elementType.typecheck(self))
+        return ListValueType(self.typecheck(node.elementType))
 
     def ClassType(self, node: ClassType):
         if not self.classExists(node.className):
             self.addError(node, F"Unknown class: {node.className}")
-            return ClassValueType(node.className)
-        else:
             return self.OBJECT_TYPE
+        else:
+            return ClassValueType(node.className)
