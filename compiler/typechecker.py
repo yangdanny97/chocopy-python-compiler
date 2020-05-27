@@ -502,9 +502,10 @@ class TypeChecker:
         if len(node.elements) == 0:
             node.inferredType = self.EMPTY_TYPE
         else:
-            node.inferredType = node.elements[0].inferredType
+            e_type = node.elements[0].inferredType
             for e in node.elements:
-                node.inferredType = self.join(node.inferredType, e.inferredType)
+                e_type = self.join(e_type, e.inferredType)
+            node.inferredType = ListValueType(e_type)
         return node.inferredType
 
     def WhileStmt(self, node: WhileStmt):
