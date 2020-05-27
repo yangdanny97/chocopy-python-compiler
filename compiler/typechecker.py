@@ -547,7 +547,13 @@ class TypeChecker:
         return node.inferredType  # TODO
 
     def IfExpr(self, node: IfExpr):
-        return node.inferredType  # TODO
+        if node.condition.inferredType != self.BOOL_TYPE:
+            self.addError(F"Expected boolean, got {node.condition.inferredType}")
+        if node.condition == True:
+            node.inferredType = node.thenExpr.inferredType
+        else:
+            node.inferredType = node.elseExpr.inferredType
+        return node.inferredType
 
     def MethodCallExpr(self, node: MethodCallExpr):
         return node.inferredType  # TODO
