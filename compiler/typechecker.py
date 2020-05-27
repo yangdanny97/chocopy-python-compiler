@@ -368,13 +368,11 @@ class TypeChecker:
     def AssignStmt(self, node: AssignStmt):
         # variables can only be assigned to if they're defined in current scope
         if len(node.targets) > 1 and node.value.inferredType == ListValueType(self.NONE_TYPE):
-            self.addError(
-                node.value, "Multiple assignment of [<None>] is forbidden")
+            self.addError(node.value, "Multiple assignment of [<None>] is forbidden")
         else:
             for t in node.targets:
                 if not self.canAssign(node.value.inferredType, t.inferredType):
-                    self.addError(
-                        node, F"Expected {t.inferredType}, got {node.value.inferredType}")
+                    self.addError(node, F"Expected {t.inferredType}, got {node.value.inferredType}")
                     return
 
     def IfStmt(self, node: IfStmt):
@@ -412,7 +410,7 @@ class TypeChecker:
                 self.binopError(node)
 
         # other arithmetic operators
-        if operator in {"-", "*", "//", "%"}:
+        elif operator in {"-", "*", "//", "%"}:
             if leftType == self.INT_TYPE and rightType == self.INT_TYPE:
                 node.inferredType = self.INT_TYPE
                 return self.INT_TYPE
@@ -420,20 +418,20 @@ class TypeChecker:
                 self.binopError(node)
 
         # relational operators
-        if operator in {"<", "<=", ">", ">="}:
+        elif operator in {"<", "<=", ">", ">="}:
             if leftType == self.INT_TYPE and rightType == self.INT_TYPE:
                 node.inferredType = self.BOOL_TYPE
                 return self.BOOL_TYPE
             else:
                 self.binopError(node)
-        if operator in {"==", "!="}:
+        elif operator in {"==", "!="}:
             if leftType == rightType and \
                     leftType in static_types:
                 node.inferredType = self.BOOL_TYPE
                 return self.BOOL_TYPE
             else:
                 self.binopError(node)
-        if operator == "is":
+        elif operator == "is":
             if leftType not in static_types and rightType not in static_types:
                 node.inferredType = self.BOOL_TYPE
                 return self.BOOL_TYPE
@@ -441,29 +439,30 @@ class TypeChecker:
                 self.binopError(node)
 
         # logical operators
-        if operator in {"and", "or"}:
+        elif operator in {"and", "or"}:
             if leftType == self.BOOL_TYPE and rightType == self.BOOL_TYPE:
                 node.inferredType = self.BOOL_TYPE
                 return self.BOOL_TYPE
             else:
                 self.binopError(node)
 
-        node.inferredType = self.OBJECT_TYPE
-        return self.OBJECT_TYPE
+        else:
+            node.inferredType = self.OBJECT_TYPE
+            return self.OBJECT_TYPE
 
     def IndexExpr(self, node: IndexExpr):
         if node.index.inferredType != self.INT_TYPE:
-            self.addError(
-                node.index, F"Expected {self.INT_TYPE}, got {node.index.inferredType}")
+            self.addError(node.index, F"Expected {self.INT_TYPE}, got {node.index.inferredType}")
         # indexing into a string returns a new string
-        if node.list.inferredType == self.STR_TYPE:
+        elif node.list.inferredType == self.STR_TYPE:
             node.inferredType = self.STR_TYPE
             return node.inferredType
         # indexing into a list of type T returns a value of type T
-        if isinstance(node.list.inferredType, ListValueType):
+        elif isinstance(node.list.inferredType, ListValueType):
             node.inferredType = node.list.inferredType.elementType
             return node.inferredType
-        return self.OBJECT_TYPE
+        else:
+            return self.OBJECT_TYPE
 
     def UnaryExpr(self, node: UnaryExpr):
         operandType = node.operand.inferredType
@@ -473,15 +472,15 @@ class TypeChecker:
                 return self.INT_TYPE
             else:
                 self.addError(node, F"Expected int, got {operandType}")
-        if node.operator == "not":
+        elif node.operator == "not":
             if operandType == self.BOOL_TYPE:
                 node.inferredType = self.BOOL_TYPE
                 return self.BOOL_TYPE
             else:
                 self.addError(node, F"Expected bool, got {operandType}")
-
-        node.inferredType = self.OBJECT_TYPE
-        return self.OBJECT_TYPE
+        else:
+            node.inferredType = self.OBJECT_TYPE
+            return self.OBJECT_TYPE
 
     def CallExpr(self, node: CallExpr):
         return node.inferredType  # TODO
@@ -553,7 +552,19 @@ class TypeChecker:
         return node.inferredType
 
     def MemberExpr(self, node: MemberExpr):
-        return self.typecheck(node.member)
+        if not isinstance(node.object.inferredType, ClassValueType): 
+            self.addError(node, F"Expected class, got {node.object.inferredType}")
+        elif not isinstance(self.typecheck(node.member), ValueType):
+            self.addError(node, F"Expected ValueType, got {self.typecheck(node.member)}")
+        else:
+            class_name, member_name = node.object.inferredType.className, node.member.name
+            if member_name not in self.classes[class_name]:
+                self.addError(node, F"Member name {member_name} doesn't exist for class {class_name}")
+            else:
+                member_type = self.classes[class_name][member_name]
+                node.member.inferredType = member_type
+                node.inferredType = member_type
+        return node.inferredType 
 
     def IfExpr(self, node: IfExpr):
         if node.condition.inferredType != self.BOOL_TYPE:
