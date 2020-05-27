@@ -7,8 +7,8 @@ class UnaryExpr(Expr):
         self.operand = operand
         self.operator = operator
 
-    def typecheck(self, typechecker):
-        typechecker.typecheck(self.operand)
+    def visit(self, typechecker):
+        typechecker.visit(self.operand)
         return typechecker.UnaryExpr(self)
 
     def toJSON(self):

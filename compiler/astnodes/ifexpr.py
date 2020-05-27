@@ -8,10 +8,10 @@ class IfExpr(Expr):
         self.thenExpr = thenExpr
         self.elseExpr = elseExpr
 
-    def typecheck(self, typechecker):
-        typechecker.typecheck(self.condition)
-        typechecker.typecheck(self.thenExpr)
-        typechecker.typecheck(self.elseExpr)
+    def visit(self, typechecker):
+        typechecker.visit(self.condition)
+        typechecker.visit(self.thenExpr)
+        typechecker.visit(self.elseExpr)
         return typechecker.IfExpr(self)
 
     def toJSON(self):

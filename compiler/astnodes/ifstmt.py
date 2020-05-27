@@ -9,12 +9,12 @@ class IfStmt(Stmt):
         self.thenBody = [s for s in thenBody if s is not None]
         self.elseBody = [s for s in elseBody if s is not None]
 
-    def typecheck(self, typechecker):
-        typechecker.typecheck(self.condition)
+    def visit(self, typechecker):
+        typechecker.visit(self.condition)
         for s in self.thenBody:
-            typechecker.typecheck(s)
+            typechecker.visit(s)
         for s in self.elseBody:
-            typechecker.typecheck(s)
+            typechecker.visit(s)
         return typechecker.IfStmt(self)
 
     def toJSON(self):

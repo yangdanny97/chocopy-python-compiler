@@ -27,7 +27,7 @@ class Compiler:
             return None
 
 
-    def typecheck(self, ast: Node, tc: TypeChecker):
+    def visit(self, ast: Node, tc: TypeChecker):
         # given an AST object, typecheck it
         # typechecking mutates the AST, adding types and errors
-        ast.typecheck(tc)
+        ast.visit(tc)

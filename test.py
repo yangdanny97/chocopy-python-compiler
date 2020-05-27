@@ -68,7 +68,7 @@ def run_typecheck_test(test, compiler: Compiler)->bool:
     if len(astparser.errors) > 0:
         return False
     tc = TypeChecker()
-    compiler.typecheck(ast, tc)
+    compiler.visit(ast, tc)
     ast_json = ast.toJSON()
     with test.with_suffix(".py.ast.typed").open("r") as f:
         correct_json = json.load(f)
@@ -86,9 +86,10 @@ def ast_equals(d1, d2)->bool:
                     return False
             # check number of errors, not the messages
             elif k == "errors":
-                pass
+                if len(d1[k]["errors"]) != len(d2[k]["errors"]):
+                    return False
             elif k == "errorMsg":
-                pass
+                pass # only check presence of message, not content
             elif k == "inferredType":
                 if k in d2 and not ast_equals(v, d2[k]):
                     return False

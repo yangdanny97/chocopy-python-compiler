@@ -10,8 +10,8 @@ class VarDef(Declaration):
         self.value = value
         self.isAttr = isAttr
 
-    def typecheck(self, typechecker):
-        typechecker.typecheck(self.value)
+    def visit(self, typechecker):
+        typechecker.visit(self.value)
         return typechecker.VarDef(self)
 
     def toJSON(self):

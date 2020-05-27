@@ -7,7 +7,7 @@ class GlobalDecl(Declaration):
         super().__init__(location, "GlobalDecl")
         self.variable = variable
 
-    def typecheck(self, typechecker):
+    def visit(self, typechecker):
         return typechecker.GlobalDecl(self)
 
     def toJSON(self):

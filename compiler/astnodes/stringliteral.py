@@ -6,5 +6,5 @@ class StringLiteral(Literal):
         super().__init__(location, "StringLiteral")
         self.value = value
 
-    def typecheck(self, typechecker):
+    def visit(self, typechecker):
         typechecker.StringLiteral(self)

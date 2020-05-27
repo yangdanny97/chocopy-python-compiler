@@ -7,9 +7,9 @@ class IndexExpr(Expr):
         self.list = lst
         self.index = index
 
-    def typecheck(self, typechecker):
-        typechecker.typecheck(self.list)
-        typechecker.typecheck(self.index)
+    def visit(self, typechecker):
+        typechecker.visit(self.list)
+        typechecker.visit(self.index)
         return typechecker.IndexExpr(self)
 
     def toJSON(self):

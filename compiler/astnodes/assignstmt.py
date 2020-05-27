@@ -8,10 +8,10 @@ class AssignStmt(Stmt):
         self.targets = targets
         self.value = value
 
-    def typecheck(self, typechecker):
+    def visit(self, typechecker):
         for t in self.targets:
-            typechecker.typecheck(t)
-        typechecker.typecheck(self.value)
+            typechecker.visit(t)
+        typechecker.visit(self.value)
         return typechecker.AssignStmt(self)
 
     def toJSON(self):

@@ -6,7 +6,7 @@ class Identifier(Expr):
         super().__init__(location, "Identifier")
         self.name = name
 
-    def typecheck(self, typechecker):
+    def visit(self, typechecker):
         return typechecker.Identifier(self)
 
     def toJSON(self):

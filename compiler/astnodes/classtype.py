@@ -6,7 +6,7 @@ class ClassType(TypeAnnotation):
         super().__init__(location, "ClassType")
         self.className = className
 
-    def typecheck(self, typechecker):
+    def visit(self, typechecker):
         return typechecker.ClassType(self)
 
     def toJSON(self):

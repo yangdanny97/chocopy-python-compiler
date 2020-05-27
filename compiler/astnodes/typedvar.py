@@ -9,7 +9,7 @@ class TypedVar(Node):
         self.identifier = identifier
         self.type = typ
 
-    def typecheck(self, typechecker):
+    def visit(self, typechecker):
         return typechecker.TypedVar(self)
 
     def toJSON(self):

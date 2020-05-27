@@ -8,9 +8,9 @@ class MethodCallExpr(Expr):
         self.method = method
         self.args = args
 
-    def typecheck(self, typechecker):
+    def visit(self, typechecker):
         for a in self.args:
-            typechecker.typecheck(a)
+            typechecker.visit(a)
         return typechecker.MethodCallExpr(self)
 
     def toJSON(self):

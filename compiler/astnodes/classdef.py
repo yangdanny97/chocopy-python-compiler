@@ -16,7 +16,7 @@ class ClassDef(Declaration):
                 d.isMethod = True
         self.declarations = declarations
 
-    def typecheck(self, typechecker):
+    def visit(self, typechecker):
         typechecker.ClassDef(self)
 
     def toJSON(self):

@@ -6,7 +6,7 @@ class ListType(TypeAnnotation):
         super().__init__(location, "ListType")
         self.elementType = elementType
 
-    def typecheck(self, typechecker):
+    def visit(self, typechecker):
         return typechecker.ListType(self)
 
     def toJSON(self):

@@ -8,10 +8,10 @@ class WhileStmt(Stmt):
         self.condition = condition
         self.body = [s for s in body if s is not None]
 
-    def typecheck(self, typechecker):
-        typechecker.typecheck(self.condition)
+    def visit(self, typechecker):
+        typechecker.visit(self.condition)
         for s in self.body:
-            typechecker.typecheck(s)
+            typechecker.visit(s)
         return typechecker.WhileStmt(self)
 
     def toJSON(self):

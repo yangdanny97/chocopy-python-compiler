@@ -6,7 +6,7 @@ class BooleanLiteral(Literal):
         super().__init__(location, "BooleanLiteral")
         self.value = value
 
-    def typecheck(self, typechecker):
+    def visit(self, typechecker):
         return typechecker.BooleanLiteral(self)
 
 

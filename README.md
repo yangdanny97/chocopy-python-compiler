@@ -20,14 +20,14 @@ The input file should have extension `.py`. If the output file is not provided, 
 
 - `-h` - show help
 - `-t` - do not typecheck the AST
-- `-o` - do not output the AST as a JSON
+- `-o` - do not output the AST as a JSON file (instead, print the output to stdout)
 - `--test-all` - run entire test suite
 - `--test-parse` - run parsing tests
 - `--test-tc` - run typechecking tests
 
 ## Differences from the reference implementation:
 
-The reference implementation represents a node's location as a four item list of \[start line, start col, end line, end col]. Python's parser does not always provide the end line/end column of a node, and the starting column sometimes differs from the reference implementation's parser (a handful of edge cases which do not impact the usefulness of error messages). Although this compiler still outputs each node's location as a four item list for compatibility reasons, only the starting line number for the node is guaranteed to match the reference implementation.
+The reference implementation represents a node's location as a four item list of \[start line, start col, end line, end col]. Since this implementation uses Python's built-in parser, only the starting position of each node is valid. Furthermore, the starting columns of nodes may differ slightly from the reference implementation. This compiler still outputs each node's location as a four item list for compatibility reasons, but only the starting line number for each node is guaranteed to match the reference implementation.
 
 The exact error messages from typechecking do not necessarily match the reference implementation, but the total number of messages and nodes that the messages are attached to will match.
 
