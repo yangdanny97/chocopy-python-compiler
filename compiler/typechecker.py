@@ -544,7 +544,7 @@ class TypeChecker:
         return node.inferredType
 
     def MemberExpr(self, node: MemberExpr):
-        return node.member.inferredType 
+        return self.typecheck(node.member)
 
     def IfExpr(self, node: IfExpr):
         if node.condition.inferredType != self.BOOL_TYPE:
