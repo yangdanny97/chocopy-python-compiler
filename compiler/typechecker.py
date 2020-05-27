@@ -548,7 +548,7 @@ class TypeChecker:
         if varType is not None and isinstance(varType, ValueType):
             node.inferredType = varType
         else:
-            self.addError(node, F"Not a variable: {node.name}")
+            self.addError(node, F"Unknown identifier: {node.name}")
             node.inferredType = self.OBJECT_TYPE
         return node.inferredType
 
