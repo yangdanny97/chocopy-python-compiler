@@ -78,7 +78,7 @@ def ast_equals(d1, d2)->bool:
     # precondition: the input dict must represent a well-formed AST
     if isinstance(d1, dict) and isinstance(d2, dict):
         for k, v in d1.items():
-            if k not in d2:
+            if k not in d2 and k != "inferredType":
                 return False
             # only check starting line of node
             if k == "location":
@@ -89,10 +89,13 @@ def ast_equals(d1, d2)->bool:
                 pass
             elif k == "errorMsg":
                 pass
+            elif k == "inferredType":
+                if k in d2 and not ast_equals(v, d2[k]):
+                    return False
             elif not ast_equals(v, d2[k]):
                 return False
         for k in d2.keys():
-            if k not in d1:
+            if k not in d1 and k != "inferredType":
                 return False
         return True
     if isinstance(d1, list) and isinstance(d2, list):
