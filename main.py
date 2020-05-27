@@ -11,7 +11,7 @@ def main():
     parser.add_argument('-t', dest='typecheck', action='store_false',
                     help='do not typecheck the AST')
     parser.add_argument('-o', dest='output', action='store_false',
-                    help="do not output AST as JSON")
+                    help="output AST to stdout instead of to a JSON file")
     parser.add_argument('--test-all', dest='testall', action='store_true',
                     help="run all test cases")
     parser.add_argument('--test-parse', dest='testparse', action='store_true',
