@@ -303,6 +303,7 @@ class TypeChecker:
                 self.addError(node.getIdentifier(
                 ), F"Duplicate declaration of identifier: {funcName}")
                 return
+            self.addType(funcName, funcType)
         else:  # method decl
             if (len(node.params) == 0 or node.params[0].identifier.name != "self" or
                     (not isinstance(funcType.parameters[0], ClassValueType)) or
@@ -383,6 +384,9 @@ class TypeChecker:
             for t in node.targets:
                 if isinstance(t, IndexExpr) and t.list.inferredType == self.STR_TYPE:
                     self.addError(t, F"Cannot assign to index of string")
+                    return
+                if isinstance(t, Identifier) and not self.defInCurrentScope(t.name):
+                    self.addError(t, F"Identifier not defined in current scope: {t.name}")
                     return
                 if not self.canAssign(node.value.inferredType, t.inferredType):
                     self.addError(node, F"Expected {t.inferredType}, got {node.value.inferredType}")
@@ -589,8 +593,6 @@ class TypeChecker:
             varType = self.getType(node.name)
         if varType is not None and isinstance(varType, ValueType):
             node.inferredType = varType
-            if not self.defInCurrentScope(node.name):
-                self.addError(node, F"Identifier not defined in current scope: {node.name}")
         else:
             self.addError(node, F"Unknown identifier: {node.name}")
             node.inferredType = self.OBJECT_TYPE
