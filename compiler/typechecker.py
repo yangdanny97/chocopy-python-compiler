@@ -581,10 +581,10 @@ class TypeChecker:
             self.addError(node, F"Expected class, got {node.object.inferredType}")
         else:
             class_name, member_name = node.object.inferredType.className, node.member.name
-            if member_name not in self.classes[class_name]:
+            if not self.classExists(class_name):
                 self.addError(node, F"Member name {member_name} doesn't exist for class {class_name}")
             else:
-                member_type = self.classes[class_name][member_name]
+                member_type = self.getAttr(class_name, member_name)
                 if isinstance(member_type, ValueType):
                     node.member.inferredType = member_type
                     node.inferredType = member_type
@@ -609,10 +609,10 @@ class TypeChecker:
             self.addError(method_member, F"Expected class, got {method_member.object.inferredType}")
         else:
             class_name, member_name = method_member.object.inferredType.className, method_member.member.name
-            if member_name not in self.classes[class_name]:
+            if not self.classExists(class_name):
                 self.addError(node, F"Member name {member_name} doesn't exist for class {class_name}")
             else:
-                member_type = self.classes[class_name][member_name]
+                member_type = self.getMethod(class_name, member_name)
                 if isinstance(member_type, FuncType):
                     node.member.inferredType = member_type
                     node.inferredType = member_type
