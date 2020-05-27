@@ -193,7 +193,7 @@ class TypeChecker:
     # ERROR HANDLING
 
     def addError(self, node: Node, message: str):
-        message = F"Semantic Error: {message}. Line {node.location[0]} Col {node.location[1]}"
+        message = F"{message}. Line {node.location[0]} Col {node.location[1]}"
         node.errorMsg = message
         self.program.errors.errors.append(
             CompilerError(node.location, message))
@@ -210,14 +210,26 @@ class TypeChecker:
         # add all classnames before checking globals/functions/class decl bodies
         for d in node.declarations:
             if isinstance(d, ClassDef):
-                if self.classExists(d.name):
+                if self.classExists(d.name.name):
                     self.addError(
-                        d.name, F"Classes cannot shadow other classes: {d.name}")
+                        d.name, F"Classes cannot shadow other classes: {d.name.name}")
                     continue
                 self.classes[d.name] = {}
-                # add superclass w/o typechecking to set up type hierarchy ASAP
-                # if there's a problem it will be caught later (I think)
-                self.superclasses[d.name] = d.superclass.name
+        for d in node.declarations:
+            if isinstance(d, ClassDef):
+                className = d.name.name
+                superclass = d.superclass.name
+                if not self.classExists(superclass):
+                    self.addError(d.superclass,
+                                F"Unknown superclass: {superclass}")
+                    continue
+                if superclass in ["int", "bool", "str", className]:
+                    self.addError(d.superclass,
+                                F"Illegal superclass: {superclass}")
+                    continue
+                self.superclasses[className] = superclass
+        if len(self.errors) > 0:
+            return
         for d in node.declarations:
             identifier = d.getIdentifier()
             if self.defInCurrentScope(identifier.name) or self.classExists(identifier.name):
@@ -227,6 +239,8 @@ class TypeChecker:
             dType = self.typecheck(d)
             if dType is not None:
                 self.addType(identifier.name, dType)
+        if len(self.errors) > 0:
+            return
         for s in node.statements:
             self.typecheck(s)
 
@@ -241,13 +255,6 @@ class TypeChecker:
     def ClassDef(self, node: ClassDef):
         className = node.name.name
         self.currentClass = className
-        superclass = node.superclass.name
-        if not self.classExists(superclass):
-            self.addError(node.superclass,
-                          F"Unknown superclass: {node.name}")
-        if superclass in ["int", "bool", "str", className]:
-            self.addError(node.superclass,
-                          F"Illegal superclass: {node.name}")
         # add all attrs and methods before checking method bodies
         for d in node.declarations:
             if isinstance(d, FuncDef):  # methods
@@ -266,8 +273,8 @@ class TypeChecker:
                         self.addError(node.getIdentifier(
                         ), F"Redefined method doesn't match superclass signature: {funcName}")
                         continue
-                self.classes[className][funcName] = FuncType([t for t in self.typecheck(
-                    d.params)], self.typecheck(d.returnType))
+                self.classes[className][funcName] = FuncType(
+                    [self.typecheck(t) for t in d.params], self.typecheck(d.returnType))
             if isinstance(d, VarDef):  # attributes
                 attrName = d.getIdentifier().name
                 if self.getAttrOrMethod(className, attrName):
@@ -367,7 +374,8 @@ class TypeChecker:
             for t in node.targets:
                 if not self.canAssign(node.value.inferredType, t.inferredType):
                     self.addError(
-                        t, F"Cannot assign {node.value.inferredType} to {t.inferredType}")
+                        node, F"Expected {t.inferredType}, got {node.value.inferredType}")
+                    return
 
     def IfStmt(self, node: IfStmt):
         # isReturn=True if there's >=1 statement in BOTH branches that have isReturn=True

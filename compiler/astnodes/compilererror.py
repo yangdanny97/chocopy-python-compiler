@@ -10,5 +10,4 @@ class CompilerError(Node):
     def toJSON(self):
         d = super().toJSON()
         d["message"] = self.message
-        d["syntax"] = self.syntax
         return d
