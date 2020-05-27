@@ -503,7 +503,11 @@ class TypeChecker:
                 self.addError(node, F"Expected {t.parameters[i]}, got {node.args[i].inferredType}")
                 node.inferredType = self.OBJECT_TYPE
                 return self.OBJECT_TYPE
-        node.inferredType = t.returnType
+        if self.classExists(fname):
+            # constructor
+            node.inferredType = ClassValueType(fname)
+        else:
+            node.inferredType = t.returnType
         return node.inferredType
 
     def ForStmt(self, node: ForStmt):
