@@ -8,7 +8,7 @@ class NonLocalDecl(Declaration):
         self.variable = variable
 
     def typecheck(self, typechecker):
-        typechecker.NonLocalDecl(self)
+        return typechecker.NonLocalDecl(self)
 
     def toJSON(self):
         d = super().toJSON()

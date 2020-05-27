@@ -8,7 +8,7 @@ class GlobalDecl(Declaration):
         self.variable = variable
 
     def typecheck(self, typechecker):
-        typechecker.GlobalDecl(self)
+        return typechecker.GlobalDecl(self)
 
     def toJSON(self):
         d = super().toJSON()

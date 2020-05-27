@@ -264,15 +264,16 @@ class TypeChecker:
                                   F"Duplicate declaration of identifier: {funcName}")
                     continue
                 t = self.getAttrOrMethod(className, funcName)
-                if not isinstance(t, FuncType):
-                    self.addError(node.getIdentifier(
-                    ), F"Method name shadows attribute: {funcName}")
-                    continue
-                if funcName != "__init__":  # for all methods besides constructor, check signatures match
-                    if not t.methodEquals(funcType):  # excluding self argument
+                if t is not None:
+                    if not isinstance(t, FuncType):
                         self.addError(node.getIdentifier(
-                        ), F"Redefined method doesn't match superclass signature: {funcName}")
+                        ), F"Method name shadows attribute: {funcName}")
                         continue
+                    if funcName != "__init__":  # for all methods besides constructor, check signatures match
+                        if not t.methodEquals(funcType):  # excluding self argument
+                            self.addError(node.getIdentifier(
+                            ), F"Redefined method doesn't match superclass signature: {funcName}")
+                            continue
                 self.classes[className][funcName] = FuncType(
                     [self.typecheck(t) for t in d.params], self.typecheck(d.returnType))
             if isinstance(d, VarDef):  # attributes
@@ -288,6 +289,7 @@ class TypeChecker:
         return None
 
     def FuncDef(self, node: FuncDef):
+        self.enterScope()
         funcName = node.getIdentifier().name
         rType = self.typecheck(node.returnType)
         funcType = FuncType([self.typecheck(t) for t in node.params], rType)
@@ -325,6 +327,7 @@ class TypeChecker:
                     identifier, F"Duplicate declaration of identifier: {name}")
                 continue
             dType = self.typecheck(d)
+            self.expReturnType = rType
             if dType is not None:
                 self.addType(name, dType)
         hasReturn = False
@@ -332,9 +335,10 @@ class TypeChecker:
             self.typecheck(s)
             if s.isReturn:
                 hasReturn = True
-        if not hasReturn and self.expReturnType != self.NONE_TYPE:
+        if (not hasReturn) and (not self.canAssign(self.NONE_TYPE, self.expReturnType)):
             self.addError(node, "Expected return statement")
         self.expReturnType = None
+        self.exitScope()
         return funcType
 
     # STATEMENTS (returns None) AND EXPRESSIONS (returns inferred type)
@@ -514,12 +518,12 @@ class TypeChecker:
         # set isReturn=True if any statement in body has isReturn=True
         iterType = node.iterable.inferredType
         if isinstance(iterType, ListValueType):
-            if self.canAssign(iterType.elementType, node.identifier.inferredType):
+            if not self.canAssign(iterType.elementType, node.identifier.inferredType):
                 self.addError(
                     node.identifier, F"Expected {iterType.elementType}, got {node.identifier.inferredType}")
                 return
         elif self.STR_TYPE == iterType:
-            if self.canAssign(self.STR_TYPE, node.identifier.inferredType):
+            if not self.canAssign(self.STR_TYPE, node.identifier.inferredType):
                 self.addError(
                     node.identifier, F"Expected {self.STR_TYPE}, got {node.identifier.inferredType}")
                 return
@@ -601,18 +605,21 @@ class TypeChecker:
 
     def MethodCallExpr(self, node: MethodCallExpr):
         method_member = node.method
+        self.typecheck(method_member.object)
+        t = None # method signature
         static_types = {self.INT_TYPE, self.BOOL_TYPE, self.STR_TYPE}
         if method_member.object.inferredType in static_types or not isinstance(method_member.object.inferredType, ClassValueType): 
             self.addError(method_member, F"Expected object, got {method_member.object.inferredType}")
+            node.inferredType = self.OBJECT_TYPE
+            return node.inferredType
         else:
             class_name, member_name = method_member.object.inferredType.className, method_member.member.name
             if self.getMethod(class_name, member_name) is None:
                 self.addError(node, F"Method {member_name} doesn't exist for class {class_name}")
-                method_member.inferredType = self.OBJECT_TYPE
-                return self.OBJECT_TYPE
+                node.inferredType = self.OBJECT_TYPE
+                return node.inferredType
             else:
-                method_member.inferredType = self.getMethod(class_name, member_name) 
-        t = method_member.inferredType
+                t = self.getMethod(class_name, member_name) 
         # self arguments
         if len(t.parameters) != len(node.args) + 1:
             self.addError(node, F"Expected {len(t.parameters)} args, got {len(node.args) + 1}")

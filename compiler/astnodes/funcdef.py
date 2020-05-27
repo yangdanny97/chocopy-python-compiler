@@ -22,7 +22,7 @@ class FuncDef(Declaration):
         self.isMethod = isMethod
 
     def typecheck(self, typechecker):
-        typechecker.FuncDef(self)
+        return typechecker.FuncDef(self)
 
     def toJSON(self):
         d = super().toJSON()
