@@ -452,7 +452,17 @@ class TypeChecker:
         return self.OBJECT_TYPE
 
     def IndexExpr(self, node: IndexExpr):
-        return node.inferredType  # TODO
+        # it is not possible to index into [<None>] and [<Empty>]
+        if node.lst.inferredType == self.NONE_TYPE or node.lst.inferredType == self.EMPTY_TYPE:
+            self.addError(node, "It is not possible to index into [<None>] and [<Empty>]")
+        # indexing into a string returns a new string
+        if node.lst.inferredType == self.STRING_TYPE:
+            node.inferredType = self.STRING_TYPE
+            return node.inferredType
+        # indexing into a list of type T returns a value of type T
+        if node.lst.inferredType == self.LIST_TYPE:
+            node.inferredType = node.lst.elements[0].inferredType
+            return node.inferredType
 
     def UnaryExpr(self, node: UnaryExpr):
         operandType = node.operand.inferredType
@@ -499,7 +509,12 @@ class TypeChecker:
     def ListExpr(self, node: ListExpr):
         if len(node.elements) == 0:
             node.inferredType = self.EMPTY_TYPE
-        return node.inferredType  # TODO
+        else:
+            e_type = node.elements[0].inferredType
+            for e in node.elements:
+                e_type = self.join(e_type, e.inferredType)
+            node.inferredType = ListValueType(e_type)
+        return node.inferredType
 
     def WhileStmt(self, node: WhileStmt):
         if node.condition.inferredType != self.BOOL_TYPE:
@@ -540,7 +555,13 @@ class TypeChecker:
         return node.inferredType  # TODO
 
     def IfExpr(self, node: IfExpr):
-        return node.inferredType  # TODO
+        if node.condition.inferredType != self.BOOL_TYPE:
+            self.addError(F"Expected boolean, got {node.condition.inferredType}")
+        if node.condition == True:
+            node.inferredType = node.thenExpr.inferredType
+        else:
+            node.inferredType = node.elseExpr.inferredType
+        return node.inferredType
 
     def MethodCallExpr(self, node: MethodCallExpr):
         return node.inferredType  # TODO
