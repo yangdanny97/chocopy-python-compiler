@@ -483,7 +483,7 @@ class TypeChecker:
             return self.OBJECT_TYPE
 
     def CallExpr(self, node: CallExpr):
-        fname = node.identifier.name
+        fname = node.function.name
         t = None
         if self.classExists(fname):
             # constructor
@@ -491,7 +491,7 @@ class TypeChecker:
         else:
             t = self.getType(fname)
         if not isinstance(t, FuncType):
-            self.addError(node.identifier, F"Not a function: {fname}")
+            self.addError(node.function, F"Not a function: {fname}")
             node.inferredType = self.OBJECT_TYPE
             return self.OBJECT_TYPE
         if len(t.parameters) != len(node.args):
