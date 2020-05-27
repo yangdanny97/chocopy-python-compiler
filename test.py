@@ -58,9 +58,14 @@ def run_parse_test(test, compiler: Compiler, bad=True)->bool:
     if len(astparser.errors) > 0:
         return False
     ast_json = ast.toJSON()
-    with test.with_suffix(".py.ast").open("r") as f:
-        correct_json = json.load(f)
-        return ast_equals(ast_json, correct_json)
+    try:
+        with test.with_suffix(".py.ast").open("r") as f:
+            correct_json = json.load(f)
+            return ast_equals(ast_json, correct_json)
+    except:
+        with test.with_suffix(".py.ast.typed").open("r") as f:
+            correct_json = json.load(f)
+            return ast_equals(ast_json, correct_json)
 
 def run_typecheck_test(test, compiler: Compiler)->bool:
     astparser = Parser()
