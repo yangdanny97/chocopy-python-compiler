@@ -483,7 +483,28 @@ class TypeChecker:
             return self.OBJECT_TYPE
 
     def CallExpr(self, node: CallExpr):
-        return node.inferredType  # TODO
+        fname = node.identifier.name
+        t = None
+        if self.classExists(fname):
+            # constructor
+            t = self.getMethod(fname, "__init__")
+        else:
+            t = self.getType(fname)
+        if not isinstance(t, FuncType):
+            self.addError(node.identifier, F"Not a function: {fname}")
+            node.inferredType = self.OBJECT_TYPE
+            return self.OBJECT_TYPE
+        if len(t.parameters) != len(node.args):
+            self.addError(node, F"Expected {len(t.parameters)} args, got {len(node.args)}")
+            node.inferredType = self.OBJECT_TYPE
+            return self.OBJECT_TYPE
+        for i in range(len(t.parameters)):
+            if not self.canAssign(node.args[i].inferredType, t.parameters[i]):
+                self.addError(node, F"Expected {t.parameters[i]}, got {node.args[i].inferredType}")
+                node.inferredType = self.OBJECT_TYPE
+                return self.OBJECT_TYPE
+        node.inferredType = t.returnType
+        return node.inferredType
 
     def ForStmt(self, node: ForStmt):
         # set isReturn=True if any statement in body has isReturn=True
@@ -547,7 +568,7 @@ class TypeChecker:
         if varType is not None and isinstance(varType, ValueType):
             node.inferredType = varType
         else:
-            self.addError(node, F"Not a variable: {node.name}")
+            self.addError(node, F"Unknown identifier: {node.name}")
             node.inferredType = self.OBJECT_TYPE
         return node.inferredType
 
@@ -576,7 +597,7 @@ class TypeChecker:
         return node.inferredType
 
     def MethodCallExpr(self, node: MethodCallExpr):
-        return node.inferredType  # TODO
+        return node.inferredType # TODO
 
     # LITERALS
 
