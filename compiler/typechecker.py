@@ -501,7 +501,11 @@ class TypeChecker:
     def ListExpr(self, node: ListExpr):
         if len(node.elements) == 0:
             node.inferredType = self.EMPTY_TYPE
-        return node.inferredType  # TODO
+        else:
+            node.inferredType = node.elements[0].inferredType
+            for e in node.elements:
+                node.inferredType = self.join(node.inferredType, e.inferredType)
+        return node.inferredType
 
     def WhileStmt(self, node: WhileStmt):
         if node.condition.inferredType != self.BOOL_TYPE:
