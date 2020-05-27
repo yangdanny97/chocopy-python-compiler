@@ -577,21 +577,17 @@ class TypeChecker:
         return node.inferredType
 
     def MemberExpr(self, node: MemberExpr):
-        if not isinstance(node.object.inferredType, ClassValueType): 
-            self.addError(node, F"Expected class, got {node.object.inferredType}")
+        static_types = {self.INT_TYPE, self.BOOL_TYPE, self.STR_TYPE}
+        if node.object.inferredType in static_types or not isinstance(node.object.inferredType, ClassValueType): 
+            self.addError(node, F"Expected object, got {node.object.inferredType}")
         else:
             class_name, member_name = node.object.inferredType.className, node.member.name
-            if member_name not in self.classes[class_name]:
-                self.addError(node, F"Member name {member_name} doesn't exist for class {class_name}")
+            if self.getAttr(class_name, member_name) is None:
+                self.addError(node, F"Attribute {member_name} doesn't exist for class {class_name}")
+                node.inferredType = self.OBJECT_TYPE
+                return self.OBJECT_TYPE
             else:
-                member_type = self.classes[class_name][member_name]
-                if isinstance(member_type, ValueType):
-                    node.member.inferredType = member_type
-                    node.inferredType = member_type
-                else:
-                    self.addError(node, F"Expected ValueType, got {member_type}")
-                    node.inferredType = self.OBJECT_TYPE
-                    return self.OBJECT_TYPE
+                node.inferredType = self.getAttr(class_name, member_name)
         return node.inferredType 
 
     def IfExpr(self, node: IfExpr):
@@ -605,29 +601,25 @@ class TypeChecker:
 
     def MethodCallExpr(self, node: MethodCallExpr):
         method_member = node.method
-        if not isinstance(method_member.object.inferredType, ClassValueType): 
-            self.addError(method_member, F"Expected class, got {method_member.object.inferredType}")
+        static_types = {self.INT_TYPE, self.BOOL_TYPE, self.STR_TYPE}
+        if method_member.object.inferredType in static_types or not isinstance(method_member.object.inferredType, ClassValueType): 
+            self.addError(method_member, F"Expected object, got {method_member.object.inferredType}")
         else:
             class_name, member_name = method_member.object.inferredType.className, method_member.member.name
-            if member_name not in self.classes[class_name]:
-                self.addError(node, F"Member name {member_name} doesn't exist for class {class_name}")
+            if self.getMethod(class_name, member_name) is None:
+                self.addError(node, F"Method {member_name} doesn't exist for class {class_name}")
+                method_member.inferredType = self.OBJECT_TYPE
+                return self.OBJECT_TYPE
             else:
-                member_type = self.classes[class_name][member_name]
-                if isinstance(member_type, FuncType):
-                    node.member.inferredType = member_type
-                    node.inferredType = member_type
-                else:
-                    self.addError(node, F"Expected FuncType, got {member_type}")
-                    node.inferredType = self.OBJECT_TYPE
-                    return self.OBJECT_TYPE
-
-        t = member_type
-        if len(t.parameters) != len(node.args):
-            self.addError(node, F"Expected {len(t.parameters)} args, got {len(node.args)}")
+                method_member.inferredType = self.getMethod(class_name, member_name) 
+        t = method_member.inferredType
+        # self arguments
+        if len(t.parameters) != len(node.args) + 1:
+            self.addError(node, F"Expected {len(t.parameters)} args, got {len(node.args) + 1}")
             node.inferredType = self.OBJECT_TYPE
             return self.OBJECT_TYPE
-        for i in range(len(t.parameters)):
-            if not self.canAssign(node.args[i].inferredType, t.parameters[i]):
+        for i in range(len(t.parameters) - 1):
+            if not self.canAssign(node.args[i].inferredType, t.parameters[i + 1]):
                 self.addError(node, F"Expected {t.parameters[i]}, got {node.args[i].inferredType}")
                 node.inferredType = self.OBJECT_TYPE
                 return self.OBJECT_TYPE
