@@ -1,5 +1,4 @@
 from .valuetype import ValueType
-import llvmlite
 
 class ClassValueType(ValueType):
     def __init__(self, className:str):

@@ -4,11 +4,11 @@ import json
 from compiler.parser import Parser
 from compiler.typechecker import TypeChecker
 
-def run_all_tests(compiler: Compiler):
-    run_parse_tests(compiler)
-    run_typecheck_tests(compiler)
+def run_all_tests():
+    run_parse_tests()
+    run_typecheck_tests()
 
-def run_parse_tests(compiler: Compiler):
+def run_parse_tests():
     print("Running parser tests...\n")
     total = 0
     n_passed = 0
@@ -16,7 +16,7 @@ def run_parse_tests(compiler: Compiler):
     print("Running tests in: tests/parse/")
     parser_tests_dir = (Path(__file__).parent / "tests/parse/").resolve()
     for test in parser_tests_dir.glob('*.py'):
-        passed = run_parse_test(test, compiler)
+        passed = run_parse_test(test)
         total += 1
         if not passed:
             print("Failed: " + test.name)
@@ -26,7 +26,7 @@ def run_parse_tests(compiler: Compiler):
     # typechecker tests should all successfully parse
     tc_tests_dir = (Path(__file__).parent / "tests/typecheck/").resolve()
     for test in tc_tests_dir.glob('*.py'):
-        passed = run_parse_test(test, compiler, False)
+        passed = run_parse_test(test, False)
         total += 1
         if not passed:
             print("Failed: " + test.name)
@@ -34,13 +34,13 @@ def run_parse_tests(compiler: Compiler):
             n_passed += 1
     print("\nPassed {:d} out of {:d} parser test cases\n".format(n_passed, total))
 
-def run_typecheck_tests(compiler: Compiler):
+def run_typecheck_tests():
     print("Running typecheck tests...\n")
     total = 0
     n_passed = 0
     tc_tests_dir = (Path(__file__).parent / "tests/typecheck/").resolve()
     for test in tc_tests_dir.glob('*.py'):
-        passed = run_typecheck_test(test, compiler)
+        passed = run_typecheck_test(test)
         total += 1
         if not passed:
             print("Failed: " + test.name)
@@ -48,10 +48,11 @@ def run_typecheck_tests(compiler: Compiler):
             n_passed += 1
     print("\nPassed {:d} out of {:d} typechecker test cases\n".format(n_passed, total))
 
-def run_parse_test(test, compiler: Compiler, bad=True)->bool:
+def run_parse_test(test, bad=True)->bool:
     # if bad=True, then test cases prefixed with bad are expected to fail
-    astparser = Parser()
-    ast = compiler.parse(test, astparser)
+    compiler = Compiler()
+    astparser = compiler.parser
+    ast = compiler.parse(test)
     # check that parsing error exists
     if bad and test.name.startswith("bad"):
         return len(astparser.errors) > 0
@@ -67,13 +68,14 @@ def run_parse_test(test, compiler: Compiler, bad=True)->bool:
             correct_json = json.load(f)
             return ast_equals(ast_json, correct_json)
 
-def run_typecheck_test(test, compiler: Compiler)->bool:
-    astparser = Parser()
-    ast = compiler.parse(test, astparser)
+def run_typecheck_test(test)->bool:
+    compiler = Compiler()
+    astparser = compiler.parser
+    ast = compiler.parse(test)
     if len(astparser.errors) > 0:
         return False
-    tc = TypeChecker()
-    compiler.typecheck(ast, tc)
+    tc = compiler.typechecker
+    compiler.typecheck(ast)
     ast_json = ast.toJSON()
     with test.with_suffix(".py.ast.typed").open("r") as f:
         correct_json = json.load(f)

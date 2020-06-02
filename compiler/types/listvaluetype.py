@@ -1,5 +1,4 @@
 from .valuetype import ValueType
-import llvmlite
 
 class ListValueType(ValueType):
     

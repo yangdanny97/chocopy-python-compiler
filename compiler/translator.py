@@ -1,3 +1,5 @@
+from .astnodes import *
+
 class Translator:
 
     def visit(self, node: Node):

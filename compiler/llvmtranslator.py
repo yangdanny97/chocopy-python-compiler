@@ -8,8 +8,8 @@ import llvmlite
 
 
 class LLVMTranslator(Translator):
-    def __init__(self, tc:TypeChecker):
-        self.tc = tc
+    def __init__(self, ts: TypeSystem):
+        self.ts = ts
         pass # TODO setup
 
     def visit(self, node: Node):

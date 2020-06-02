@@ -6,34 +6,33 @@ from compiler.parser import Parser
 from compiler.typechecker import TypeChecker
 from compiler.astnodes import Node
 
+
 def main():
     parser = argparse.ArgumentParser(description='Chocopy frontend')
-    parser.add_argument('-m', '--mode', dest='mode', choices=["parse", "tc", "llvm"], default="tc"
-                    help='modes:\nparse (output AST before typechecking)\ntc (output typechecked AST)\nllvm (output LLVM IR)')
+    parser.add_argument('-m', '--mode', dest='mode', choices=["parse", "tc", "llvm"], default="tc",
+                        help='modes:\nparse (output AST before typechecking)\ntc (output typechecked AST)\nllvm (output LLVM IR)')
     parser.add_argument('-o', '--output', dest='output', action='store_false',
-                    help="output to stdout instead of file")
+                        help="output to stdout instead of file")
     parser.add_argument('--test-all', dest='testall', action='store_true',
-                    help="run all test cases")
+                        help="run all test cases")
     parser.add_argument('--test-parse', dest='testparse', action='store_true',
-                    help="run parser test cases")
+                        help="run parser test cases")
     parser.add_argument('--test-tc', dest='testtc', action='store_true',
-                    help="run typechecker test cases")
+                        help="run typechecker test cases")
     parser.add_argument('infile', nargs='?', type=str, default=None)
     parser.add_argument('outfile', nargs='?', type=str, default=None)
     args = parser.parse_args()
 
-    compiler = Compiler()
-
     if args.testall:
-        run_all_tests(compiler)
+        run_all_tests()
         return
 
     if args.testparse:
-        run_parse_tests(compiler)
+        run_parse_tests()
         return
 
     if args.testtc:
-        run_typecheck_tests(compiler)
+        run_typecheck_tests()
         return
 
     infile = args.infile
@@ -51,16 +50,17 @@ def main():
         elif args.mode == "llvm":
             outfile = infile + ".ll"
 
-    astparser = Parser()
-    tree = compiler.parse(infile, astparser)
+    compiler = Compiler()
+    astparser = compiler.parser
+    tc = compiler.typechecker
+    tree = compiler.parse(infile)
 
     if len(astparser.errors) > 0:
         for e in astparser.errors:
             print(e)
             return
     elif args.mode != "parse":
-        tc = TypeChecker()
-        compiler.typecheck(tree, tc)
+        compiler.typecheck(tree)
         if len(tc.errors) > 0:
             for e in astparser.errors:
                 print(e)
@@ -68,14 +68,15 @@ def main():
 
     if args.mode in {"parse", "tc"}:
         ast_json = tree.toJSON()
-        if args.output: # output to file
+        if args.output:  # output to file
             with open(outfile, "w") as f:
                 json.dump(ast_json, f)
-        else: # output to stdout
+        else:  # output to stdout
             if isinstance(tree, Node):
                 print(json.dumps(ast_json))
     elif args.mode == "llvm":
-        pass # TODO
+        pass  # TODO
+
 
 if __name__ == "__main__":
     main()

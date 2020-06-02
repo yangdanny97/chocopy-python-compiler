@@ -5,7 +5,7 @@ from .typesystem import TypeSystem
 
 
 class TypeChecker:
-    def __init__(self):
+    def __init__(self, ts: TypeSystem):
         # typechecker attributes and their chocopy typing judgement analogues:
         # O : symbolTable
         # M : classes
@@ -21,7 +21,7 @@ class TypeChecker:
         self.symbolTable[0]["input"] = FuncType([], StrType())
         self.symbolTable[0]["len"] = FuncType([ObjectType()], IntType())
 
-        self.typeSystem = TypeSystem()
+        self.ts = ts
 
         self.errors = []  # list of errors encountered
         self.currentClass = None  # name of current class
@@ -76,33 +76,33 @@ class TypeChecker:
     # CLASSES
 
     def getMethod(self, className: str, methodName: str):
-        if methodName not in self.typeSystem.classes[className]:
-            if self.typeSystem.superclasses[className] is None:
+        if methodName not in self.ts.classes[className]:
+            if self.ts.superclasses[className] is None:
                 return None
-            return self.getMethod(self.typeSystem.superclasses[className], methodName)
-        if not isinstance(self.typeSystem.classes[className][methodName], FuncType):
+            return self.getMethod(self.ts.superclasses[className], methodName)
+        if not isinstance(self.ts.classes[className][methodName], FuncType):
             return None
-        return self.typeSystem.classes[className][methodName]
+        return self.ts.classes[className][methodName]
 
     def getAttr(self, className: str, attrName: str):
-        if attrName not in self.typeSystem.classes[className]:
-            if self.typeSystem.superclasses[className] is None:
+        if attrName not in self.ts.classes[className]:
+            if self.ts.superclasses[className] is None:
                 return None
-            return self.getAttr(self.typeSystem.superclasses[className], attrName)
-        if not isinstance(self.typeSystem.classes[className][attrName], ValueType):
+            return self.getAttr(self.ts.superclasses[className], attrName)
+        if not isinstance(self.ts.classes[className][attrName], ValueType):
             return None
-        return self.typeSystem.classes[className][attrName]
+        return self.ts.classes[className][attrName]
 
     def getAttrOrMethod(self, className: str, name: str):
-        if name not in self.typeSystem.classes[className]:
-            if self.typeSystem.superclasses[className] is None:
+        if name not in self.ts.classes[className]:
+            if self.ts.superclasses[className] is None:
                 return None
-            return self.getAttrOrMethod(self.typeSystem.superclasses[className], name)
-        return self.typeSystem.classes[className][name]
+            return self.getAttrOrMethod(self.ts.superclasses[className], name)
+        return self.ts.classes[className][name]
 
     def classExists(self, className: str) -> bool:
         # we cannot check for None because it is a defaultdict
-        return className in self.typeSystem.classes
+        return className in self.ts.classes
 
     # TYPE HIERARCHY UTILS
 
@@ -113,7 +113,7 @@ class TypeChecker:
             if curr == b:
                 return True
             else:
-                curr = self.typeSystem.superclasses[curr]
+                curr = self.ts.superclasses[curr]
         return False
 
     def isSubtype(self, a: ValueType, b: ValueType) -> bool:
@@ -152,12 +152,12 @@ class TypeChecker:
         # find paths from A & B to root of typing tree
         aAncestors = []
         bAncestors = []
-        while self.typeSystem.superclasses[a] is not None:
-            aAncestors.append(self.typeSystem.superclasses[a])
-            a = self.typeSystem.superclasses[a]
-        while self.typeSystem.superclasses[b] is not None:
-            aAncestors.append(self.typeSystem.superclasses[b])
-            b = self.typeSystem.superclasses[b]
+        while self.ts.superclasses[a] is not None:
+            aAncestors.append(self.ts.superclasses[a])
+            a = self.ts.superclasses[a]
+        while self.ts.superclasses[b] is not None:
+            aAncestors.append(self.ts.superclasses[b])
+            b = self.ts.superclasses[b]
         # reverse lists to find lowest common ancestor
         aAncestors = aAncestors[::-1]
         bAncestors = bAncestors[::-1]
@@ -202,8 +202,8 @@ class TypeChecker:
                     self.addError(d.superclass,
                                   F"Illegal superclass: {superclass}")
                     continue
-                self.typeSystem.classes[d.name.name] = {}
-                self.typeSystem.superclasses[className] = superclass
+                self.ts.classes[d.name.name] = {}
+                self.ts.superclasses[className] = superclass
             if isinstance(d, FuncDef):
                 self.addType(d.getIdentifier().name, self.getSignature(d))
             if isinstance(d, VarDef):
@@ -233,7 +233,7 @@ class TypeChecker:
             if isinstance(d, FuncDef):  # methods
                 funcName = d.getIdentifier().name
                 funcType = self.getSignature(d)
-                if funcName in self.typeSystem.classes[className]:
+                if funcName in self.ts.classes[className]:
                     self.addError(d.getIdentifier(),
                                   F"Duplicate declaration of identifier: {funcName}")
                     continue
@@ -248,14 +248,14 @@ class TypeChecker:
                         self.addError(d.getIdentifier(),
                                       F"Redefined method doesn't match superclass signature: {funcName}")
                         continue
-                self.typeSystem.classes[className][funcName] = funcType
+                self.ts.classes[className][funcName] = funcType
             if isinstance(d, VarDef):  # attributes
                 attrName = d.getIdentifier().name
                 if self.getAttrOrMethod(className, attrName):
                     self.addError(d.getIdentifier(),
                                   F"Cannot redefine attribute: {attrName}")
                     continue
-                self.typeSystem.classes[className][attrName] = self.visit(
+                self.ts.classes[className][attrName] = self.visit(
                     d.var)
         for d in node.declarations:
             self.visit(d)

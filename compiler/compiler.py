@@ -3,11 +3,18 @@ from .types import *
 from .typechecker import TypeChecker
 from .parser import Parser, ParseError
 from .llvmtranslator import LLVMTranslator
+from .typesystem import TypeSystem
 import ast
 from pathlib import Path
 
 class Compiler:
-    def parse(self, infile, astparser: Parser) -> Node:
+    def __init__(self):
+        self.ts = TypeSystem()
+        self.parser = Parser()
+        self.typechecker = TypeChecker(self.ts)
+
+    def parse(self, infile) -> Node:
+        astparser = self.parser
         # given an input file, parse it into an AST object
         lines = None
         fname = infile
@@ -28,12 +35,12 @@ class Compiler:
             return None
 
 
-    def typecheck(self, ast: Node, tc: TypeChecker):
+    def typecheck(self, ast: Node):
         # given an AST object, typecheck it
         # typechecking mutates the AST, adding types and errors
-        ast.visit(tc)
+        ast.visit(self.typechecker)
 
-    def llvm(self, ast: Node, translator: LLVMTranslator):
+    def llvm(self, ast: Node):
         pass # TODO
 
     
