@@ -9,8 +9,11 @@ class TypedVar(Node):
         self.identifier = identifier
         self.type = typ
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         return typechecker.TypedVar(self)
+
+    def visit(self, visitor):
+        return visitor.TypedVar(self)
 
     def toJSON(self):
         d = super().toJSON()

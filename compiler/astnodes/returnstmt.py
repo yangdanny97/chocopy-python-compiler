@@ -8,10 +8,13 @@ class ReturnStmt(Stmt):
         self.value = value
         self.isReturn = True
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         if self.value is not None:
             typechecker.visit(self.value)
         return typechecker.ReturnStmt(self)
+
+    def visit(self, visitor):
+        return visitor.ReturnStmt(self)
 
     def toJSON(self):
         d = super().toJSON()

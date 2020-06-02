@@ -16,8 +16,11 @@ class ClassDef(Declaration):
                 d.isMethod = True
         self.declarations = declarations
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         typechecker.ClassDef(self)
+
+    def visit(self, visitor):
+        return visitor.ClassDef(self)
 
     def toJSON(self):
         d = super().toJSON()

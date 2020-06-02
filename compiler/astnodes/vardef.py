@@ -10,9 +10,12 @@ class VarDef(Declaration):
         self.value = value
         self.isAttr = isAttr
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         typechecker.visit(self.value)
         return typechecker.VarDef(self)
+
+    def visit(self, visitor):
+        return visitor.VarDef(self)
 
     def toJSON(self):
         d = super().toJSON()

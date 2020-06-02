@@ -7,9 +7,12 @@ class UnaryExpr(Expr):
         self.operand = operand
         self.operator = operator
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         typechecker.visit(self.operand)
         return typechecker.UnaryExpr(self)
+
+    def visit(self, visitor):
+        return visitor.UnaryExpr(self)
 
     def toJSON(self):
         d = super().toJSON()

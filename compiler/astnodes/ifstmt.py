@@ -9,13 +9,16 @@ class IfStmt(Stmt):
         self.thenBody = [s for s in thenBody if s is not None]
         self.elseBody = [s for s in elseBody if s is not None]
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         typechecker.visit(self.condition)
         for s in self.thenBody:
             typechecker.visit(s)
         for s in self.elseBody:
             typechecker.visit(s)
         return typechecker.IfStmt(self)
+
+    def visit(self, visitor):
+        return visitor.IfStmt(self)
 
     def toJSON(self):
         d = super().toJSON()

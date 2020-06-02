@@ -6,10 +6,13 @@ class ListExpr(Expr):
         super().__init__(location, "ListExpr")
         self.elements = elements
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         for e in self.elements:
             typechecker.visit(e)
         return typechecker.ListExpr(self)
+
+    def visit(self, visitor):
+        return visitor.ListExpr(self)
 
     def toJSON(self):
         d = super().toJSON()

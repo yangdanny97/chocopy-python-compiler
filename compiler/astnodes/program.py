@@ -12,8 +12,11 @@ class Program(Node):
         self.statements = [s for s in statements if s is not None]
         self.errors = errors
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         return typechecker.Program(self)
+
+    def visit(self, visitor):
+        return visitor.Program(self)
 
     def toJSON(self):
         d = super().toJSON()

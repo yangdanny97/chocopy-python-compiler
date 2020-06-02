@@ -7,10 +7,13 @@ class IndexExpr(Expr):
         self.list = lst
         self.index = index
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         typechecker.visit(self.list)
         typechecker.visit(self.index)
         return typechecker.IndexExpr(self)
+
+    def visit(self, visitor):
+        return visitor.IndexExpr(self)
 
     def toJSON(self):
         d = super().toJSON()

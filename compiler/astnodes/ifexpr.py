@@ -8,11 +8,14 @@ class IfExpr(Expr):
         self.thenExpr = thenExpr
         self.elseExpr = elseExpr
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         typechecker.visit(self.condition)
         typechecker.visit(self.thenExpr)
         typechecker.visit(self.elseExpr)
         return typechecker.IfExpr(self)
+
+    def visit(self, visitor):
+        return visitor.IfExpr(self)
 
     def toJSON(self):
         d = super().toJSON()

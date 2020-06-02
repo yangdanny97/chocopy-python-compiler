@@ -7,9 +7,12 @@ class MemberExpr(Expr):
         self.object = obj
         self.member = member
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         typechecker.visit(self.object)
         return typechecker.MemberExpr(self)
+
+    def visit(self, visitor):
+        return visitor.MemberExpr(self)
 
     def toJSON(self):
         d = super().toJSON()

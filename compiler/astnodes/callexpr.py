@@ -8,10 +8,13 @@ class CallExpr(Expr):
         self.function = function
         self.args = args
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         for a in self.args:
             typechecker.visit(a)
         return typechecker.CallExpr(self)
+
+    def visit(self, visitor):
+        return visitor.CallExpr(self)
 
     def toJSON(self):
         d = super().toJSON()

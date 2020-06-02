@@ -52,8 +52,8 @@ class TypeChecker:
 
         self.program = None
 
-    def visit(self, node):
-        return node.visit(self)
+    def visit(self, node: Node):
+        return node.tcvisit(self)
 
     def enterScope(self):
         self.symbolTable.append(defaultdict(lambda: None))

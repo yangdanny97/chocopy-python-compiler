@@ -21,8 +21,11 @@ class FuncDef(Declaration):
         self.statements = [s for s in statements if s is not None]
         self.isMethod = isMethod
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         return typechecker.FuncDef(self)
+
+    def visit(self, visitor):
+        return visitor.FuncDef(self)
 
     def toJSON(self):
         d = super().toJSON()

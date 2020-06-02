@@ -6,9 +6,12 @@ This compiler frontend has the same functionality as the first 2 passes (parsing
 
 That means that you can parse and typecheck the Chocopy file with this compiler, then use the reference implementation's backend to handle assembly code generation.
 
-The implementation uses Python's `ast` module, and is designed to work with Python 3.6 - 3.8
+Most of the test cases are taken from test suites included in the release code for CS164, with some additional tests written for more coverage.
 
-Most of the test cases are taken from test suites included in the PA1 and PA2 release code for CS164, with some additional tests written for more coverage.
+## Requires:
+- Python 3.6 - 3.8
+- llvmlite
+- LLVM
 
 ## Usage
 

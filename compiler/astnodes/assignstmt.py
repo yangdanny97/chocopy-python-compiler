@@ -8,11 +8,14 @@ class AssignStmt(Stmt):
         self.targets = targets
         self.value = value
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         for t in self.targets:
             typechecker.visit(t)
         typechecker.visit(self.value)
         return typechecker.AssignStmt(self)
+
+    def visit(self, visitor):
+        return visitor.AssignStmt(self)
 
     def toJSON(self):
         d = super().toJSON()

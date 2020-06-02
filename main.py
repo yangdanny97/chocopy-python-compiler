@@ -8,10 +8,10 @@ from compiler.astnodes import Node
 
 def main():
     parser = argparse.ArgumentParser(description='Chocopy frontend')
-    parser.add_argument('-t', dest='typecheck', action='store_false',
-                    help='do not typecheck the AST')
-    parser.add_argument('-o', dest='output', action='store_false',
-                    help="output AST to stdout instead of to a JSON file")
+    parser.add_argument('-m', '--mode', dest='mode', choices=["parse", "tc", "llvm"], default="tc"
+                    help='modes:\nparse (output AST before typechecking)\ntc (output typechecked AST)\nllvm (output LLVM IR)')
+    parser.add_argument('-o', '--output', dest='output', action='store_false',
+                    help="output to stdout instead of file")
     parser.add_argument('--test-all', dest='testall', action='store_true',
                     help="run all test cases")
     parser.add_argument('--test-parse', dest='testparse', action='store_true',
@@ -44,10 +44,12 @@ def main():
         return
 
     if args.outfile is None:
-        if args.typecheck:
+        if args.mode == "tc":
             outfile = infile + ".ast.typed"
-        else:
+        elif args.mode == "parse":
             outfile = infile + ".ast"
+        elif args.mode == "llvm":
+            outfile = infile + ".ll"
 
     astparser = Parser()
     tree = compiler.parse(infile, astparser)
@@ -55,20 +57,25 @@ def main():
     if len(astparser.errors) > 0:
         for e in astparser.errors:
             print(e)
-    elif args.typecheck:
+            return
+    elif args.mode != "parse":
         tc = TypeChecker()
-        compiler.visit(tree, tc)
+        compiler.typecheck(tree, tc)
         if len(tc.errors) > 0:
             for e in astparser.errors:
                 print(e)
+                return
 
-    if args.output:
+    if args.mode in {"parse", "tc"}:
         ast_json = tree.toJSON()
-        with open(outfile, "w") as f:
-            json.dump(ast_json, f)
-    else:
-        if isinstance(tree, Node):
-            print(json.dumps(tree.toJSON()))
+        if args.output: # output to file
+            with open(outfile, "w") as f:
+                json.dump(ast_json, f)
+        else: # output to stdout
+            if isinstance(tree, Node):
+                print(json.dumps(ast_json))
+    elif args.mode == "llvm":
+        pass # TODO
 
 if __name__ == "__main__":
     main()

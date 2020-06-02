@@ -7,7 +7,10 @@ class Errors(Node):
         super().__init__(location, "Errors")
         self.errors = errors
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
+        pass
+
+    def visit(self, visitor):
         pass
 
     def toJSON(self):

@@ -8,8 +8,11 @@ class Node:
         self.location = location
         self.errorMsg = None
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         raise Exception('operation not supported')
+
+    def visit(self, visitor):
+        return Exception('operation not supported')
 
     def toJSON(self):
         d = {}

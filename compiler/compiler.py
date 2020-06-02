@@ -2,6 +2,7 @@ from .astnodes import *
 from .types import *
 from .typechecker import TypeChecker
 from .parser import Parser, ParseError
+from .llvmtranslator import LLVMTranslator
 import ast
 from pathlib import Path
 
@@ -27,7 +28,12 @@ class Compiler:
             return None
 
 
-    def visit(self, ast: Node, tc: TypeChecker):
+    def typecheck(self, ast: Node, tc: TypeChecker):
         # given an AST object, typecheck it
         # typechecking mutates the AST, adding types and errors
         ast.visit(tc)
+
+    def llvm(self, ast: Node, translator: LLVMTranslator):
+        pass # TODO
+
+    

@@ -7,8 +7,11 @@ class ExprStmt(Stmt):
         super().__init__(location, "ExprStmt")
         self.expr = expr
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         typechecker.visit(self.expr)
+
+    def visit(self, visitor):
+        return visitor.ExprStmt(self)
 
     def toJSON(self):
         d = super().toJSON()

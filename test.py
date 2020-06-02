@@ -73,7 +73,7 @@ def run_typecheck_test(test, compiler: Compiler)->bool:
     if len(astparser.errors) > 0:
         return False
     tc = TypeChecker()
-    compiler.visit(ast, tc)
+    compiler.typecheck(ast, tc)
     ast_json = ast.toJSON()
     with test.with_suffix(".py.ast.typed").open("r") as f:
         correct_json = json.load(f)

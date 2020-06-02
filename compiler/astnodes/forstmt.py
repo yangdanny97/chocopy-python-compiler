@@ -10,12 +10,15 @@ class ForStmt(Stmt):
         self.iterable = iterable
         self.body = [s for s in body if s is not None]
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         typechecker.visit(self.identifier)
         typechecker.visit(self.iterable)
         for s in self.body:
             typechecker.visit(s)
         return typechecker.ForStmt(self)
+
+    def visit(self, visitor):
+        return visitor.ForStmt(self)
 
     def toJSON(self):
         d = super().toJSON()

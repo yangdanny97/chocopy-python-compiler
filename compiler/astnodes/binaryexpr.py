@@ -8,10 +8,13 @@ class BinaryExpr(Expr):
         self.right = right
         self.operator = operator
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         typechecker.visit(self.left)
         typechecker.visit(self.right)
         return typechecker.BinaryExpr(self)
+
+    def visit(self, visitor):
+        return visitor.BinaryExpr(self)
 
     def toJSON(self):
         d = super().toJSON()

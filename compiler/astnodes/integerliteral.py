@@ -6,5 +6,8 @@ class IntegerLiteral(Literal):
         super().__init__(location, "IntegerLiteral")
         self.value = value
 
-    def visit(self, typechecker):
+    def tcvisit(self, typechecker):
         return typechecker.IntegerLiteral(self)
+
+    def visit(self, visitor):
+        return visitor.IntegerLiteral(self)
