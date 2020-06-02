@@ -18,3 +18,6 @@ class SymbolType:
 
     def toJSON(self):
         raise Exception("unsupported")
+
+    def llvmType(self, typeSystem):
+        raise Exception("unsupported")

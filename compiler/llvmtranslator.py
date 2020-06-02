@@ -3,6 +3,8 @@ from .types import *
 from collections import defaultdict
 from .typechecker import TypeChecker
 from .translator import Translator
+from .typesystem import TypeSystem
+import llvmlite
 
 
 class LLVMTranslator(Translator):
