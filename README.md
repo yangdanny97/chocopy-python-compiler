@@ -10,8 +10,8 @@ Most of the test cases are taken from test suites included in the release code f
 
 ## Requires:
 - Python 3.6 - 3.8
-- llvmlite
-- LLVM
+- llvmlite 0.32.1
+- LLVM >= 8.0.1
 
 ## Usage
 
