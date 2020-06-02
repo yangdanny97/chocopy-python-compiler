@@ -1,114 +1,93 @@
-from .astnodes import *
-from .types import *
-from collections import defaultdict
-from .typechecker import TypeChecker
-from .translator import Translator
-
-
-class LLVMTranslator(Translator):
-    def __init__(self, tc:TypeChecker):
-        self.tc = tc
-        pass # TODO setup
+class Translator:
 
     def visit(self, node: Node):
         return node.visit(self)
 
-    # set up standard library functions
-
-    def stdlibPrint(self):
-        pass # TODO
-
-    def stdlibLen(self):
-        pass # TODO
-
-    def stdlibInput(self):
-        pass # TODO
-
     # TOP LEVEL & DECLARATIONS
 
     def Program(self, node: Program):
-        pass # TODO
+        pass
 
     def VarDef(self, node: VarDef):
-        pass # TODO
+        pass
 
     def ClassDef(self, node: ClassDef):
-        pass # TODO
+        pass
 
     def FuncDef(self, node: FuncDef):
-        pass # TODO
+        pass
 
     # STATEMENTS
 
     def NonLocalDecl(self, node: NonLocalDecl):
-        pass # TODO
+        pass
 
     def GlobalDecl(self, node: GlobalDecl):
-        pass # TODO
+        pass
 
     def AssignStmt(self, node: AssignStmt):
-        pass # TODO
+        pass
 
     def IfStmt(self, node: IfStmt):
-        pass # TODO
+        pass
 
     def BinaryExpr(self, node: BinaryExpr):
-        pass # TODO
+        pass
 
     def IndexExpr(self, node: IndexExpr):
-        pass # TODO
+        pass
 
     def UnaryExpr(self, node: UnaryExpr):
-        pass # TODO
+        pass
 
     def CallExpr(self, node: CallExpr):
-        pass # TODO
+        pass
 
     def ForStmt(self, node: ForStmt):
-        pass # TODO
+        pass
 
     def ListExpr(self, node: ListExpr):
-        pass # TODO
+        pass
 
     def WhileStmt(self, node: WhileStmt):
-        pass # TODO
+        pass
 
     def ReturnStmt(self, node: ReturnStmt):
-        pass # TODO
+        pass
 
     def Identifier(self, node: Identifier):
-        pass # TODO
+        pass
 
     def MemberExpr(self, node: MemberExpr):
-        pass # TODO
+        pass
 
     def IfExpr(self, node: IfExpr):
-        pass # TODO
+        pass
 
     def MethodCallExpr(self, node: MethodCallExpr):
-        pass # TODO
+        pass
 
     # LITERALS
 
     def BooleanLiteral(self, node: BooleanLiteral):
-        pass # TODO
+        pass
 
     def IntegerLiteral(self, node: IntegerLiteral):
-        pass # TODO
+        pass
 
     def NoneLiteral(self, node: NoneLiteral):
-        pass # TODO
+        pass
 
     def StringLiteral(self, node: StringLiteral):
-        pass # TODO
+        pass
 
     # TYPES
 
     def TypedVar(self, node: TypedVar):
-        pass # TODO
+        pass
 
     def ListType(self, node: ListType):
-        pass # TODO
+        pass
 
     def ClassType(self, node: ClassType):
-        pass # TODO
+        pass
