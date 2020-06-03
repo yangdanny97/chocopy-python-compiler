@@ -8,88 +8,91 @@ class Translator:
     # TOP LEVEL & DECLARATIONS
 
     def Program(self, node: Program):
-        pass
+        raise NotImplementedError
 
     def VarDef(self, node: VarDef):
-        pass
+        raise NotImplementedError
 
     def ClassDef(self, node: ClassDef):
-        pass
+        raise NotImplementedError
 
     def FuncDef(self, node: FuncDef):
-        pass
+        raise NotImplementedError
 
     # STATEMENTS
 
     def NonLocalDecl(self, node: NonLocalDecl):
-        pass
+        raise NotImplementedError
 
     def GlobalDecl(self, node: GlobalDecl):
-        pass
+        raise NotImplementedError
 
     def AssignStmt(self, node: AssignStmt):
-        pass
+        raise NotImplementedError
 
     def IfStmt(self, node: IfStmt):
-        pass
+        raise NotImplementedError
+
+    def ExprStmt(self, node: ExprStmt):
+        raise NotImplementedError
 
     def BinaryExpr(self, node: BinaryExpr):
-        pass
+        raise NotImplementedError
 
     def IndexExpr(self, node: IndexExpr):
-        pass
+        raise NotImplementedError
 
     def UnaryExpr(self, node: UnaryExpr):
-        pass
+        raise NotImplementedError
 
     def CallExpr(self, node: CallExpr):
-        pass
+        raise NotImplementedError
 
     def ForStmt(self, node: ForStmt):
-        pass
+        raise NotImplementedError
 
     def ListExpr(self, node: ListExpr):
-        pass
+        raise NotImplementedError
 
     def WhileStmt(self, node: WhileStmt):
-        pass
+        raise NotImplementedError
 
     def ReturnStmt(self, node: ReturnStmt):
-        pass
+        raise NotImplementedError
 
     def Identifier(self, node: Identifier):
-        pass
+        raise NotImplementedError
 
     def MemberExpr(self, node: MemberExpr):
-        pass
+        raise NotImplementedError
 
     def IfExpr(self, node: IfExpr):
-        pass
+        raise NotImplementedError
 
     def MethodCallExpr(self, node: MethodCallExpr):
-        pass
+        raise NotImplementedError
 
     # LITERALS
 
     def BooleanLiteral(self, node: BooleanLiteral):
-        pass
+        raise NotImplementedError
 
     def IntegerLiteral(self, node: IntegerLiteral):
-        pass
+        raise NotImplementedError
 
     def NoneLiteral(self, node: NoneLiteral):
-        pass
+        raise NotImplementedError
 
     def StringLiteral(self, node: StringLiteral):
-        pass
+        raise NotImplementedError
 
     # TYPES
 
     def TypedVar(self, node: TypedVar):
-        pass
+        raise NotImplementedError
 
     def ListType(self, node: ListType):
-        pass
+        raise NotImplementedError
 
     def ClassType(self, node: ClassType):
-        pass
+        raise NotImplementedError
