@@ -35,6 +35,8 @@ class LLVMTranslator(Translator):
         self.stdInput()
 
         self.builder = ir.IRBuilder()
+        self.currentClass = None  # name of current class
+        self.expReturnType = None  # expected return type of current function
 
     def visit(self, node: Node):
         return node.visit(self)
@@ -117,7 +119,14 @@ class LLVMTranslator(Translator):
         pass  # TODO
 
     def ReturnStmt(self, node: ReturnStmt):
-        pass  # TODO
+        if node.value is None or isinstance(node.value, NoneLiteral):
+            if isinstance(self.expReturnType, ir.VoidType):
+                self.builder.ret_void()
+            else:
+                self.builder.ret(ir.Constant(self.expReturnType.as_pointer(), None))
+        else:
+            val = self.visit(node.value)
+            self.builder.ret(val)
 
     def Identifier(self, node: Identifier):
         pass  # TODO
@@ -140,7 +149,7 @@ class LLVMTranslator(Translator):
         return ir.Constant(self.INT_TYPE, node.value)
 
     def NoneLiteral(self, node: NoneLiteral):
-        return ir.Constant(self.classTypes["object"], None)
+        return ir.Constant(self.classTypes["object"].as_pointer(), None)
 
     def StringLiteral(self, node: StringLiteral):
         return ir.Constant.literal_struct([
