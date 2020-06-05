@@ -1,7 +1,7 @@
 from .astnodes import *
 from .types import *
 from collections import defaultdict
-from .typesystem import TypeSystem
+from .typesystem import TypeSystem, ClassInfo
 
 
 class TypeChecker:
@@ -73,100 +73,6 @@ class TypeChecker:
         # return if the name was defined in the current scope
         return self.symbolTable[-1][var] is not None
 
-    # CLASSES
-
-    def getMethod(self, className: str, methodName: str):
-        if methodName not in self.ts.classes[className]:
-            if self.ts.superclasses[className] is None:
-                return None
-            return self.getMethod(self.ts.superclasses[className], methodName)
-        if not isinstance(self.ts.classes[className][methodName], FuncType):
-            return None
-        return self.ts.classes[className][methodName]
-
-    def getAttr(self, className: str, attrName: str):
-        if attrName not in self.ts.classes[className]:
-            if self.ts.superclasses[className] is None:
-                return None
-            return self.getAttr(self.ts.superclasses[className], attrName)
-        if not isinstance(self.ts.classes[className][attrName], ValueType):
-            return None
-        return self.ts.classes[className][attrName]
-
-    def getAttrOrMethod(self, className: str, name: str):
-        if name not in self.ts.classes[className]:
-            if self.ts.superclasses[className] is None:
-                return None
-            return self.getAttrOrMethod(self.ts.superclasses[className], name)
-        return self.ts.classes[className][name]
-
-    def classExists(self, className: str) -> bool:
-        # we cannot check for None because it is a defaultdict
-        return className in self.ts.classes
-
-    # TYPE HIERARCHY UTILS
-
-    def isSubClass(self, a: str, b: str) -> bool:
-        # return if a is the same class or subclass of b
-        curr = a
-        while curr is not None:
-            if curr == b:
-                return True
-            else:
-                curr = self.ts.superclasses[curr]
-        return False
-
-    def isSubtype(self, a: ValueType, b: ValueType) -> bool:
-        # return if a is a subtype of b
-        if b == ObjectType():
-            return True
-        if isinstance(a, ClassValueType) and isinstance(b, ClassValueType):
-            return self.isSubClass(a.className, b.className)
-        return a == b
-
-    def canAssign(self, a: ValueType, b: ValueType) -> bool:
-        # return if value of type a can be assigned/passed to type b (ex: b = a)
-        if self.isSubtype(a, b):
-            return True
-        if a == NoneType() and b not in [IntType(), StrType(), BoolType()]:
-            return True
-        if isinstance(b, ListValueType) and a == EmptyType():
-            return True
-        if (isinstance(b, ListValueType) and isinstance(a, ListValueType)
-                and a.elementType == NoneType()):
-            return self.canAssign(a.elementType, b.elementType)
-        return False
-
-    def join(self, a: ValueType, b: ValueType):
-        # return closest mutual ancestor on typing tree
-        if self.canAssign(a, b):
-            return b
-        if self.canAssign(b, a):
-            return a
-        if isinstance(b, ListValueType) and isinstance(a, ListValueType):
-            return ListValueType(self.join(b.elementType, a.elementType))
-        # if only 1 of the types is a list then the closest ancestor is object
-        if isinstance(b, ListValueType) or isinstance(a, ListValueType):
-            return ObjectType()
-        # for 2 classes that aren't related by subtyping
-        # find paths from A & B to root of typing tree
-        aAncestors = []
-        bAncestors = []
-        while self.ts.superclasses[a] is not None:
-            aAncestors.append(self.ts.superclasses[a])
-            a = self.ts.superclasses[a]
-        while self.ts.superclasses[b] is not None:
-            aAncestors.append(self.ts.superclasses[b])
-            b = self.ts.superclasses[b]
-        # reverse lists to find lowest common ancestor
-        aAncestors = aAncestors[::-1]
-        bAncestors = bAncestors[::-1]
-        for i in range(min(len(aAncestors), len(bAncestors))):
-            if aAncestors[i] != bAncestors[i]:
-                return aAncestors[i-1]
-        # this really shouldn't be returned
-        return ObjectType()
-
     # ERROR HANDLING
 
     def addError(self, node: Node, message: str):
@@ -188,22 +94,21 @@ class TypeChecker:
         self.program = node
         for d in node.declarations:
             identifier = d.getIdentifier()
-            if self.defInCurrentScope(identifier.name) or self.classExists(identifier.name):
+            if self.defInCurrentScope(identifier.name) or self.ts.classExists(identifier.name):
                 self.addError(
                     identifier, F"Duplicate declaration of identifier: {identifier.name}")
             if isinstance(d, ClassDef):
                 className = d.name.name
                 superclass = d.superclass.name
-                if not self.classExists(superclass):
+                if not self.ts.classExists(superclass):
                     self.addError(d.superclass,
                                   F"Unknown superclass: {superclass}")
-                    continue
+                    superclass = "object"
                 if superclass in ["int", "bool", "str", className]:
                     self.addError(d.superclass,
                                   F"Illegal superclass: {superclass}")
-                    continue
-                self.ts.classes[d.name.name] = {}
-                self.ts.superclasses[className] = superclass
+                    superclass = "object"
+                self.ts.classes[className] = ClassInfo(className, superclass)
             if isinstance(d, FuncDef):
                 self.addType(d.getIdentifier().name, self.getSignature(d))
             if isinstance(d, VarDef):
@@ -220,7 +125,7 @@ class TypeChecker:
     def VarDef(self, node: VarDef):
         varName = node.getIdentifier().name
         annotationType = self.visit(node.var)
-        if not self.canAssign(node.value.inferredType, annotationType):
+        if not self.ts.canAssign(node.value.inferredType, annotationType):
             self.addError(
                 node, F"Expected {annotationType}, got {node.value.inferredType}")
         return annotationType
@@ -233,11 +138,11 @@ class TypeChecker:
             if isinstance(d, FuncDef):  # methods
                 funcName = d.getIdentifier().name
                 funcType = self.getSignature(d)
-                if funcName in self.ts.classes[className]:
+                if funcName in self.ts.classes[className].methods or funcName in self.ts.classes[className].attrs:
                     self.addError(d.getIdentifier(),
                                   F"Duplicate declaration of identifier: {funcName}")
                     continue
-                t = self.getAttrOrMethod(className, funcName)
+                t = self.ts.getAttrOrMethod(className, funcName)
                 if t is not None:
                     if not isinstance(t, FuncType):
                         self.addError(d.getIdentifier(),
@@ -248,15 +153,15 @@ class TypeChecker:
                         self.addError(d.getIdentifier(),
                                       F"Redefined method doesn't match superclass signature: {funcName}")
                         continue
-                self.ts.classes[className][funcName] = funcType
+                self.ts.classes[className].methods[funcName] = funcType
             if isinstance(d, VarDef):  # attributes
                 attrName = d.getIdentifier().name
-                if self.getAttrOrMethod(className, attrName):
+                if self.ts.getAttrOrMethod(className, attrName):
                     self.addError(d.getIdentifier(),
                                   F"Cannot redefine attribute: {attrName}")
                     continue
-                self.ts.classes[className][attrName] = self.visit(
-                    d.var)
+                self.ts.classes[className].attrs[attrName] = (self.visit(
+                    d.var), d.value)
         for d in node.declarations:
             self.visit(d)
         self.currentClass = None
@@ -273,7 +178,7 @@ class TypeChecker:
         funcType = FuncType([self.visit(t) for t in node.params], rType)
         self.expReturnType = rType
         if not node.isMethod:  # top level function decl OR nested function
-            if self.classExists(funcName):
+            if self.ts.classExists(funcName):
                 self.addError(node.getIdentifier(),
                               F"Functions cannot shadow classes: {funcName}")
                 return
@@ -292,7 +197,7 @@ class TypeChecker:
         for p in node.params:
             t = self.visit(p)
             pName = p.identifier.name
-            if self.defInCurrentScope(pName) or self.classExists(pName):
+            if self.defInCurrentScope(pName) or self.ts.classExists(pName):
                 self.addError(
                     p.identifier, F"Duplicate parameter name: {pName}")
                 continue
@@ -302,7 +207,7 @@ class TypeChecker:
         for d in node.declarations:
             identifier = d.getIdentifier()
             name = identifier.name
-            if self.defInCurrentScope(name) or self.classExists(name):
+            if self.defInCurrentScope(name) or self.ts.classExists(name):
                 self.addError(
                     identifier, F"Duplicate declaration of identifier: {name}")
                 continue
@@ -320,7 +225,7 @@ class TypeChecker:
             self.visit(s)
             if s.isReturn:
                 hasReturn = True
-        if (not hasReturn) and (not self.canAssign(NoneType(), self.expReturnType)):
+        if (not hasReturn) and (not self.ts.canAssign(NoneType(), self.expReturnType)):
             self.addError(node.getIdentifier(
             ), F"Expected return statement of type {self.expReturnType}")
         self.expReturnType = None
@@ -369,7 +274,7 @@ class TypeChecker:
                     self.addError(
                         t, F"Identifier not defined in current scope: {t.name}")
                     return
-                if not self.canAssign(node.value.inferredType, t.inferredType):
+                if not self.ts.canAssign(node.value.inferredType, t.inferredType):
                     self.addError(
                         node, F"Expected {t.inferredType}, got {node.value.inferredType}")
                     return
@@ -402,7 +307,7 @@ class TypeChecker:
         if operator == "+":
             if isinstance(leftType, ListValueType) and isinstance(rightType, ListValueType):
                 node.inferredType = ListValueType(
-                    self.join(leftType.elementType, rightType.elementType))
+                    self.ts.join(leftType.elementType, rightType.elementType))
                 return node.inferredType
             elif leftType == rightType and leftType in {StrType(), IntType()}:
                 node.inferredType = leftType
@@ -489,15 +394,15 @@ class TypeChecker:
     def CallExpr(self, node: CallExpr):
         fname = node.function.name
         t = None
-        if self.classExists(fname):
+        if self.ts.classExists(fname):
             # constructor
-            t = self.getMethod(fname, "__init__")
+            t = self.ts.getMethod(fname, "__init__")
             if len(t.parameters) != len(node.args) + 1:
                 self.addError(
                     node, F"Expected {len(t.parameters) - 1} args, got {len(node.args)}")
             else:
                 for i in range(len(t.parameters) - 1):
-                    if not self.canAssign(node.args[i].inferredType, t.parameters[i + 1]):
+                    if not self.ts.canAssign(node.args[i].inferredType, t.parameters[i + 1]):
                         self.addError(
                             node, F"Expected {t.parameters[i + 1]}, got {node.args[i].inferredType}")
                         continue
@@ -513,7 +418,7 @@ class TypeChecker:
                     node, F"Expected {len(t.parameters)} args, got {len(node.args)}")
             else:
                 for i in range(len(t.parameters)):
-                    if not self.canAssign(node.args[i].inferredType, t.parameters[i]):
+                    if not self.ts.canAssign(node.args[i].inferredType, t.parameters[i]):
                         self.addError(
                             node, F"Expected {t.parameters[i]}, got {node.args[i].inferredType}")
                         continue
@@ -525,12 +430,12 @@ class TypeChecker:
         # set isReturn=True if any statement in body has isReturn=True
         iterType = node.iterable.inferredType
         if isinstance(iterType, ListValueType):
-            if not self.canAssign(iterType.elementType, node.identifier.inferredType):
+            if not self.ts.canAssign(iterType.elementType, node.identifier.inferredType):
                 self.addError(
                     node.identifier, F"Expected {iterType.elementType}, got {node.identifier.inferredType}")
                 return
         elif StrType() == iterType:
-            if not self.canAssign(StrType(), node.identifier.inferredType):
+            if not self.ts.canAssign(StrType(), node.identifier.inferredType):
                 self.addError(
                     node.identifier, F"Expected {StrType()}, got {node.identifier.inferredType}")
                 return
@@ -548,7 +453,7 @@ class TypeChecker:
         else:
             e_type = node.elements[0].inferredType
             for e in node.elements:
-                e_type = self.join(e_type, e.inferredType)
+                e_type = self.ts.join(e_type, e.inferredType)
             node.inferredType = ListValueType(e_type)
         return node.inferredType
 
@@ -566,10 +471,10 @@ class TypeChecker:
             self.addError(
                 node, "Return statement outside of function definition")
         elif node.value is None:
-            if not self.canAssign(NoneType(), self.expReturnType):
+            if not self.ts.canAssign(NoneType(), self.expReturnType):
                 self.addError(
                     node, F"Expected {self.expReturnType}, got {NoneType()}")
-        elif not self.canAssign(node.value.inferredType, self.expReturnType):
+        elif not self.ts.canAssign(node.value.inferredType, self.expReturnType):
             self.addError(
                 node, F"Expected {self.expReturnType}, got {node.value.inferredType}")
         return
@@ -595,20 +500,20 @@ class TypeChecker:
                 node, F"Expected object, got {node.object.inferredType}")
         else:
             class_name, member_name = node.object.inferredType.className, node.member.name
-            if self.getAttr(class_name, member_name) is None:
+            if self.ts.getAttr(class_name, member_name) is None:
                 self.addError(
                     node, F"Attribute {member_name} doesn't exist for class {class_name}")
                 node.inferredType = ObjectType()
                 return ObjectType()
             else:
-                node.inferredType = self.getAttr(class_name, member_name)
+                node.inferredType = self.ts.getAttr(class_name, member_name)
         return node.inferredType
 
     def IfExpr(self, node: IfExpr):
         if node.condition.inferredType != BoolType():
             self.addError(
                 F"Expected boolean, got {node.condition.inferredType}")
-        node.inferredType = self.join(
+        node.inferredType = self.ts.join(
             node.thenExpr.inferredType, node.elseExpr.inferredType)
         return node.inferredType
 
@@ -625,20 +530,20 @@ class TypeChecker:
             return node.inferredType
         else:
             class_name, member_name = method_member.object.inferredType.className, method_member.member.name
-            if self.getMethod(class_name, member_name) is None:
+            if self.ts.getMethod(class_name, member_name) is None:
                 self.addError(
                     node, F"Method {member_name} doesn't exist for class {class_name}")
                 node.inferredType = ObjectType()
                 return node.inferredType
             else:
-                t = self.getMethod(class_name, member_name)
+                t = self.ts.getMethod(class_name, member_name)
         # self arguments
         if len(t.parameters) != len(node.args) + 1:
             self.addError(
                 node, F"Expected {len(t.parameters) - 1} args, got {len(node.args)}")
         else:
             for i in range(len(t.parameters) - 1):
-                if not self.canAssign(node.args[i].inferredType, t.parameters[i + 1]):
+                if not self.ts.canAssign(node.args[i].inferredType, t.parameters[i + 1]):
                     self.addError(
                         node, F"Expected {t.parameters[i + 1]}, got {node.args[i].inferredType}")
                     continue
@@ -674,7 +579,7 @@ class TypeChecker:
         return ListValueType(self.visit(node.elementType))
 
     def ClassType(self, node: ClassType):
-        if node.className not in {"<None>", "<Empty>"} and not self.classExists(node.className):
+        if node.className not in {"<None>", "<Empty>"} and not self.ts.classExists(node.className):
             self.addError(node, F"Unknown class: {node.className}")
             return ObjectType()
         else:

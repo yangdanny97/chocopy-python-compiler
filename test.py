@@ -69,17 +69,21 @@ def run_parse_test(test, bad=True)->bool:
             return ast_equals(ast_json, correct_json)
 
 def run_typecheck_test(test)->bool:
-    compiler = Compiler()
-    astparser = compiler.parser
-    ast = compiler.parse(test)
-    if len(astparser.errors) > 0:
-        return False
-    tc = compiler.typechecker
-    compiler.typecheck(ast)
-    ast_json = ast.toJSON()
-    with test.with_suffix(".py.ast.typed").open("r") as f:
-        correct_json = json.load(f)
-        return ast_equals(ast_json, correct_json)
+    try:
+        compiler = Compiler()
+        astparser = compiler.parser
+        ast = compiler.parse(test)
+        if len(astparser.errors) > 0:
+            return False
+        tc = compiler.typechecker
+        compiler.typecheck(ast)
+        ast_json = ast.toJSON()
+        with test.with_suffix(".py.ast.typed").open("r") as f:
+            correct_json = json.load(f)
+            return ast_equals(ast_json, correct_json)
+    except Exception as e:
+        print("Internal compiler error:", test)
+        raise e
 
 def ast_equals(d1, d2)->bool:
     # precondition: the input dict must represent a well-formed AST

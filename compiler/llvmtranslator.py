@@ -21,22 +21,24 @@ class LLVMTranslator(Translator):
 
         self.INT_TYPE = ir.IntType(64)
         self.BOOL_TYPE = ir.BoolType(64)
-        self.STR_TYPE = ir.ArrayType(ir.IntType(8), 0)
 
         self.classTypes = defaultdict(lambda: None)
         # strings are variable-length arrays of i8
         self.classTypes["str"] = ir.LiteralStructType(ir.context.global_context,
-                                                      [ir.IntType(8), ir.ArrayType(ir.IntType(8), 0)])
+                                                      [ir.IntType(64), ir.ArrayType(ir.IntType(8), 0)])
         # object is empty struct
         self.classTypes["object"] = ir.LiteralStructType(ir.context.global_context, [])
-        
-        self.stdPrint()
-        self.stdLen()
-        self.stdInput()
+        self.classLayouts = defaultdict(lambda: None)
 
         self.builder = ir.IRBuilder()
         self.currentClass = None  # name of current class
         self.expReturnType = None  # expected return type of current function
+
+        self.setupClasses()
+
+        self.stdPrint()
+        self.stdLen()
+        self.stdInput()
 
     def visit(self, node: Node):
         return node.visit(self)
@@ -45,33 +47,64 @@ class LLVMTranslator(Translator):
 
     def stdPrint(self):
         # may need different prints for different types
-        pass  # TODO
+        raise NotImplementedError
 
     def stdLen(self):
-        pass  # TODO
+        raise NotImplementedError
 
     def stdInput(self):
-        pass  # TODO
+        raise NotImplementedError
+
+    # utils
+
+    def setupClasses(self):
+        done = {"str", "object", "int", "bool", "<Empty>", "<None>"}
+        todo = []
+        pass # TODO
+
+    # convert Chocopy type to LLVM type, with 
+    # optional flag to return in pointer form for classes & lists
+    def typeToLLVM(self, t, aspointer=False):
+        if isinstance(t, ClassValueType):
+            if t == ts.INT_TYPE:
+                return self.INT_TYPE
+            if t == ts.BOOL_TYPE:
+                return self.BOOL_TYPE
+            if t == ts.EMPTY_TYPE: # pointer to empty list
+                return self.typeToLLVM(ListValueType(ClassValueType("object")), True)
+            if t == ts.NONE_TYPE: # null pointer
+                return self.classTypes["object"].as_pointer()
+            typ = self.classTypes[t.className]
+            return typ.as_pointer() if aspointer else typ
+        elif isinstance(t, ListValueType):
+            elementType = self.typeToLLVM(t.elementType)
+            typ = ir.LiteralStructType(ir.context.global_context,
+                [ir.IntType(64), ir.ArrayType(ir.IntType(8), 0)])
+            return typ.as_pointer() if aspointer else typ
+        elif isinstance(t, FuncValueType):
+            parameters = [self.typeToLLVM(x, True) for x in t.parameters]
+            returnType = self.typeToLLVM(t.returnType, True)
+            return ir.FunctionType(returnType, parameters)
 
     # TOP LEVEL & DECLARATIONS
 
     def Program(self, node: Program):
-        pass  # TODO
+        raise NotImplementedError
 
     def VarDef(self, node: VarDef):
-        pass  # TODO
+        raise NotImplementedError
 
     def ClassDef(self, node: ClassDef):
-        pass  # TODO
+        raise NotImplementedError
 
     def FuncDef(self, node: FuncDef):
-        pass  # TODO
+        raise NotImplementedError
 
     def NonLocalDecl(self, node: NonLocalDecl):
-        pass  # TODO
+        raise NotImplementedError
 
     def GlobalDecl(self, node: GlobalDecl):
-        pass  # TODO
+        raise NotImplementedError
 
     # STATEMENTS & EXPRESSIONS
 
@@ -79,7 +112,7 @@ class LLVMTranslator(Translator):
         self.visit(node.expr)
 
     def AssignStmt(self, node: AssignStmt):
-        pass  # TODO
+        raise NotImplementedError
 
     def IfStmt(self, node: IfStmt):
         pred = self.visit(node.condition)
@@ -98,25 +131,25 @@ class LLVMTranslator(Translator):
                         self.visit(s)
 
     def BinaryExpr(self, node: BinaryExpr):
-        pass  # TODO
+        raise NotImplementedError
 
     def IndexExpr(self, node: IndexExpr):
-        pass  # TODO
+        raise NotImplementedError
 
     def UnaryExpr(self, node: UnaryExpr):
-        pass  # TODO
+        raise NotImplementedError
 
     def CallExpr(self, node: CallExpr):
-        pass  # TODO
+        raise NotImplementedError
 
     def ForStmt(self, node: ForStmt):
-        pass  # TODO
+        raise NotImplementedError
 
     def ListExpr(self, node: ListExpr):
-        pass  # TODO
+        raise NotImplementedError
 
     def WhileStmt(self, node: WhileStmt):
-        pass  # TODO
+        raise NotImplementedError
 
     def ReturnStmt(self, node: ReturnStmt):
         if node.value is None or isinstance(node.value, NoneLiteral):
@@ -129,16 +162,16 @@ class LLVMTranslator(Translator):
             self.builder.ret(val)
 
     def Identifier(self, node: Identifier):
-        pass  # TODO
+        raise NotImplementedError
 
     def MemberExpr(self, node: MemberExpr):
-        pass  # TODO
+        raise NotImplementedError
 
     def IfExpr(self, node: IfExpr):
-        pass  # TODO
+        raise NotImplementedError
 
     def MethodCallExpr(self, node: MethodCallExpr):
-        pass  # TODO
+        raise NotImplementedError
 
     # LITERALS
 
@@ -160,10 +193,10 @@ class LLVMTranslator(Translator):
     # TYPES
 
     def TypedVar(self, node: TypedVar):
-        pass  # TODO
+        raise NotImplementedError
 
     def ListType(self, node: ListType):
-        pass  # TODO
+        raise NotImplementedError
 
     def ClassType(self, node: ClassType):
-        pass  # TODO
+        raise NotImplementedError
