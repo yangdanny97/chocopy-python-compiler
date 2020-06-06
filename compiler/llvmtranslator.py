@@ -24,15 +24,18 @@ class LLVMTranslator(Translator):
 
         self.classTypes = defaultdict(lambda: None)
         # strings are variable-length arrays of i8
-        self.classTypes["str"] = ir.LiteralStructType(ir.context.global_context,
-                                                      [ir.IntType(64), ir.ArrayType(ir.IntType(8), 0)])
-        # object is empty struct
-        self.classTypes["object"] = ir.LiteralStructType(ir.context.global_context, [])
-        self.classLayouts = defaultdict(lambda: None)
+        strType = self.module.context.get_identified_type("str")
+        strType.set_body([ir.IntType(64), ir.ArrayType(ir.IntType(8), 0)])
+        self.classTypes["str"] = strType
 
-        self.builder = ir.IRBuilder()
-        self.currentClass = None  # name of current class
-        self.expReturnType = None  # expected return type of current function
+        # object is empty struct
+        objType=self.module.context.get_identified_type("object")
+        objType.set_body([])
+        self.classTypes["object"]=objType
+
+        self.builder=ir.IRBuilder()
+        self.currentClass=None  # name of current class
+        self.expReturnType=None  # expected return type of current function
 
         self.setupClasses()
 
@@ -58,30 +61,36 @@ class LLVMTranslator(Translator):
     # utils
 
     def setupClasses(self):
-        done = {"str", "object", "int", "bool", "<Empty>", "<None>"}
-        todo = []
-        pass # TODO
+        # set up struct types for each class
+        exclude={"str", "object", "int", "bool", "<Empty>", "<None>"}
+        for c in self.ts.classes:
+            if c not in exclude:
+                attrs=self.ts.getOrderedAttrs(c)
+                attrTypes=[self.typeToLLVM(x[1], True) for x in attrs]
+                typ=self.module.context.get_identified_type(c)
+                typ.set_body(attrTypes)
+                self.classTypes[c]=typ
 
-    # convert Chocopy type to LLVM type, with 
+    # convert Chocopy type to LLVM type, with
     # optional flag to return in pointer form for classes & lists
-    def typeToLLVM(self, t, aspointer=False):
+    def typeToLLVM(self, t, aspointer = False):
         if isinstance(t, ClassValueType):
             if t == ts.INT_TYPE:
                 return self.INT_TYPE
             if t == ts.BOOL_TYPE:
                 return self.BOOL_TYPE
-            if t == ts.EMPTY_TYPE: # pointer to empty list
+            if t == ts.EMPTY_TYPE:  # pointer to empty list
                 return self.typeToLLVM(ListValueType(ClassValueType("object")), True)
-            if t == ts.NONE_TYPE: # null pointer
-                return self.classTypes["object"].as_pointer()
-            typ = self.classTypes[t.className]
+            if t == ts.NONE_TYPE:  # null pointer
+                return self.module.context.get_identified_type("object").as_pointer()
+            typ=self.module.context.get_identified_type(t.className)
             return typ.as_pointer() if aspointer else typ
         elif isinstance(t, ListValueType):
-            elementType = self.typeToLLVM(t.elementType)
-            typ = ir.LiteralStructType(ir.context.global_context,
+            elementType=self.typeToLLVM(t.elementType)
+            typ=ir.LiteralStructType(self.module.context,
                 [ir.IntType(64), ir.ArrayType(ir.IntType(8), 0)])
             return typ.as_pointer() if aspointer else typ
-        elif isinstance(t, FuncValueType):
+        elif isinstance(t, FuncType):
             parameters = [self.typeToLLVM(x, True) for x in t.parameters]
             returnType = self.typeToLLVM(t.returnType, True)
             return ir.FunctionType(returnType, parameters)
@@ -185,10 +194,10 @@ class LLVMTranslator(Translator):
         return ir.Constant(self.classTypes["object"].as_pointer(), None)
 
     def StringLiteral(self, node: StringLiteral):
-        return ir.Constant.literal_struct([
-            ir.Constant(self.INT_TYPE, len(node.value)), 
-            ir.Constant(ir.ArrayType(ir.IntType(8), 0), [ord(x) for x in node.value])
-            ])
+        value = [ord(x) for x in node.value]
+        strType = self.module.get_identified_types("str")
+        return strType([ir.Constant(self.INT_TYPE, len(node.value)), 
+            ir.Constant(ir.ArrayType(ir.IntType(8), 0), value)])
 
     # TYPES
 

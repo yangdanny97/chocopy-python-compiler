@@ -162,6 +162,7 @@ class TypeChecker:
                     continue
                 self.ts.classes[className].attrs[attrName] = (self.visit(
                     d.var), d.value)
+                self.ts.classes[className].orderedAttrs.append(attrName)
         for d in node.declarations:
             self.visit(d)
         self.currentClass = None

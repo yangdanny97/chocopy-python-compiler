@@ -7,6 +7,7 @@ class ClassInfo:
         self.superclass = superclass
         self.attrs = defaultdict(lambda: None) # (attr type, init value)
         self.methods = defaultdict(lambda: None) # type of method
+        self.orderedAttrs = []
     
     def __str__(self):
         return F"class {self.name}({self.superclass}): {self.attrs} {self.methods}"
@@ -35,27 +36,43 @@ class TypeSystem:
         self.classes["<None>"] = ClassInfo("<None>", "object")
         self.classes["<Empty>"] = ClassInfo("<Empty>", "object")
 
-    def getMethod(self, className: str, methodName: str):
+    def getMethodHelper(self, className: str, methodName: str):
         # requires className to be the name of a valid class
         if methodName not in self.classes[className].methods:
             if self.classes[className].superclass is None:
-                return None
-            return self.getMethod(self.classes[className].superclass, methodName)
-        if not isinstance(self.classes[className].methods[methodName], FuncType):
-            return None
-        return self.classes[className].methods[methodName]
+                return (None, None)
+            return self.getMethodHelper(self.classes[className].superclass, methodName)
+        return (self.classes[className].methods[methodName], className)
 
-    def getAttr(self, className: str, attrName: str):
+    def getMethod(self, className: str, methodName: str):
+        # requires className to be the name of a valid class
+        return self.getMethodHelper(className, methodName)[0]
+
+    def getMethodDefClass(self, className: str, methodName: str):
+        # returns the class that the method was originally defined in
+        # requires className to be the name of a valid class
+        return self.getMethodHelper(className, methodName)[1]
+
+    def getAttrHelper(self, className: str, attrName: str):
         # requires className to be the name of a valid class
         if attrName not in self.classes[className].attrs:
             if self.classes[className].superclass is None:
-                return None
-            return self.getAttr(self.classes[className].superclass, attrName)
-        if not isinstance(self.classes[className].attrs[attrName][0], ValueType):
-            return None
-        return self.classes[className].attrs[attrName][0]
+                return (None, None)
+            return self.getAttrHelper(self.classes[className].superclass, attrName)
+        return self.classes[className].attrs[attrName]
+
+    def getAttr(self, className: str, attrName: str):
+        # returns type of attribute
+        # requires className to be the name of a valid class
+        return self.getAttrHelper(className, attrName)[0]
+
+    def getAttrInit(self, className: str, attrName: str):
+        # returns initial value of attribute
+        # requires className to be the name of a valid class
+        return self.getAttrHelper(className, attrName)[1]
 
     def getAttrOrMethod(self, className: str, name: str):
+        # returns type of attribute or method
         # requires className to be the name of a valid class
         if name in self.classes[className].methods:
             return self.classes[className].methods[name]
@@ -133,8 +150,22 @@ class TypeSystem:
         # this really shouldn't be returned
         return ObjectType()
 
-    def getMethods(self, className: str):
-        pass # TODO
+    def getAllMethods(self, className: str):
+        # return map of method names to tuples of 
+        # (signature, classname of their definition)
+        methods = {}
+        if self.classes[className].superclass is not None:
+            methods = self.getAllMethods(self.classes[className].superclass)
+        for name in self.classes[className].methods:
+            methods[name] = (self.classes[className].methods[name], className)
+        return methods
 
-    def getAttrs(self, className:str):
-        pass # TODO
+    def getOrderedAttrs(self, className:str):
+        # return list of (name, type, init value) triples
+        attrs = []
+        if self.classes[className].superclass is not None:
+            attr = self.getOrderedAttrs(self.classes[className].superclass)
+        for attr in self.classes[className].orderedAttrs:
+            attrType, attrInit = self.classes[className].attrs[attr]
+            attrs.append((attr, attrType, attrInit))
+        return attrs
