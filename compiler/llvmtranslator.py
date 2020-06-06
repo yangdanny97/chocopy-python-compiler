@@ -29,13 +29,13 @@ class LLVMTranslator(Translator):
         self.classTypes["str"] = strType
 
         # object is empty struct
-        objType=self.module.context.get_identified_type("object")
+        objType = self.module.context.get_identified_type("object")
         objType.set_body([])
-        self.classTypes["object"]=objType
+        self.classTypes["object"] = objType
 
-        self.builder=ir.IRBuilder()
-        self.currentClass=None  # name of current class
-        self.expReturnType=None  # expected return type of current function
+        self.builder = ir.IRBuilder()
+        self.currentClass = None  # name of current class
+        self.expReturnType = None  # expected return type of current function
 
         self.setupClasses()
 
@@ -62,18 +62,18 @@ class LLVMTranslator(Translator):
 
     def setupClasses(self):
         # set up struct types for each class
-        exclude={"str", "object", "int", "bool", "<Empty>", "<None>"}
+        exclude = {"str", "object", "int", "bool", "<Empty>", "<None>"}
         for c in self.ts.classes:
             if c not in exclude:
-                attrs=self.ts.getOrderedAttrs(c)
-                attrTypes=[self.typeToLLVM(x[1], True) for x in attrs]
-                typ=self.module.context.get_identified_type(c)
+                attrs = self.ts.getOrderedAttrs(c)
+                attrTypes = [self.typeToLLVM(x[1], True) for x in attrs]
+                typ = self.module.context.get_identified_type(c)
                 typ.set_body(attrTypes)
-                self.classTypes[c]=typ
+                self.classTypes[c] = typ
 
     # convert Chocopy type to LLVM type, with
     # optional flag to return in pointer form for classes & lists
-    def typeToLLVM(self, t, aspointer = False):
+    def typeToLLVM(self, t, aspointer=False):
         if isinstance(t, ClassValueType):
             if t == ts.INT_TYPE:
                 return self.INT_TYPE
@@ -83,12 +83,12 @@ class LLVMTranslator(Translator):
                 return self.typeToLLVM(ListValueType(ClassValueType("object")), True)
             if t == ts.NONE_TYPE:  # null pointer
                 return self.module.context.get_identified_type("object").as_pointer()
-            typ=self.module.context.get_identified_type(t.className)
+            typ = self.module.context.get_identified_type(t.className)
             return typ.as_pointer() if aspointer else typ
         elif isinstance(t, ListValueType):
-            elementType=self.typeToLLVM(t.elementType)
-            typ=ir.LiteralStructType(self.module.context,
-                [ir.IntType(64), ir.ArrayType(ir.IntType(8), 0)])
+            elementType = self.typeToLLVM(t.elementType)
+            typ = ir.LiteralStructType(self.module.context,
+                                       [ir.IntType(64), ir.ArrayType(ir.IntType(8), 0)])
             return typ.as_pointer() if aspointer else typ
         elif isinstance(t, FuncType):
             parameters = [self.typeToLLVM(x, True) for x in t.parameters]
@@ -140,13 +140,59 @@ class LLVMTranslator(Translator):
                         self.visit(s)
 
     def BinaryExpr(self, node: BinaryExpr):
-        raise NotImplementedError
+        left = self.visit(node.left)
+        right = self.visit(node.right)
+        leftType = node.left.inferredType
+        rightType = node.right.inferredType
+
+        # concatenation and addition
+        if operator == "+":
+            if isinstance(leftType, ListValueType) and isinstance(rightType, ListValueType):
+                raise NotImplementedError  # TODO list concat
+            elif leftType == StrType() and rightType == StrType():
+                raise NotImplementedError  # TODO concat
+            elif leftType == IntType() and rightType == IntType():
+                return self.builder.add(left, right)
+        elif operator == "-":
+            return self.builder.sub(left, right)
+        elif operator == "*":
+            return self.builder.mul(left, right)
+        elif operator == "//":
+            return self.builder.sdiv(left, right)
+        elif operator == "%":
+            return self.builder.srem(left, right)
+        elif operator == "<":
+            return self.builder.icmp_signed("<", left, right)
+        elif operator == "<=":
+            return self.builder.icmp_signed("<=", left, right)
+        elif operator == ">":
+            return self.builder.icmp_signed(">", left, right)
+        elif operator == ">=":
+            return self.builder.icmp_signed(">=", left, right)
+        elif operator == "==":
+            return self.builder.icmp_signed("==", left, right)
+        elif operator == "!=":
+            return self.builder.icmp_signed("!=", left, right)
+        elif operator == "is":
+            # convert pointers to ints & compare
+            return self.builder.icmp_unsigned("==",
+                                              self.builder.ptrtoint(
+                                                  left, self.INT_TYPE),
+                                              self.builder.ptrtoint(right, self.INT_TYPE))
+        elif operator == "and":
+            return self.builder.and_(left, right)
+        elif operator == "or":
+            return self.builder.or_(left, right)
 
     def IndexExpr(self, node: IndexExpr):
         raise NotImplementedError
 
     def UnaryExpr(self, node: UnaryExpr):
-        raise NotImplementedError
+        operand self.visit(node.operand)
+        if node.operator == "-":
+            return self.builder.neg(operand)
+        elif node.operator == "not":
+            return self.builder.not_(operand)
 
     def CallExpr(self, node: CallExpr):
         raise NotImplementedError
@@ -165,7 +211,8 @@ class LLVMTranslator(Translator):
             if isinstance(self.expReturnType, ir.VoidType):
                 self.builder.ret_void()
             else:
-                self.builder.ret(ir.Constant(self.expReturnType.as_pointer(), None))
+                self.builder.ret(ir.Constant(
+                    self.expReturnType.as_pointer(), None))
         else:
             val = self.visit(node.value)
             self.builder.ret(val)
@@ -191,13 +238,16 @@ class LLVMTranslator(Translator):
         return ir.Constant(self.INT_TYPE, node.value)
 
     def NoneLiteral(self, node: NoneLiteral):
-        return ir.Constant(self.classTypes["object"].as_pointer(), None)
+        return self.builder.inttoptr(
+            ir.Constant(self.INT_TYPE, 0),
+            self.module.get_identified_type("object"))
 
     def StringLiteral(self, node: StringLiteral):
+        # TODO may need to null-terminate
         value = [ord(x) for x in node.value]
-        strType = self.module.get_identified_types("str")
-        return strType([ir.Constant(self.INT_TYPE, len(node.value)), 
-            ir.Constant(ir.ArrayType(ir.IntType(8), 0), value)])
+        strType = self.module.get_identified_type("str")
+        return strType([ir.Constant(self.INT_TYPE, len(node.value)),
+                        ir.Constant(ir.ArrayType(ir.IntType(8), 0), value)])
 
     # TYPES
 
