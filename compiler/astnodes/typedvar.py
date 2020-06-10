@@ -9,7 +9,7 @@ class TypedVar(Node):
         self.identifier = identifier
         self.type = typ
 
-    def tcvisit(self, typechecker):
+    def visitChildren(self, typechecker):
         return typechecker.TypedVar(self)
 
     def visit(self, visitor):

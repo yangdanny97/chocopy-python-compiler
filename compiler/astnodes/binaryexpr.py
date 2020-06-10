@@ -8,7 +8,7 @@ class BinaryExpr(Expr):
         self.right = right
         self.operator = operator
 
-    def tcvisit(self, typechecker):
+    def visitChildren(self, typechecker):
         typechecker.visit(self.left)
         typechecker.visit(self.right)
         return typechecker.BinaryExpr(self)

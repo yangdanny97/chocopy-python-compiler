@@ -7,6 +7,7 @@ from compiler.typechecker import TypeChecker
 def run_all_tests():
     run_parse_tests()
     run_typecheck_tests()
+    run_nonlocal_tests()
 
 def run_parse_tests():
     print("Running parser tests...\n")
@@ -48,6 +49,21 @@ def run_typecheck_tests():
             n_passed += 1
     print("\nPassed {:d} out of {:d} typechecker test cases\n".format(n_passed, total))
 
+def run_nonlocal_tests():
+    print("Running nonlocal visitor tests...\n")
+    total = 0
+    n_passed = 0
+    tc_tests_dir = (Path(__file__).parent / "tests/typecheck/").resolve()
+    for test in tc_tests_dir.glob('*.py'):
+        if not test.name.startswith("bad"):
+            passed = run_nonlocal_test(test)
+            total += 1
+            if not passed:
+                print("Failed: " + test.name)
+            else:
+                n_passed += 1
+    print("\nPassed {:d} out of {:d} nonlocal visitor test cases\n".format(n_passed, total))
+
 def run_parse_test(test, bad=True)->bool:
     # if bad=True, then test cases prefixed with bad are expected to fail
     compiler = Compiler()
@@ -84,6 +100,24 @@ def run_typecheck_test(test)->bool:
     except Exception as e:
         print("Internal compiler error:", test)
         raise e
+
+def run_nonlocal_test(test)->bool:
+    # check that typechecking passes with the transformed AST
+    # for valid cases only
+    try:
+        compiler = Compiler()
+        astparser = compiler.parser
+        ast = compiler.parse(test)
+        if len(astparser.errors) > 0:
+            return False
+        tc = compiler.typechecker
+        compiler.typecheck(ast)
+        compiler.nonlocalpass(ast)
+        return True
+    except Exception as e:
+        print("Internal compiler error:", test)
+        print(e)
+        return False
 
 def ast_equals(d1, d2)->bool:
     # precondition: the input dict must represent a well-formed AST

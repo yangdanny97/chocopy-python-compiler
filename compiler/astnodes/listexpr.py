@@ -6,7 +6,7 @@ class ListExpr(Expr):
         super().__init__(location, "ListExpr")
         self.elements = elements
 
-    def tcvisit(self, typechecker):
+    def visitChildren(self, typechecker):
         for e in self.elements:
             typechecker.visit(e)
         return typechecker.ListExpr(self)

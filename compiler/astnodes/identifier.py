@@ -6,7 +6,7 @@ class Identifier(Expr):
         super().__init__(location, "Identifier")
         self.name = name
 
-    def tcvisit(self, typechecker):
+    def visitChildren(self, typechecker):
         return typechecker.Identifier(self)
 
     def visit(self, visitor):

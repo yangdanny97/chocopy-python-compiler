@@ -8,7 +8,7 @@ class Node:
         self.location = location
         self.errorMsg = None
 
-    def tcvisit(self, typechecker):
+    def visitChildren(self, typechecker):
         raise Exception('operation not supported')
 
     def visit(self, visitor):

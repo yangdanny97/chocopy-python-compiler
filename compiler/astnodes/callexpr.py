@@ -8,7 +8,7 @@ class CallExpr(Expr):
         self.function = function
         self.args = args
 
-    def tcvisit(self, typechecker):
+    def visitChildren(self, typechecker):
         for a in self.args:
             typechecker.visit(a)
         return typechecker.CallExpr(self)

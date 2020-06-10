@@ -3,6 +3,8 @@ from .types import *
 from .typechecker import TypeChecker
 from .parser import Parser, ParseError
 from .llvmtranslator import LLVMTranslator
+from .nonlocalvisitor import NonlocalVisitor
+from .nonlocaltransformer import NonlocalTransformer 
 from .typesystem import TypeSystem
 import ast
 from pathlib import Path
@@ -34,6 +36,9 @@ class Compiler:
             astparser.errors.append(ParseError(message))
             return None
 
+    def nonlocalpass(self, ast: Node):
+        ast.visit(NonlocalVisitor())
+        ast.visit(NonlocalTransformer())
 
     def typecheck(self, ast: Node):
         # given an AST object, typecheck it

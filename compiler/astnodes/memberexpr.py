@@ -7,7 +7,7 @@ class MemberExpr(Expr):
         self.object = obj
         self.member = member
 
-    def tcvisit(self, typechecker):
+    def visitChildren(self, typechecker):
         typechecker.visit(self.object)
         return typechecker.MemberExpr(self)
 

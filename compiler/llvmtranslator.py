@@ -2,12 +2,12 @@ from .astnodes import *
 from .types import *
 from collections import defaultdict
 from .typechecker import TypeChecker
-from .translator import Translator
+from .visitor import Visitor
 from .typesystem import TypeSystem
 from llvmlite import ir, binding
 
 
-class LLVMTranslator(Translator):
+class LLVMTranslator(Visitor):
     def __init__(self, name: str, ts: TypeSystem):
         self.ts = ts
 
@@ -42,9 +42,6 @@ class LLVMTranslator(Translator):
         self.stdPrint()
         self.stdLen()
         self.stdInput()
-
-    def visit(self, node: Node):
-        return node.visit(self)
 
     # set up standard library functions
 
@@ -188,7 +185,7 @@ class LLVMTranslator(Translator):
         raise NotImplementedError
 
     def UnaryExpr(self, node: UnaryExpr):
-        operand self.visit(node.operand)
+        operand = self.visit(node.operand)
         if node.operator == "-":
             return self.builder.neg(operand)
         elif node.operator == "not":

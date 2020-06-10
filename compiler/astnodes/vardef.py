@@ -10,7 +10,7 @@ class VarDef(Declaration):
         self.value = value
         self.isAttr = isAttr
 
-    def tcvisit(self, typechecker):
+    def visitChildren(self, typechecker):
         typechecker.visit(self.value)
         return typechecker.VarDef(self)
 

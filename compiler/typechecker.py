@@ -30,7 +30,7 @@ class TypeChecker:
         self.program = None
 
     def visit(self, node: Node):
-        return node.tcvisit(self)
+        return node.visitChildren(self)
 
     def enterScope(self):
         self.symbolTable.append(defaultdict(lambda: None))
@@ -246,6 +246,7 @@ class TypeChecker:
             self.addError(
                 identifier, F"Unknown nonlocal variable: {name}")
             return
+        identifier.inferredType = t
         return t
 
     def GlobalDecl(self, node: GlobalDecl):
@@ -259,6 +260,7 @@ class TypeChecker:
             self.addError(
                 identifier, F"Unknown global variable: {name}")
             return
+        identifier.inferredType = t
         return t
 
     def AssignStmt(self, node: AssignStmt):

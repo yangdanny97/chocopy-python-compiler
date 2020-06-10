@@ -6,7 +6,7 @@ class ClassType(TypeAnnotation):
         super().__init__(location, "ClassType")
         self.className = className
 
-    def tcvisit(self, typechecker):
+    def visitChildren(self, typechecker):
         return typechecker.ClassType(self)
 
     def visit(self, visitor):

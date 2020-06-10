@@ -8,7 +8,7 @@ class WhileStmt(Stmt):
         self.condition = condition
         self.body = [s for s in body if s is not None]
 
-    def tcvisit(self, typechecker):
+    def visitChildren(self, typechecker):
         typechecker.visit(self.condition)
         for s in self.body:
             typechecker.visit(s)
