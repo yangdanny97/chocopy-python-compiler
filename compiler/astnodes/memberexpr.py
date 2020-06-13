@@ -1,8 +1,9 @@
 from .expr import Expr
+from .identifier import Identifier
 
 class MemberExpr(Expr):
 
-    def __init__(self, location:[int], obj:Expr, member:Expr):
+    def __init__(self, location:[int], obj:Expr, member:Identifier):
         super().__init__(location, "MemberExpr")
         self.object = obj
         self.member = member

@@ -192,7 +192,10 @@ class LLVMTranslator(Visitor):
             return self.builder.not_(operand)
 
     def CallExpr(self, node: CallExpr):
-        raise NotImplementedError
+        args = [self.visit(x) for x in node.args]
+        name = node.function.name
+        func = self.module.get_global(name)
+        self.builder.call(func, args)
 
     def ForStmt(self, node: ForStmt):
         raise NotImplementedError
@@ -224,7 +227,12 @@ class LLVMTranslator(Visitor):
         raise NotImplementedError
 
     def MethodCallExpr(self, node: MethodCallExpr):
-        raise NotImplementedError
+        # add self argument
+        args = [self.visit(node.method.object)] + [self.visit(x) for x in node.args]
+        # node.method.object has a ClassType
+        name = node.method.object.inferredType.className + "_" + node.method.member.name
+        func = self.module.get_global(name)
+        self.builder.call(func, args)
 
     # LITERALS
 
