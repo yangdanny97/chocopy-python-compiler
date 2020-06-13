@@ -5,6 +5,7 @@ from .parser import Parser, ParseError
 from .llvmtranslator import LLVMTranslator
 from .nonlocalvisitor import NonlocalVisitor
 from .nonlocaltransformer import NonlocalTransformer 
+from .nestedfuncrenamer import NestedFuncRenamer
 from .typesystem import TypeSystem
 import ast
 from pathlib import Path
@@ -39,6 +40,9 @@ class Compiler:
     def nonlocalpass(self, ast: Node):
         ast.visit(NonlocalVisitor())
         ast.visit(NonlocalTransformer())
+
+    def nestedfuncpass(self, ast: Node):
+        ast.visit(NestedFuncRenamer())
 
     def typecheck(self, ast: Node):
         # given an AST object, typecheck it
