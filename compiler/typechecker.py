@@ -28,6 +28,7 @@ class TypeChecker:
         self.expReturnType = None  # expected return type of current function
 
         self.program = None
+        self.addErrors = True
 
     def visit(self, node: Node):
         return node.visitChildren(self)
@@ -76,13 +77,14 @@ class TypeChecker:
     # ERROR HANDLING
 
     def addError(self, node: Node, message: str):
-        if node.errorMsg is not None:  # 1 error msg per node
-            return
-        message = F"{message}. Line {node.location[0]} Col {node.location[1]}"
-        node.errorMsg = message
-        self.program.errors.errors.append(
-            CompilerError(node.location, message))
-        self.errors.append(message)
+        if self.addErrors:
+            if node.errorMsg is not None:  # 1 error msg per node
+                return
+            message = F"{message}. Line {node.location[0]} Col {node.location[1]}"
+            node.errorMsg = message
+            self.program.errors.errors.append(
+                CompilerError(node.location, message))
+            self.errors.append(message)
 
     def binopError(self, node):
         self.addError(node, "Cannot use operator {} on types {} and {}".format(

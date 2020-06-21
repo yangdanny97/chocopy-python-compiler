@@ -10,6 +10,7 @@ class ClosureTransformer(TypeChecker):
 
     def __init__(self):
         super().__init__(TypeSystem())
+        self.addErrors = False
 
     def typeToAnnotation(self, t: ValueType):
         if isinstance(t, ListValueType):

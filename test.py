@@ -120,6 +120,10 @@ def run_closure_test(test)->bool:
         compiler.closurepass(ast)
         tc = TypeChecker(TypeSystem())
         tc.visit(ast)
+        if len(ast.errors.errors) > 0:
+            for e in ast.errors.errors:
+                print(e.toJSON())
+            return False
         return True
     except Exception as e:
         print("Internal compiler error:", test)
