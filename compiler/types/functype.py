@@ -5,7 +5,7 @@ class FuncType(SymbolType):
     def __init__(self, parameters:[ValueType], returnType:ValueType):
         self.parameters = parameters
         self.returnType = returnType
-        self.nonlocals = [] # used in AST transformations, not printed out
+        self.freevars = [] # used in AST transformations, not printed out
 
     def __eq__(self, other):
         if isinstance(other, FuncType):

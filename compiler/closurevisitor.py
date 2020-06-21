@@ -2,11 +2,17 @@ from .astnodes import *
 from .types import *
 from .visitor import Visitor
 
-class NonlocalVisitor(Visitor):
-    # record all nonlocal declarations from nested functions
+class ClosureVisitor(Visitor):
+    # record all free vars from nested functions
 
     def __init__(self):
         self.symbolTable = [set()]
+        self.vars = []
+    
+    def visit(self, node: Node):
+        if isinstance(node, Expr) or isinstance(node, Stmt):
+            return node.visitChildren(self)
+        return node.visit(self)
 
     def deduplicate(self, ids:[str])->[str]:
         seen = set()
@@ -26,31 +32,32 @@ class NonlocalVisitor(Visitor):
             self.visit(d)
 
     def ClassDef(self, node: ClassDef):
-        node.declarations = [self.visit(d) for d in node.declarations]
+        for d in node.declarations:
+            self.visit(d)
 
     def FuncDef(self, node: FuncDef):
+        self.vars = []
         self.symbolTable.append(set())
-        nonlocals = []
+        freevars:[str] = []
+        for p in node.params:
+            self.symbolTable[-1].add(p.identifier.name)
         for d in node.declarations:
-            if isinstance(d, NonLocalDecl):
-                nonlocals.append(d.getIdentifier().name)
             self.symbolTable[-1].add(d.getIdentifier().name)
-        node.declarations = [self.visit(d) for d in node.declarations]
+        for s in node.statements:
+            self.visit(s)
+        freevars += self.vars
         for d in node.declarations:
+            self.visit(d)
             if isinstance(d, FuncDef):
-                nonlocals += d.nonlocals
-        # deduplicate inner function nonlocals, remove the ones declared in this scope
-        nonlocals = [x for x in self.deduplicate(nonlocals) if x not in self.symbolTable[-1]]
+                freevars += d.freevars
+        # deduplicate inner function freevars, remove the ones declared in this scope
+        freevars = [x for x in self.deduplicate(freevars) if x not in self.symbolTable[-1]]
         self.symbolTable.pop()
-        node.nonlocals = nonlocals
+        node.freevars = freevars
         return node
+    
+    def Identifier(self, node: Identifier):
+        self.vars.append(node.name)
 
-    def GlobalDecl(self, node: NonLocalDecl):
-        return node
 
-    def NonLocalDecl(self, node: NonLocalDecl):
-        return node
-
-    def VarDef(self, node: VarDef):
-        return node
 

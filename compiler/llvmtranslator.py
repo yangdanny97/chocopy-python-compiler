@@ -106,9 +106,6 @@ class LLVMTranslator(Visitor):
     def FuncDef(self, node: FuncDef):
         raise NotImplementedError
 
-    def NonLocalDecl(self, node: NonLocalDecl):
-        raise NotImplementedError
-
     def GlobalDecl(self, node: GlobalDecl):
         raise NotImplementedError
 
@@ -248,19 +245,13 @@ class LLVMTranslator(Visitor):
             self.module.get_identified_type("object"))
 
     def StringLiteral(self, node: StringLiteral):
-        # TODO may need to null-terminate
-        value = [ord(x) for x in node.value]
+        # encoding format referenced from: https://github.com/hassanalinali/Lesma
+        string = node.value
+        n = len(string) + 1
+        value = bytearray((' ' * n).encode('ascii'))
+        value[-1] = 0
+        value[:-1] = string.encode('utf-8')
         strType = self.module.get_identified_type("str")
-        return strType([ir.Constant(self.INT_TYPE, len(node.value)),
-                        ir.Constant(ir.ArrayType(ir.IntType(8), 0), value)])
+        return strType([ir.Constant(self.INT_TYPE, len(string)),
+                        ir.Constant(ir.ArrayType(ir.IntType(8), n), value)])
 
-    # TYPES
-
-    def TypedVar(self, node: TypedVar):
-        raise NotImplementedError
-
-    def ListType(self, node: ListType):
-        raise NotImplementedError
-
-    def ClassType(self, node: ClassType):
-        raise NotImplementedError

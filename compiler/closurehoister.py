@@ -5,16 +5,20 @@ from .astnodes import *
 from .types import *
 from .visitor import Visitor
 
-class NestedFuncRenamer(Visitor):
+class ClosureHoister(Visitor):
     # rename nested functions to be unique, 
     # that way we can declare them in a global ctx for LLVM
     # we do not rename methods at this stage
+
+    # hoist all nested funcs to top level
 
     def __init__(self):
         # map of function names to their LLVM function names
         self.symbolTable = [defaultdict(lambda: None)]
         self.currentClass = None
         self.funcNesting = []
+        self.nestingLevel = 0
+        self.hoisted = []
 
     def visit(self, node: Node):
         if isinstance(node, Stmt) or isinstance(node, Expr):
@@ -34,6 +38,7 @@ class NestedFuncRenamer(Visitor):
                 self.symbolTable[-1][name] = name
         for d in node.declarations:
             self.visit(d)
+        node.declarations = self.hoisted + node.declarations
         for s in node.statements:
             self.visit(s)
 
@@ -56,14 +61,20 @@ class NestedFuncRenamer(Visitor):
         node.getIdentifier().name = newname
         self.symbolTable.append(defaultdict(lambda: None))
         self.funcNesting.append(name)
+        self.nestingLevel += 1
 
         for d in node.declarations:
             self.visit(d)
+        node.declarations = [d for d in node.declarations if not isinstance(d, FuncDef)]
+
         for s in node.statements:
             self.visit(s)
         
         self.symbolTable.pop()
         self.funcNesting.pop()
+        self.nestingLevel -= 1
+        if self.nestingLevel > 0:
+            self.hoisted.append(node)
         return node
 
     def CallExpr(self, node: CallExpr):

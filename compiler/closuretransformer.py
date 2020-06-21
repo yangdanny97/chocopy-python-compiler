@@ -4,8 +4,8 @@ from collections import defaultdict
 from .astnodes import *
 from .types import *
 
-class NonlocalTransformer(TypeChecker):
-    # remove all nonlocal declarations, rewriting function signatures to 
+class ClosureTransformer(TypeChecker):
+    # remove all nonlocal & global declarations, rewriting function signatures to 
     # include them as explicit arguments, rewrite callsites to include new args
 
     def __init__(self):
@@ -18,17 +18,17 @@ class NonlocalTransformer(TypeChecker):
             return ClassType([0,0], t.className)
 
     def FuncDef(self, node: FuncDef):
-        for n in node.nonlocals:
+        for n in node.freevars:
             ident = Identifier(node.location, n)
             annot = self.typeToAnnotation(self.visit(ident))
             node.params.append(TypedVar(node.location, ident, annot))
-        node.declarations = [d for d in node.declarations if not isinstance(d, NonLocalDecl)]
+        node.declarations = [d for d in node.declarations if not isinstance(d, NonLocalDecl) and not isinstance(d, GlobalDecl)]
         return super().FuncDef(node)
 
     def getSignature(self, node: FuncDef):
         rType = self.visit(node.returnType)
         t = FuncType([self.visit(t) for t in node.params], rType)
-        t.nonlocals = node.nonlocals
+        t.freevars = node.freevars
         return t
 
     def callHelper(self, node):
@@ -38,9 +38,9 @@ class NonlocalTransformer(TypeChecker):
         if isinstance(node, MethodCallExpr):
             target = node.method
         t = target.inferredType
-        if len(t.nonlocals) == 0 or not isinstance(t, FuncType):
+        if len(t.freevars) == 0 or not isinstance(t, FuncType):
             return
-        for n in t.nonlocals:
+        for n in t.freevars:
             ident = Identifier(node.location, n)
             self.visit(ident)
             node.args.append(ident)

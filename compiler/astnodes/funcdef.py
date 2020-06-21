@@ -20,7 +20,7 @@ class FuncDef(Declaration):
         self.declarations = declarations
         self.statements = [s for s in statements if s is not None]
         self.isMethod = isMethod
-        self.nonlocals = [] # used in AST transformations, not printed out
+        self.freevars = [] # used in AST transformations, not printed out
 
     def visitChildren(self, typechecker):
         return typechecker.FuncDef(self)
