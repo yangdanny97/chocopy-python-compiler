@@ -41,7 +41,8 @@ class ClosureVisitor(Visitor):
         for p in node.params:
             decls.add(p.identifier.name)
         for d in node.declarations:
-            decls.add(d.getIdentifier().name)
+            if not (isinstance(d, GlobalDecl) or isinstance(d, NonLocalDecl)):
+                decls.add(d.getIdentifier().name)
         for s in node.statements:
             self.visit(s)
         freevars = [v for v in self.vars if (v.name not in decls and v.name not in self.globals)]
@@ -50,7 +51,7 @@ class ClosureVisitor(Visitor):
             if isinstance(d, FuncDef):
                 freevars += d.freevars
         freevars = [v for v in freevars if (v.name not in decls and v.name not in self.globals)]
-        node.freevars = freevars
+        node.freevars = self.deduplicate(freevars)
         return node
     
     def Identifier(self, node: Identifier):

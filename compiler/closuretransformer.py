@@ -5,8 +5,8 @@ from .astnodes import *
 from .types import *
 
 class ClosureTransformer(TypeChecker):
-    # remove all nonlocal & global declarations, rewriting function signatures to 
-    # include them as explicit arguments, rewrite callsites to include new args
+    # rewriting function signatures to include free vars as explicit arguments
+    # rewrite function calls to include new args
 
     def __init__(self):
         super().__init__(TypeSystem())
@@ -23,7 +23,6 @@ class ClosureTransformer(TypeChecker):
             ident = Identifier(node.location, fv.name)
             annot = self.typeToAnnotation(fv.inferredType)
             node.params.append(TypedVar(node.location, ident, annot))
-        node.declarations = [d for d in node.declarations if not isinstance(d, NonLocalDecl) and not isinstance(d, GlobalDecl)]
         return super().FuncDef(node)
 
     def getSignature(self, node: FuncDef):
@@ -33,13 +32,17 @@ class ClosureTransformer(TypeChecker):
         return t
 
     def callHelper(self, node):
-        target = None
+        t = None
         if isinstance(node, CallExpr):
-            target = node.function
+            fname = node.function.name
+            if self.ts.classExists(fname):
+                t = self.ts.getMethod(fname, "__init__")
+            else:
+                t = self.getType(fname)
         if isinstance(node, MethodCallExpr):
-            target = node.method
-        t = target.inferredType
-        if len(t.freevars) == 0 or not isinstance(t, FuncType):
+            class_name, member_name = node.method.object.inferredType.className, node.method.member.name
+            t = self.ts.getMethod(class_name, member_name)
+        if t is None or len(t.freevars) == 0 or not isinstance(t, FuncType):
             return
         for fv in t.freevars:
             ident = Identifier(node.location, fv.name)

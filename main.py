@@ -71,7 +71,7 @@ def main():
         ast_json = tree.toJSON(False)
         if args.output:  # output to file
             with open(outfile, "w") as f:
-                json.dump(ast_json, f)
+                json.dump(ast_json, f, indent=2)
         else:  # output to stdout
             if isinstance(tree, Node):
                 print(json.dumps(ast_json, indent=2))

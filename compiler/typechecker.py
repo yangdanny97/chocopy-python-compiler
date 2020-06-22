@@ -90,6 +90,12 @@ class TypeChecker:
         self.addError(node, "Cannot use operator {} on types {} and {}".format(
             node.operator, node.left.inferredType, node.right.inferredType))
 
+    # UTIL
+
+    def getSignature(self, node: FuncDef):
+        rType = self.visit(node.returnType)
+        return FuncType([self.visit(t) for t in node.params], rType)
+
     # DECLARATIONS (returns type of declaration, besides Program)
 
     def Program(self, node: Program):
@@ -170,16 +176,11 @@ class TypeChecker:
         self.currentClass = None
         return None
 
-    def getSignature(self, node: FuncDef):
-        rType = self.visit(node.returnType)
-        return FuncType([self.visit(t) for t in node.params], rType)
-
     def FuncDef(self, node: FuncDef):
         self.enterScope()
         funcName = node.getIdentifier().name
-        rType = self.visit(node.returnType)
-        funcType = FuncType([self.visit(t) for t in node.params], rType)
-        self.expReturnType = rType
+        funcType = self.getSignature(node)
+        self.expReturnType = funcType.returnType
         if not node.isMethod:  # top level function decl OR nested function
             if self.ts.classExists(funcName):
                 self.addError(node.getIdentifier(),
@@ -220,6 +221,7 @@ class TypeChecker:
                 self.addType(name, self.visit(d.var))
             if isinstance(d, NonLocalDecl) or isinstance(d, GlobalDecl):
                 self.addType(name, self.visit(d))
+        rType = self.expReturnType
         for d in node.declarations:
             self.visit(d)
             self.expReturnType = rType
@@ -524,7 +526,6 @@ class TypeChecker:
 
     def MethodCallExpr(self, node: MethodCallExpr):
         method_member = node.method
-        self.visit(method_member.object)
         t = None  # method signature
         static_types = {IntType(),
                         BoolType(), StrType()}
@@ -535,13 +536,12 @@ class TypeChecker:
             return node.inferredType
         else:
             class_name, member_name = method_member.object.inferredType.className, method_member.member.name
-            if self.ts.getMethod(class_name, member_name) is None:
+            t = self.ts.getMethod(class_name, member_name)
+            if t is None:
                 self.addError(
                     node, F"Method {member_name} doesn't exist for class {class_name}")
                 node.inferredType = ObjectType()
                 return node.inferredType
-            else:
-                t = self.ts.getMethod(class_name, member_name)
         # self arguments
         if len(t.parameters) != len(node.args) + 1:
             self.addError(
