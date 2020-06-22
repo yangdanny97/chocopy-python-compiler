@@ -28,9 +28,9 @@ class FuncType(SymbolType):
         paramStr = ",".join([str(t) for t in self.parameters])
         return (F"[{paramStr}]->{self.returnType}").__hash__()
 
-    def toJSON(self):
+    def toJSON(self, dump_location=True):
         return {
             "kind": "FuncType",
-            "parameters": [p.toJSON() for p in self.parameters],
-            "returnType": self.returnType.toJSON()
+            "parameters": [p.toJSON(dump_location) for p in self.parameters],
+            "returnType": self.returnType.toJSON(dump_location)
         }

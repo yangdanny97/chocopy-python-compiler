@@ -6,9 +6,9 @@ class Expr(Node):
         super().__init__(location, kind)
         self.inferredType = None
 
-    def toJSON(self):
-        d = super().toJSON()
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
         if self.inferredType is not None:
-            d['inferredType'] = self.inferredType.toJSON()
+            d['inferredType'] = self.inferredType.toJSON(dump_location)
         return d
 

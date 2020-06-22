@@ -16,7 +16,7 @@ class SymbolType:
     def isSpecialType():
         return False
 
-    def toJSON(self):
+    def toJSON(self, dump_location=True):
         raise Exception("unsupported")
 
     def llvmType(self, typeSystem):

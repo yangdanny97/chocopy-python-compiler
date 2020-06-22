@@ -5,10 +5,9 @@ from .astnodes import *
 from .types import *
 from .visitor import Visitor
 
-class ClosureHoister(Visitor):
+class NestedFuncHoister(Visitor):
     # rename nested functions to be unique, 
     # that way we can declare them in a global ctx for LLVM
-    # we do not rename methods at this stage
 
     # hoist all nested funcs to top level
 
@@ -29,6 +28,8 @@ class ClosureHoister(Visitor):
     def genFuncName(self, name:str):
         # for example, f2 declared inside f1 will be named f1_f2
         # f4 declared inside C.f3 will be named C_f3_f4
+        if len(self.funcNesting) == 0:
+            return name
         return "_".join(self.funcNesting) + "_" + name
 
     def Program(self, node: Program):
@@ -78,7 +79,7 @@ class ClosureHoister(Visitor):
         return node
 
     def CallExpr(self, node: CallExpr):
-        for t in self.symbolTable[::-1]:
+        for t in self.symbolTable:
             if node.function.name in t:
                 node.function.name = t[node.function.name]
 

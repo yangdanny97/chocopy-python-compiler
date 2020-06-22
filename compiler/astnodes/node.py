@@ -14,10 +14,11 @@ class Node:
     def visit(self, visitor):
         return Exception('operation not supported')
 
-    def toJSON(self):
+    def toJSON(self, dump_location=True):
         d = {}
         d['kind'] = self.kind
-        d['location'] = self.location + self.location
+        if dump_location:
+            d['location'] = self.location + self.location
         if self.errorMsg is not None:
             d['errorMsg'] = self.errorMsg
         return d

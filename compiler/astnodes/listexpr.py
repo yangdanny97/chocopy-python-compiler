@@ -14,9 +14,9 @@ class ListExpr(Expr):
     def visit(self, visitor):
         return visitor.ListExpr(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["elements"] = [e.toJSON() for e in self.elements]
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["elements"] = [e.toJSON(dump_location) for e in self.elements]
         return d
 
 

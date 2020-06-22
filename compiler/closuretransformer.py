@@ -12,16 +12,16 @@ class ClosureTransformer(TypeChecker):
         super().__init__(TypeSystem())
         self.addErrors = False
 
-    def typeToAnnotation(self, t: ValueType):
+    def typeToAnnotation(self, t: ValueType)->SymbolType:
         if isinstance(t, ListValueType):
             return ListType([0,0], self.typeToAnnotation(t.elementType))
         elif isinstance(t, ClassValueType):
             return ClassType([0,0], t.className)
 
     def FuncDef(self, node: FuncDef):
-        for n in node.freevars:
-            ident = Identifier(node.location, n)
-            annot = self.typeToAnnotation(self.visit(ident))
+        for fv in node.freevars:
+            ident = Identifier(node.location, fv.name)
+            annot = self.typeToAnnotation(fv.inferredType)
             node.params.append(TypedVar(node.location, ident, annot))
         node.declarations = [d for d in node.declarations if not isinstance(d, NonLocalDecl) and not isinstance(d, GlobalDecl)]
         return super().FuncDef(node)
@@ -41,8 +41,8 @@ class ClosureTransformer(TypeChecker):
         t = target.inferredType
         if len(t.freevars) == 0 or not isinstance(t, FuncType):
             return
-        for n in t.freevars:
-            ident = Identifier(node.location, n)
+        for fv in t.freevars:
+            ident = Identifier(node.location, fv.name)
             self.visit(ident)
             node.args.append(ident)
 

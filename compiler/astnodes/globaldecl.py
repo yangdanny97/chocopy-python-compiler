@@ -13,9 +13,9 @@ class GlobalDecl(Declaration):
     def visit(self, visitor):
         return visitor.GlobalDecl(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["variable"] = self.variable.toJSON()
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["variable"] = self.variable.toJSON(dump_location)
         return d
 
     def getIdentifier(self):

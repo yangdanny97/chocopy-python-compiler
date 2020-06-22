@@ -15,8 +15,8 @@ class IndexExpr(Expr):
     def visit(self, visitor):
         return visitor.IndexExpr(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["list"] = self.list.toJSON()
-        d["index"] = self.index.toJSON()
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["list"] = self.list.toJSON(dump_location)
+        d["index"] = self.index.toJSON(dump_location)
         return d

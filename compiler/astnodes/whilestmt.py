@@ -17,9 +17,9 @@ class WhileStmt(Stmt):
     def visit(self, visitor):
         return visitor.WhileStmt(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["condition"] = self.condition.toJSON()
-        d["body"] = [s.toJSON() for s in self.body]
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["condition"] = self.condition.toJSON(dump_location)
+        d["body"] = [s.toJSON(dump_location) for s in self.body]
         return d
 

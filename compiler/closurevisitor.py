@@ -6,7 +6,7 @@ class ClosureVisitor(Visitor):
     # record all free vars from nested functions
 
     def __init__(self):
-        self.symbolTable = [set()]
+        self.globals = set()
         self.vars = []
     
     def visit(self, node: Node):
@@ -14,20 +14,20 @@ class ClosureVisitor(Visitor):
             return node.visitChildren(self)
         return node.visit(self)
 
-    def deduplicate(self, ids:[str])->[str]:
+    def deduplicate(self, ids):
         seen = set()
         res = []
         for i in ids:
-            if i in seen:
+            if i.name in seen:
                 continue
-            seen.add(i)
+            seen.add(i.name)
             res.append(i)
         return res
 
     def Program(self, node: Program):
         for d in node.declarations:
             if isinstance(d, VarDef):
-                self.symbolTable[-1].add(d.getIdentifier().name)
+                self.globals.add(d.getIdentifier().name)
         for d in node.declarations:
             self.visit(d)
 
@@ -37,27 +37,24 @@ class ClosureVisitor(Visitor):
 
     def FuncDef(self, node: FuncDef):
         self.vars = []
-        self.symbolTable.append(set())
-        freevars:[str] = []
+        decls = set()
         for p in node.params:
-            self.symbolTable[-1].add(p.identifier.name)
+            decls.add(p.identifier.name)
         for d in node.declarations:
-            self.symbolTable[-1].add(d.getIdentifier().name)
+            decls.add(d.getIdentifier().name)
         for s in node.statements:
             self.visit(s)
-        freevars += self.vars
+        freevars = [v for v in self.vars if (v.name not in decls and v.name not in self.globals)]
         for d in node.declarations:
             self.visit(d)
             if isinstance(d, FuncDef):
                 freevars += d.freevars
-        # deduplicate inner function freevars, remove the ones declared in this scope
-        freevars = [x for x in self.deduplicate(freevars) if x not in self.symbolTable[-1]]
-        self.symbolTable.pop()
+        freevars = [v for v in freevars if (v.name not in decls and v.name not in self.globals)]
         node.freevars = freevars
         return node
     
     def Identifier(self, node: Identifier):
-        self.vars.append(node.name)
+        self.vars.append(node)
 
 
 

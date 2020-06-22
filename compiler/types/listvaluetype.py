@@ -19,8 +19,8 @@ class ListValueType(ValueType):
     def __hash__(self):
         return str(self).__hash__()
 
-    def toJSON(self):
+    def toJSON(self, dump_location=True):
         return {
             "kind": "ListValueType",
-            "elementType": self.elementType.toJSON()
+            "elementType": self.elementType.toJSON(dump_location)
         }

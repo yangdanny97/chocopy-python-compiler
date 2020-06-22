@@ -67,13 +67,14 @@ def main():
                 return
 
     if args.mode in {"parse", "tc"}:
-        ast_json = tree.toJSON()
+        compiler.closurepass(tree)
+        ast_json = tree.toJSON(False)
         if args.output:  # output to file
             with open(outfile, "w") as f:
                 json.dump(ast_json, f)
         else:  # output to stdout
             if isinstance(tree, Node):
-                print(json.dumps(ast_json))
+                print(json.dumps(ast_json, indent=2))
     elif args.mode == "llvm":
         pass  # TODO
 

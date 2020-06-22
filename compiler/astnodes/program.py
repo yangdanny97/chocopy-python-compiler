@@ -18,10 +18,10 @@ class Program(Node):
     def visit(self, visitor):
         return visitor.Program(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d['declarations'] = [d.toJSON() for d in self.declarations]
-        d['statements'] = [s.toJSON() for s in self.statements]
-        d['errors'] = self.errors.toJSON()
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d['declarations'] = [d.toJSON(dump_location) for d in self.declarations]
+        d['statements'] = [s.toJSON(dump_location) for s in self.statements]
+        d['errors'] = self.errors.toJSON(dump_location)
         return d
 

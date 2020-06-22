@@ -16,10 +16,10 @@ class ReturnStmt(Stmt):
     def visit(self, visitor):
         return visitor.ReturnStmt(self)
 
-    def toJSON(self):
-        d = super().toJSON()
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
         if self.value is not None:
-            d["value"] = self.value.toJSON()
+            d["value"] = self.value.toJSON(dump_location)
         else:
             d["value"] = None
         return d

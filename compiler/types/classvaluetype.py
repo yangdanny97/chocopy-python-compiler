@@ -18,7 +18,7 @@ class ClassValueType(ValueType):
     def __hash__(self):
         return str(self).__hash__()
 
-    def toJSON(self):
+    def toJSON(self, dump_location=True):
         return {
             "kind": "ClassValueType",
             "className": self.className

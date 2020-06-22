@@ -5,7 +5,7 @@ from .parser import Parser, ParseError
 from .llvmtranslator import LLVMTranslator
 from .closurevisitor import ClosureVisitor
 from .closuretransformer import ClosureTransformer 
-from .closurehoister import ClosureHoister
+from .nestedfunchoister import NestedFuncHoister
 from .typesystem import TypeSystem
 import ast
 from pathlib import Path
@@ -39,8 +39,9 @@ class Compiler:
 
     def closurepass(self, ast: Node):
         ast.visit(ClosureVisitor())
-        ast.visit(ClosureHoister())
+        ast.visit(NestedFuncHoister())
         ast.visit(ClosureTransformer())
+        ast.visit(TypeChecker(TypeSystem()))
 
     def typecheck(self, ast: Node):
         # given an AST object, typecheck it

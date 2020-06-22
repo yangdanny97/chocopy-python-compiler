@@ -14,10 +14,10 @@ class UnaryExpr(Expr):
     def visit(self, visitor):
         return visitor.UnaryExpr(self)
 
-    def toJSON(self):
-        d = super().toJSON()
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
         d["operator"] = self.operator
-        d["operand"] = self.operand.toJSON()
+        d["operand"] = self.operand.toJSON(dump_location)
         return d
 
 

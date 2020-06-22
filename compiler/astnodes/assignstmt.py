@@ -17,8 +17,8 @@ class AssignStmt(Stmt):
     def visit(self, visitor):
         return visitor.AssignStmt(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["targets"] = [t.toJSON() for t in self.targets]
-        d["value"] = self.value.toJSON()
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["targets"] = [t.toJSON(dump_location) for t in self.targets]
+        d["value"] = self.value.toJSON(dump_location)
         return d

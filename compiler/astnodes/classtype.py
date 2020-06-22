@@ -12,8 +12,8 @@ class ClassType(TypeAnnotation):
     def visit(self, visitor):
         return visitor.ClassType(self)
 
-    def toJSON(self):
-        d = super().toJSON()
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
         d["className"] = self.className
         return d
 

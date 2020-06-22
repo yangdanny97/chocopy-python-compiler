@@ -4,5 +4,5 @@ class ValueType(SymbolType):
     def isValueType():
         return True
 
-    def toJSON(self):
+    def toJSON(self, dump_location=True):
         raise Exception("unsupported")

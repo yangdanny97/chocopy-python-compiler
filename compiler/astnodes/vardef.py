@@ -17,10 +17,10 @@ class VarDef(Declaration):
     def visit(self, visitor):
         return visitor.VarDef(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["var"] = self.var.toJSON()
-        d["value"] = self.value.toJSON()
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["var"] = self.var.toJSON(dump_location)
+        d["value"] = self.value.toJSON(dump_location)
         return d
 
     def getIdentifier(self):

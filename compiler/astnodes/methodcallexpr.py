@@ -16,10 +16,10 @@ class MethodCallExpr(Expr):
     def visit(self, visitor):
         return visitor.MethodCallExpr(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["method"] = self.method.toJSON()
-        d["args"] = [a.toJSON() for a in self.args]
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["method"] = self.method.toJSON(dump_location)
+        d["args"] = [a.toJSON(dump_location) for a in self.args]
         return d
 
 

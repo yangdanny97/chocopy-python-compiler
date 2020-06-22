@@ -12,8 +12,8 @@ class ListType(TypeAnnotation):
     def visit(self, visitor):
         return visitor.ListType(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["elementType"] = self.elementType.toJSON()
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["elementType"] = self.elementType.toJSON(dump_location)
         return d
 

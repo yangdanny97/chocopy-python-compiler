@@ -13,8 +13,8 @@ class ExprStmt(Stmt):
     def visit(self, visitor):
         return visitor.ExprStmt(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["expr"] = self.expr.toJSON()
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["expr"] = self.expr.toJSON(dump_location)
         return d
 

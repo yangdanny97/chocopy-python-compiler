@@ -15,8 +15,8 @@ class MemberExpr(Expr):
     def visit(self, visitor):
         return visitor.MemberExpr(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["object"] = self.object.toJSON()
-        d["member"] = self.member.toJSON()
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["object"] = self.object.toJSON(dump_location)
+        d["member"] = self.member.toJSON(dump_location)
         return d

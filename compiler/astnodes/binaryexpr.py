@@ -16,10 +16,10 @@ class BinaryExpr(Expr):
     def visit(self, visitor):
         return visitor.BinaryExpr(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["left"] = self.left.toJSON()
-        d["right"] = self.right.toJSON()
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["left"] = self.left.toJSON(dump_location)
+        d["right"] = self.right.toJSON(dump_location)
         d["operator"] = self.operator
         return d
 

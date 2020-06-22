@@ -20,10 +20,10 @@ class IfStmt(Stmt):
     def visit(self, visitor):
         return visitor.IfStmt(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["condition"] = self.condition.toJSON()
-        d["thenBody"] = [s.toJSON() for s in self.thenBody]
-        d["elseBody"] = [s.toJSON() for s in self.elseBody]
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["condition"] = self.condition.toJSON(dump_location)
+        d["thenBody"] = [s.toJSON(dump_location) for s in self.thenBody]
+        d["elseBody"] = [s.toJSON(dump_location) for s in self.elseBody]
         return d
 

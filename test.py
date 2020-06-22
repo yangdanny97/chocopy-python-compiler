@@ -6,6 +6,8 @@ from compiler.typechecker import TypeChecker
 from compiler.typesystem import TypeSystem
 import traceback
 
+dump_location = True
+
 def run_all_tests():
     run_parse_tests()
     run_typecheck_tests()
@@ -76,7 +78,7 @@ def run_parse_test(test, bad=True)->bool:
         return len(astparser.errors) > 0
     if len(astparser.errors) > 0:
         return False
-    ast_json = ast.toJSON()
+    ast_json = ast.toJSON(dump_location)
     try:
         with test.with_suffix(".py.ast").open("r") as f:
             correct_json = json.load(f)
@@ -95,7 +97,7 @@ def run_typecheck_test(test)->bool:
             return False
         tc = compiler.typechecker
         compiler.typecheck(ast)
-        ast_json = ast.toJSON()
+        ast_json = ast.toJSON(dump_location)
         with test.with_suffix(".py.ast.typed").open("r") as f:
             correct_json = json.load(f)
             return ast_equals(ast_json, correct_json)
@@ -122,7 +124,7 @@ def run_closure_test(test)->bool:
         tc.visit(ast)
         if len(ast.errors.errors) > 0:
             for e in ast.errors.errors:
-                print(e.toJSON())
+                print(e.toJSON(dump_location))
             return False
         return True
     except Exception as e:
