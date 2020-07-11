@@ -6,7 +6,6 @@ from .visitor import Visitor
 from .typesystem import TypeSystem
 from llvmlite import ir, binding
 
-
 class LLVMTranslator(Visitor):
     def __init__(self, name: str, ts: TypeSystem):
         self.ts = ts
@@ -39,9 +38,12 @@ class LLVMTranslator(Visitor):
 
         self.setupClasses()
 
-        self.stdPrint()
-        self.stdLen()
-        self.stdInput()
+        # map variable names to llvm ptr values
+        self.symboltable = [defaultdict(lambda: None)]
+
+        # self.stdPrint()
+        # self.stdLen()
+        # self.stdInput()
 
     # set up standard library functions
 
@@ -92,13 +94,27 @@ class LLVMTranslator(Visitor):
             returnType = self.typeToLLVM(t.returnType, True)
             return ir.FunctionType(returnType, parameters)
 
+    def deref(self, ptr):
+        if isinstance(ptr.type, ir.PointerType):
+            return self.builder.load(ptr)
+        return ptr
+
     # TOP LEVEL & DECLARATIONS
 
     def Program(self, node: Program):
         raise NotImplementedError
 
     def VarDef(self, node: VarDef):
-        raise NotImplementedError
+        value = self.visit(node.value)
+        if node.value.inferredType in ["int", "bool"]: 
+            # deref and store primitives
+            ptr = self.builder.alloca(self.typeToLLVM(node.var.t, False))
+            value = self.deref(value)
+            self.builder.store(value, ptr)
+            self.symboltable[-1][node.getIdentifier().name] = ptr
+        else: 
+            # aliasing
+            self.symboltable[-1][node.getIdentifier().name] = value
 
     def ClassDef(self, node: ClassDef):
         raise NotImplementedError
@@ -115,7 +131,22 @@ class LLVMTranslator(Visitor):
         self.visit(node.expr)
 
     def AssignStmt(self, node: AssignStmt):
-        raise NotImplementedError
+        value = self.visit(node.value)
+        for t in node.targets:
+            # TODO
+            if isinstance(t, Identifier):
+                ptr = self.visit(t)
+                if node.value.inferredType in ["int", "bool"]: 
+                    # deref and store primitives
+                    value = self.deref(value)
+                    self.builder.store(value, ptr)
+                else: 
+                    # aliasing
+                    self.symboltable[-1][t.name] = value
+            elif isinstance(t, IndexExpr):
+                raise NotImplementedError
+            elif isinstance(t, MemberExpr):
+                raise NotImplementedError
 
     def IfStmt(self, node: IfStmt):
         pred = self.visit(node.condition)
@@ -138,6 +169,17 @@ class LLVMTranslator(Visitor):
         right = self.visit(node.right)
         leftType = node.left.inferredType
         rightType = node.right.inferredType
+
+        deref = True
+        if operator == "is":
+            deref = False
+        elif operator in ["==", "!="]:
+            if leftType.name not in ["int", "bool", "str"]:
+                deref = False
+
+        if deref:
+            left = self.deref(left)
+            right = self.deref(right)
 
         # concatenation and addition
         if operator == "+":
@@ -164,8 +206,14 @@ class LLVMTranslator(Visitor):
         elif operator == ">=":
             return self.builder.icmp_signed(">=", left, right)
         elif operator == "==":
+            if leftType == StrType() and rightType == StrType():
+                raise NotImplementedError
+            # TODO string equality
             return self.builder.icmp_signed("==", left, right)
         elif operator == "!=":
+            if leftType == StrType() and rightType == StrType():
+                raise NotImplementedError
+            # TODO string equality
             return self.builder.icmp_signed("!=", left, right)
         elif operator == "is":
             # convert pointers to ints & compare
@@ -215,7 +263,9 @@ class LLVMTranslator(Visitor):
             self.builder.ret(val)
 
     def Identifier(self, node: Identifier):
-        raise NotImplementedError
+        for t in self.symboltable[::-1]:
+            if node.name in t:
+                return t[node.name]
 
     def MemberExpr(self, node: MemberExpr):
         raise NotImplementedError

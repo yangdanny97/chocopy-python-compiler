@@ -8,6 +8,7 @@ class TypedVar(Node):
         super().__init__(location, "TypedVar")
         self.identifier = identifier
         self.type = typ
+        self.t = None # the typechecked type goes here
 
     def visitChildren(self, typechecker):
         return typechecker.TypedVar(self)

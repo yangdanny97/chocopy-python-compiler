@@ -578,7 +578,8 @@ class TypeChecker:
 
     def TypedVar(self, node: TypedVar):
         # return the type of the annotaton
-        return self.visit(node.type)
+        node.t = self.visit(node.type)
+        return node.t
 
     def ListType(self, node: ListType):
         return ListValueType(self.visit(node.elementType))

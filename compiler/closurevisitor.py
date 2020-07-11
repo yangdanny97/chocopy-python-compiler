@@ -8,6 +8,7 @@ class ClosureVisitor(Visitor):
     def __init__(self):
         self.globals = set()
         self.vars = []
+        self.decls = []
     
     def visit(self, node: Node):
         if isinstance(node, Expr) or isinstance(node, Stmt):
@@ -35,6 +36,15 @@ class ClosureVisitor(Visitor):
         for d in node.declarations:
             self.visit(d)
 
+    def process_vars(self, decls:[str], variables:[Identifier])->[Identifier]:
+        freevars = []
+        for v in variables:
+            if v.name not in decls and v.name not in self.globals:
+                freevars.append(v)
+            elif v.name in self.globals and not any([v.name in d for d in self.decls]):
+                v.isGlobal = True
+        return freevars
+
     def FuncDef(self, node: FuncDef):
         self.vars = []
         decls = set()
@@ -43,15 +53,17 @@ class ClosureVisitor(Visitor):
         for d in node.declarations:
             if not (isinstance(d, GlobalDecl) or isinstance(d, NonLocalDecl)):
                 decls.add(d.getIdentifier().name)
+        self.decls.append(decls)
         for s in node.statements:
             self.visit(s)
-        freevars = [v for v in self.vars if (v.name not in decls and v.name not in self.globals)]
+        freevars = self.process_vars(decls, self.vars)
         for d in node.declarations:
             self.visit(d)
             if isinstance(d, FuncDef):
                 freevars += d.freevars
-        freevars = [v for v in freevars if (v.name not in decls and v.name not in self.globals)]
+        freevars = self.process_vars(decls, freevars)
         node.freevars = self.deduplicate(freevars)
+        self.decls.pop()
         return node
     
     def Identifier(self, node: Identifier):
