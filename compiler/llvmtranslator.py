@@ -128,9 +128,9 @@ class LLVMTranslator(Visitor):
         self.visit(node.expr)
 
     def AssignStmt(self, node: AssignStmt):
+        # TODO: handle assignments to nonlocals & globals
         value = self.visit(node.value)
         for t in node.targets:
-            # TODO
             if isinstance(t, Identifier):
                 ptr = self.visit(t)
                 if node.value.inferredType in ["int", "bool"]: 
@@ -146,7 +146,7 @@ class LLVMTranslator(Visitor):
                 raise NotImplementedError
 
     def IfStmt(self, node: IfStmt):
-        pred = self.visit(node.condition)
+        pred = self.deref(self.visit(node.condition))
         if len(node.elseBody) == 0:
             with self.builder.if_then(pred) as then:
                 with then:
@@ -258,6 +258,7 @@ class LLVMTranslator(Visitor):
         raise NotImplementedError
 
     def WhileStmt(self, node: WhileStmt):
+        # loop construction referenced from: http://dev.stephendiehl.com/numpile/
         test_block = self.function.append_basic_block('while.cond')
         body_block = self.function.append_basic_block('while.body')
         end_block = self.function.append_basic_block("while.end")
@@ -265,7 +266,7 @@ class LLVMTranslator(Visitor):
         # Setup the loop condition
         self.builder.branch(test_block)
         self.builder.position_at_end(test_block)
-        cond = self.builder.icmp_unsigned('==', self.visit(node.condition), ir.Constant(self.BOOL_TYPE, node.value))
+        cond = self.deref(self.visit(node.condition))
         self.builder.cbranch(cond, body_block, end_block)
 
         # Generate the loop body
@@ -297,7 +298,7 @@ class LLVMTranslator(Visitor):
 
     def IfExpr(self, node: IfExpr):
         result = self.builder.alloca(self.typeToLLVM(node.thenExpr.inferredtype))
-        pred = self.visit(node.condition)
+        pred = self.deref(self.visit(node.condition))
         with self.builder.if_else(pred) as (then, otherwise):
             with then:
                 thenExpr = self.visit(node.thenExpr)
