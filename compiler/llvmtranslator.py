@@ -33,6 +33,7 @@ class LLVMTranslator(Visitor):
         self.classTypes["object"] = objType
 
         self.builder = ir.IRBuilder()
+        self.function = None
         self.currentClass = None  # name of current class
         self.expReturnType = None  # expected return type of current function
 
@@ -40,10 +41,6 @@ class LLVMTranslator(Visitor):
 
         # map variable names to llvm ptr values
         self.symboltable = [defaultdict(lambda: None)]
-
-        # self.stdPrint()
-        # self.stdLen()
-        # self.stdInput()
 
     # set up standard library functions
 
@@ -227,7 +224,11 @@ class LLVMTranslator(Visitor):
             return self.builder.or_(left, right)
 
     def IndexExpr(self, node: IndexExpr):
-        raise NotImplementedError
+        lst = self.visit(node.list)
+        index = self.deref(self.visit(node.index))
+        values = self.builder.gep(lst, [ir.Constant(self.INT_TYPE, 1)])
+        value = self.builder.gep(values, [index])
+        return self.builder.load(value)
 
     def UnaryExpr(self, node: UnaryExpr):
         operand = self.visit(node.operand)
@@ -239,8 +240,16 @@ class LLVMTranslator(Visitor):
     def CallExpr(self, node: CallExpr):
         args = [self.visit(x) for x in node.args]
         name = node.function.name
-        func = self.module.get_global(name)
-        self.builder.call(func, args)
+        if name == "print":
+            raise NotImplementedError
+        elif name == "len":
+            lst = self.visit(node.args[0])
+            self.deref(self.builder.gep(lst, [ir.Constant(self.INT_TYPE, 0)]))
+        elif name == "input":
+            raise NotImplementedError
+        else:
+            func = self.module.get_global(name)
+            self.builder.call(func, args)
 
     def ForStmt(self, node: ForStmt):
         raise NotImplementedError
@@ -249,7 +258,23 @@ class LLVMTranslator(Visitor):
         raise NotImplementedError
 
     def WhileStmt(self, node: WhileStmt):
-        raise NotImplementedError
+        test_block = self.function.append_basic_block('while.cond')
+        body_block = self.function.append_basic_block('while.body')
+        end_block = self.function.append_basic_block("while.end")
+
+        # Setup the loop condition
+        self.builder.branch(test_block)
+        self.builder.position_at_end(test_block)
+        cond = self.builder.icmp_unsigned('==', self.visit(node.condition), ir.Constant(self.BOOL_TYPE, node.value))
+        self.builder.cbranch(cond, body_block, end_block)
+
+        # Generate the loop body
+        self.builder.position_at_end(test_block)
+        map(self.visit, node.body)
+
+        # Exit the loop
+        self.builder.branch(test_block)
+        self.builder.position_at_end(end_block)
 
     def ReturnStmt(self, node: ReturnStmt):
         if node.value is None or isinstance(node.value, NoneLiteral):
@@ -271,7 +296,15 @@ class LLVMTranslator(Visitor):
         raise NotImplementedError
 
     def IfExpr(self, node: IfExpr):
-        raise NotImplementedError
+        result = self.builder.alloca(self.typeToLLVM(node.thenExpr.inferredtype))
+        pred = self.visit(node.condition)
+        with self.builder.if_else(pred) as (then, otherwise):
+            with then:
+                thenExpr = self.visit(node.thenExpr)
+                self.builder.store(thenExpr, result)
+            with otherwise:
+                elseExpr = self.visit(node.elseExpr)
+                self.builder.store(elseExpr, result)
 
     def MethodCallExpr(self, node: MethodCallExpr):
         # add self argument
