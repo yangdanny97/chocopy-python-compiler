@@ -45,7 +45,7 @@ class LLVMTranslator(Visitor):
     # set up standard library functions
 
     def stdPrint(self):
-        # may need different prints for different types
+        # need different prints for different types
         raise NotImplementedError
 
     def stdLen(self):
@@ -99,27 +99,41 @@ class LLVMTranslator(Visitor):
     # TOP LEVEL & DECLARATIONS
 
     def Program(self, node: Program):
-        raise NotImplementedError
+        for d in node.declarations:
+            if isinstance(d, VarDef):
+                self.GlobalVarDef(d)
+            else:
+                self.visit(d)
+        # create "main" function
+        mainFunc = FuncDef([], Identifier([], "main"), [], ClassType([], "None"), [], node.statements)
+        self.visit(mainFunc)
+
+    def GlobalVarDef(self, node):
+        value = self.visit(node.value)
+        t = None
+        if node.value.inferredType in ["int", "bool"]: 
+            t = self.typeToLLVM(node.var.t, False)
+        else: 
+            t = self.typeToLLVM(node.var.t, True)
+        ptr = ir.GlobalVariable(self.module, t)
+        self.builder.store(value, ptr)
+        self.symboltable[-1][node.getIdentifier().name] = ptr
 
     def VarDef(self, node: VarDef):
         value = self.visit(node.value)
+        t = None
         if node.value.inferredType in ["int", "bool"]: 
-            # deref and store primitives
-            ptr = self.builder.alloca(self.typeToLLVM(node.var.t, False))
-            value = self.deref(value)
-            self.builder.store(value, ptr)
-            self.symboltable[-1][node.getIdentifier().name] = ptr
+            t = self.typeToLLVM(node.var.t, False)
         else: 
-            # aliasing
-            self.symboltable[-1][node.getIdentifier().name] = value
+            t = self.typeToLLVM(node.var.t, True)
+        ptr = self.builder.alloca(t)
+        self.builder.store(value, ptr)
+        self.symboltable[-1][node.getIdentifier().name] = ptr
 
     def ClassDef(self, node: ClassDef):
         raise NotImplementedError
 
     def FuncDef(self, node: FuncDef):
-        raise NotImplementedError
-
-    def GlobalDecl(self, node: GlobalDecl):
         raise NotImplementedError
 
     # STATEMENTS & EXPRESSIONS
@@ -128,7 +142,6 @@ class LLVMTranslator(Visitor):
         self.visit(node.expr)
 
     def AssignStmt(self, node: AssignStmt):
-        # TODO: handle assignments to nonlocals & globals
         value = self.visit(node.value)
         for t in node.targets:
             if isinstance(t, Identifier):
@@ -139,6 +152,7 @@ class LLVMTranslator(Visitor):
                     self.builder.store(value, ptr)
                 else: 
                     # aliasing
+                    self.builder.store(value, ptr)
                     self.symboltable[-1][t.name] = value
             elif isinstance(t, IndexExpr):
                 raise NotImplementedError
