@@ -87,7 +87,7 @@ class LLVMTranslator(Visitor):
                                        [ir.IntType(64), ir.ArrayType(ir.IntType(8), 0)])
             return typ.as_pointer() if aspointer else typ
         elif isinstance(t, FuncType):
-            parameters = [self.typeToLLVM(x, True) for x in t.parameters]
+            parameters = tuple([self.typeToLLVM(x, True) for x in t.parameters])
             returnType = self.typeToLLVM(t.returnType, True)
             return ir.FunctionType(returnType, parameters)
 
@@ -134,7 +134,19 @@ class LLVMTranslator(Visitor):
         raise NotImplementedError
 
     def FuncDef(self, node: FuncDef):
-        raise NotImplementedError
+        funcType = self.typeToLLVM(node.type)
+        func = ir.Function(self.module, funcType, name=node.getIdentifier().name)
+        block = func.append_basic_block(name="entry")
+        self.builder.position_at_end(block)
+        self.symboltable.append(defaultdict(lambda: None))
+        for i in range(len(node.params)):
+            param = node.params[i]
+            self.symboltable[param.identifier.name] = func.args[i]
+        for d in node.declarations:
+            self.visit(d)
+        for s in node.statements:
+            self.visit(s)
+        self.symboltable.pop()
 
     # STATEMENTS & EXPRESSIONS
 
@@ -285,7 +297,9 @@ class LLVMTranslator(Visitor):
 
         # Generate the loop body
         self.builder.position_at_end(test_block)
-        map(self.visit, node.body)
+
+        for s in node.body:
+            self.visit(s)
 
         # Exit the loop
         self.builder.branch(test_block)

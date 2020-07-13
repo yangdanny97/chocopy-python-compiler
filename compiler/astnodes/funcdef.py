@@ -21,6 +21,7 @@ class FuncDef(Declaration):
         self.statements = [s for s in statements if s is not None]
         self.isMethod = isMethod
         self.freevars = [] # used in AST transformations, not printed out
+        self.type = None # type signature of function
 
     def visitChildren(self, typechecker):
         return typechecker.FuncDef(self)

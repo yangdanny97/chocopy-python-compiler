@@ -180,6 +180,7 @@ class TypeChecker:
         self.enterScope()
         funcName = node.getIdentifier().name
         funcType = self.getSignature(node)
+        node.type = funcType
         self.expReturnType = funcType.returnType
         if not node.isMethod:  # top level function decl OR nested function
             if self.ts.classExists(funcName):
