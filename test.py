@@ -65,7 +65,7 @@ def run_parse_test(test, compiler: Compiler, bad=True)->bool:
     except:
         with test.with_suffix(".py.ast.typed").open("r") as f:
             correct_json = json.load(f)
-            return ast_equals(ast_json, correct_json)
+            return ast_equals(correct_json, ast_json)
 
 def run_typecheck_test(test, compiler: Compiler)->bool:
     astparser = Parser()
@@ -77,21 +77,25 @@ def run_typecheck_test(test, compiler: Compiler)->bool:
     ast_json = ast.toJSON()
     with test.with_suffix(".py.ast.typed").open("r") as f:
         correct_json = json.load(f)
-        return ast_equals(ast_json, correct_json)
+        return ast_equals(correct_json, ast_json)
 
 def ast_equals(d1, d2)->bool:
     # precondition: the input dict must represent a well-formed AST
+    # d1 is the correct AST, d2 is the AST output by this compiler
     if isinstance(d1, dict) and isinstance(d2, dict):
         for k, v in d1.items():
             if k not in d2 and k != "inferredType":
+                print("Expected field: "+k)
                 return False
             # only check starting line of node
             if k == "location":
                 if d1[k][0] != d2[k][0]:
+                    print("Expected starting line {:d}, got {:d}".format(d1[k][0], d2[k][0]))
                     return False
             # check number of errors, not the messages
             elif k == "errors":
                 if len(d1[k]["errors"]) != len(d2[k]["errors"]):
+                    print("Expected {:d} errors, got {:d}".format(len(d1[k]["errors"]), len(d2[k]["errors"])))
                     return False
             elif k == "errorMsg":
                 pass # only check presence of message, not content
@@ -102,13 +106,17 @@ def ast_equals(d1, d2)->bool:
                 return False
         for k in d2.keys():
             if k not in d1 and k != "inferredType":
+                print("Unxpected field: "+k)
                 return False
         return True
     if isinstance(d1, list) and isinstance(d2, list):
         if len(d1) != len(d2):
+            print("Expected list of length {:s}, got {:s}".format(len(d1), len(d2)))
             return False
         for i in range(len(d1)):
             if not ast_equals(d1[i], d2[i]):
                 return False
         return True
+    if d1 != d2:
+        print("Expected {:s}, got {:s}".format(str(d1), str(d2)))
     return d1 == d2
