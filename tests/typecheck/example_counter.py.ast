@@ -1,0 +1,281 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 13, 11 ],
+  "declarations" : [ {
+    "kind" : "ClassDef",
+    "location" : [ 1, 1, 8, 0 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 1, 7, 1, 13 ],
+      "name" : "Counter"
+    },
+    "superClass" : {
+      "kind" : "Identifier",
+      "location" : [ 1, 15, 1, 20 ],
+      "name" : "object"
+    },
+    "declarations" : [ {
+      "kind" : "VarDef",
+      "location" : [ 2, 3, 2, 13 ],
+      "var" : {
+        "kind" : "TypedVar",
+        "location" : [ 2, 3, 2, 9 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 2, 3, 2, 3 ],
+          "name" : "n"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 2, 7, 2, 9 ],
+          "className" : "int"
+        }
+      },
+      "value" : {
+        "kind" : "IntegerLiteral",
+        "location" : [ 2, 13, 2, 13 ],
+        "value" : 0
+      }
+    }, {
+      "kind" : "FuncDef",
+      "location" : [ 3, 3, 4, 9 ],
+      "name" : {
+        "kind" : "Identifier",
+        "location" : [ 3, 7, 3, 14 ],
+        "name" : "__init__"
+      },
+      "params" : [ {
+        "kind" : "TypedVar",
+        "location" : [ 3, 16, 3, 29 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 3, 16, 3, 19 ],
+          "name" : "self"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 3, 23, 3, 29 ],
+          "className" : "Counter"
+        }
+      } ],
+      "returnType" : {
+        "kind" : "ClassType",
+        "location" : [ 3, 31, 3, 31 ],
+        "className" : "<None>"
+      },
+      "declarations" : [ ],
+      "statements" : [ ]
+    }, {
+      "kind" : "FuncDef",
+      "location" : [ 5, 3, 6, 24 ],
+      "name" : {
+        "kind" : "Identifier",
+        "location" : [ 5, 7, 5, 9 ],
+        "name" : "inc"
+      },
+      "params" : [ {
+        "kind" : "TypedVar",
+        "location" : [ 5, 11, 5, 24 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 5, 11, 5, 14 ],
+          "name" : "self"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 5, 18, 5, 24 ],
+          "className" : "Counter"
+        }
+      } ],
+      "returnType" : {
+        "kind" : "ClassType",
+        "location" : [ 5, 26, 5, 26 ],
+        "className" : "<None>"
+      },
+      "declarations" : [ ],
+      "statements" : [ {
+        "kind" : "AssignStmt",
+        "location" : [ 6, 5, 6, 23 ],
+        "targets" : [ {
+          "kind" : "MemberExpr",
+          "location" : [ 6, 5, 6, 10 ],
+          "object" : {
+            "kind" : "Identifier",
+            "location" : [ 6, 5, 6, 8 ],
+            "name" : "self"
+          },
+          "member" : {
+            "kind" : "Identifier",
+            "location" : [ 6, 10, 6, 10 ],
+            "name" : "n"
+          }
+        } ],
+        "value" : {
+          "kind" : "BinaryExpr",
+          "location" : [ 6, 14, 6, 23 ],
+          "left" : {
+            "kind" : "MemberExpr",
+            "location" : [ 6, 14, 6, 19 ],
+            "object" : {
+              "kind" : "Identifier",
+              "location" : [ 6, 14, 6, 17 ],
+              "name" : "self"
+            },
+            "member" : {
+              "kind" : "Identifier",
+              "location" : [ 6, 19, 6, 19 ],
+              "name" : "n"
+            }
+          },
+          "operator" : "+",
+          "right" : {
+            "kind" : "IntegerLiteral",
+            "location" : [ 6, 23, 6, 23 ],
+            "value" : 1
+          }
+        }
+      } ]
+    } ]
+  }, {
+    "kind" : "VarDef",
+    "location" : [ 8, 1, 8, 18 ],
+    "var" : {
+      "kind" : "TypedVar",
+      "location" : [ 8, 1, 8, 11 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 8, 1, 8, 1 ],
+        "name" : "c"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 8, 5, 8, 11 ],
+        "className" : "Counter"
+      }
+    },
+    "value" : {
+      "kind" : "NoneLiteral",
+      "location" : [ 8, 15, 8, 18 ]
+    }
+  } ],
+  "statements" : [ {
+    "kind" : "AssignStmt",
+    "location" : [ 9, 1, 9, 13 ],
+    "targets" : [ {
+      "kind" : "Identifier",
+      "location" : [ 9, 1, 9, 1 ],
+      "name" : "c"
+    } ],
+    "value" : {
+      "kind" : "CallExpr",
+      "location" : [ 9, 5, 9, 13 ],
+      "function" : {
+        "kind" : "Identifier",
+        "location" : [ 9, 5, 9, 11 ],
+        "name" : "Counter"
+      },
+      "args" : [ ]
+    }
+  }, {
+    "kind" : "ExprStmt",
+    "location" : [ 10, 1, 10, 7 ],
+    "expr" : {
+      "kind" : "MethodCallExpr",
+      "location" : [ 10, 1, 10, 7 ],
+      "method" : {
+        "kind" : "MemberExpr",
+        "location" : [ 10, 1, 10, 5 ],
+        "object" : {
+          "kind" : "Identifier",
+          "location" : [ 10, 1, 10, 1 ],
+          "name" : "c"
+        },
+        "member" : {
+          "kind" : "Identifier",
+          "location" : [ 10, 3, 10, 5 ],
+          "name" : "inc"
+        }
+      },
+      "args" : [ ]
+    }
+  }, {
+    "kind" : "ExprStmt",
+    "location" : [ 11, 1, 11, 10 ],
+    "expr" : {
+      "kind" : "CallExpr",
+      "location" : [ 11, 1, 11, 10 ],
+      "function" : {
+        "kind" : "Identifier",
+        "location" : [ 11, 1, 11, 5 ],
+        "name" : "print"
+      },
+      "args" : [ {
+        "kind" : "MemberExpr",
+        "location" : [ 11, 7, 11, 9 ],
+        "object" : {
+          "kind" : "Identifier",
+          "location" : [ 11, 7, 11, 7 ],
+          "name" : "c"
+        },
+        "member" : {
+          "kind" : "Identifier",
+          "location" : [ 11, 9, 11, 9 ],
+          "name" : "n"
+        }
+      } ]
+    }
+  }, {
+    "kind" : "ExprStmt",
+    "location" : [ 12, 1, 12, 7 ],
+    "expr" : {
+      "kind" : "MethodCallExpr",
+      "location" : [ 12, 1, 12, 7 ],
+      "method" : {
+        "kind" : "MemberExpr",
+        "location" : [ 12, 1, 12, 5 ],
+        "object" : {
+          "kind" : "Identifier",
+          "location" : [ 12, 1, 12, 1 ],
+          "name" : "c"
+        },
+        "member" : {
+          "kind" : "Identifier",
+          "location" : [ 12, 3, 12, 5 ],
+          "name" : "inc"
+        }
+      },
+      "args" : [ ]
+    }
+  }, {
+    "kind" : "ExprStmt",
+    "location" : [ 13, 1, 13, 10 ],
+    "expr" : {
+      "kind" : "CallExpr",
+      "location" : [ 13, 1, 13, 10 ],
+      "function" : {
+        "kind" : "Identifier",
+        "location" : [ 13, 1, 13, 5 ],
+        "name" : "print"
+      },
+      "args" : [ {
+        "kind" : "MemberExpr",
+        "location" : [ 13, 7, 13, 9 ],
+        "object" : {
+          "kind" : "Identifier",
+          "location" : [ 13, 7, 13, 7 ],
+          "name" : "c"
+        },
+        "member" : {
+          "kind" : "Identifier",
+          "location" : [ 13, 9, 13, 9 ],
+          "name" : "n"
+        }
+      } ]
+    }
+  } ],
+  "errors" : {
+    "errors" : [ ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}
