@@ -2,41 +2,12 @@ from .astnodes import *
 from .types import *
 from .visitor import Visitor
 
+# A utility visitor to erase the inferred types of expressions
 class TypeEraser(Visitor):
 
-    def BinaryExpr(self, node: BinaryExpr):
-        pass
+    def visit(self, node: Node):
+        if isinstance(node, Expr):
+            node.inferredType = None
+        return node.visitChildren(self)
 
-    def IndexExpr(self, node: IndexExpr):
-        pass
-
-    def UnaryExpr(self, node: UnaryExpr):
-        pass
-
-    def CallExpr(self, node: CallExpr):
-        pass
-
-    def ForStmt(self, node: ForStmt):
-        pass
-
-    def ListExpr(self, node: ListExpr):
-        pass
-
-    def WhileStmt(self, node: WhileStmt):
-        pass
-
-    def ReturnStmt(self, node: ReturnStmt):
-        pass
-
-    def Identifier(self, node: Identifier):
-        pass
-
-    def MemberExpr(self, node: MemberExpr):
-        pass
-
-    def IfExpr(self, node: IfExpr):
-        pass
-
-    def MethodCallExpr(self, node: MethodCallExpr):
-        pass
 

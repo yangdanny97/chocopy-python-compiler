@@ -1,8 +1,8 @@
 from pathlib import Path
 from compiler.compiler import Compiler
 import json
-from compiler.parser import Parser
 from compiler.typechecker import TypeChecker
+from compiler.typeeraser import TypeEraser
 from compiler.typesystem import TypeSystem
 import traceback
 
@@ -120,6 +120,8 @@ def run_closure_test(test)->bool:
         tc = compiler.typechecker
         compiler.typecheck(ast)
         compiler.closurepass(ast)
+        # clean types to get fresh typecheck
+        ast.visit(TypeEraser())
         tc = TypeChecker(TypeSystem())
         tc.visit(ast)
         if len(ast.errors.errors) > 0:
