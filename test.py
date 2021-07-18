@@ -9,8 +9,8 @@ import traceback
 dump_location = True
 
 def run_all_tests():
-    run_parse_tests()
-    run_typecheck_tests()
+    # run_parse_tests()
+    # run_typecheck_tests()
     run_closure_tests()
 
 def run_parse_tests():
