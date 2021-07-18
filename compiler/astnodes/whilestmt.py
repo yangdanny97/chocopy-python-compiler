@@ -8,11 +8,11 @@ class WhileStmt(Stmt):
         self.condition = condition
         self.body = [s for s in body if s is not None]
 
-    def visitChildren(self, typechecker):
-        typechecker.visit(self.condition)
+    def visitChildren(self, visitor):
+        visitor.visit(self.condition)
         for s in self.body:
-            typechecker.visit(s)
-        return typechecker.WhileStmt(self)
+            visitor.visit(s)
+        return visitor.WhileStmt(self)
 
     def visit(self, visitor):
         return visitor.WhileStmt(self)

@@ -6,8 +6,8 @@ class BooleanLiteral(Literal):
         super().__init__(location, "BooleanLiteral")
         self.value = value
 
-    def visitChildren(self, typechecker):
-        return typechecker.BooleanLiteral(self)
+    def visitChildren(self, visitor):
+        return visitor.BooleanLiteral(self)
 
     def visit(self, visitor):
         return visitor.BooleanLiteral(self)

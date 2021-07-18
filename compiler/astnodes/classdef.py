@@ -16,8 +16,8 @@ class ClassDef(Declaration):
                 d.isMethod = True
         self.declarations = declarations
 
-    def visitChildren(self, typechecker):
-        typechecker.ClassDef(self)
+    def visitChildren(self, visitor):
+        visitor.ClassDef(self)
 
     def visit(self, visitor):
         return visitor.ClassDef(self)

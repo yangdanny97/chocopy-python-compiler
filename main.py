@@ -47,8 +47,6 @@ def main():
             outfile = infile + ".ast.typed"
         elif args.mode == "parse":
             outfile = infile + ".ast"
-        elif args.mode == "llvm":
-            outfile = infile + ".ll"
 
     compiler = Compiler()
     astparser = compiler.parser
@@ -67,7 +65,6 @@ def main():
                 return
 
     if args.mode in {"parse", "tc"}:
-        compiler.closurepass(tree)
         ast_json = tree.toJSON(False)
         if args.output:  # output to file
             with open(outfile, "w") as f:

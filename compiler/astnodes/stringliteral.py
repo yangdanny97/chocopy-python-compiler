@@ -6,8 +6,8 @@ class StringLiteral(Literal):
         super().__init__(location, "StringLiteral")
         self.value = value
 
-    def visitChildren(self, typechecker):
-        typechecker.StringLiteral(self)
+    def visitChildren(self, visitor):
+        visitor.StringLiteral(self)
 
     def visit(self, visitor):
         return visitor.StringLiteral(self)

@@ -12,8 +12,8 @@ class Program(Node):
         self.statements = [s for s in statements if s is not None]
         self.errors = errors
 
-    def visitChildren(self, typechecker):
-        return typechecker.Program(self)
+    def visitChildren(self, visitor):
+        return visitor.Program(self)
 
     def visit(self, visitor):
         return visitor.Program(self)

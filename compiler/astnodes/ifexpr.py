@@ -8,11 +8,11 @@ class IfExpr(Expr):
         self.thenExpr = thenExpr
         self.elseExpr = elseExpr
 
-    def visitChildren(self, typechecker):
-        typechecker.visit(self.condition)
-        typechecker.visit(self.thenExpr)
-        typechecker.visit(self.elseExpr)
-        return typechecker.IfExpr(self)
+    def visitChildren(self, visitor):
+        visitor.visit(self.condition)
+        visitor.visit(self.thenExpr)
+        visitor.visit(self.elseExpr)
+        return visitor.IfExpr(self)
 
     def visit(self, visitor):
         return visitor.IfExpr(self)

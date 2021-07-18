@@ -8,10 +8,10 @@ class ReturnStmt(Stmt):
         self.value = value
         self.isReturn = True
 
-    def visitChildren(self, typechecker):
+    def visitChildren(self, visitor):
         if self.value is not None:
-            typechecker.visit(self.value)
-        return typechecker.ReturnStmt(self)
+            visitor.visit(self.value)
+        return visitor.ReturnStmt(self)
 
     def visit(self, visitor):
         return visitor.ReturnStmt(self)

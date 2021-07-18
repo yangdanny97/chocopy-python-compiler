@@ -8,9 +8,9 @@ class MemberExpr(Expr):
         self.object = obj
         self.member = member
 
-    def visitChildren(self, typechecker):
-        typechecker.visit(self.object)
-        return typechecker.MemberExpr(self)
+    def visitChildren(self, visitor):
+        visitor.visit(self.object)
+        return visitor.MemberExpr(self)
 
     def visit(self, visitor):
         return visitor.MemberExpr(self)

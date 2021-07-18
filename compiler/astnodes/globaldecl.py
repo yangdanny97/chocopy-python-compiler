@@ -7,8 +7,8 @@ class GlobalDecl(Declaration):
         super().__init__(location, "GlobalDecl")
         self.variable = variable
 
-    def visitChildren(self, typechecker):
-        return typechecker.GlobalDecl(self)
+    def visitChildren(self, visitor):
+        return visitor.GlobalDecl(self)
 
     def visit(self, visitor):
         return visitor.GlobalDecl(self)

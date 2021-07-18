@@ -8,11 +8,11 @@ class MethodCallExpr(Expr):
         self.method = method
         self.args = args
 
-    def visitChildren(self, typechecker):
-        typechecker.visit(self.method.object)
+    def visitChildren(self, visitor):
+        visitor.visit(self.method.object)
         for a in self.args:
-            typechecker.visit(a)
-        return typechecker.MethodCallExpr(self)
+            visitor.visit(a)
+        return visitor.MethodCallExpr(self)
 
     def visit(self, visitor):
         return visitor.MethodCallExpr(self)

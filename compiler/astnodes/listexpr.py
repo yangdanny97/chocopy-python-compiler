@@ -6,10 +6,10 @@ class ListExpr(Expr):
         super().__init__(location, "ListExpr")
         self.elements = elements
 
-    def visitChildren(self, typechecker):
+    def visitChildren(self, visitor):
         for e in self.elements:
-            typechecker.visit(e)
-        return typechecker.ListExpr(self)
+            visitor.visit(e)
+        return visitor.ListExpr(self)
 
     def visit(self, visitor):
         return visitor.ListExpr(self)

@@ -6,8 +6,8 @@ class ListType(TypeAnnotation):
         super().__init__(location, "ListType")
         self.elementType = elementType
 
-    def visitChildren(self, typechecker):
-        return typechecker.ListType(self)
+    def visitChildren(self, visitor):
+        return visitor.ListType(self)
 
     def visit(self, visitor):
         return visitor.ListType(self)

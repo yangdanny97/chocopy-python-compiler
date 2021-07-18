@@ -8,10 +8,10 @@ class BinaryExpr(Expr):
         self.right = right
         self.operator = operator
 
-    def visitChildren(self, typechecker):
-        typechecker.visit(self.left)
-        typechecker.visit(self.right)
-        return typechecker.BinaryExpr(self)
+    def visitChildren(self, visitor):
+        visitor.visit(self.left)
+        visitor.visit(self.right)
+        return visitor.BinaryExpr(self)
 
     def visit(self, visitor):
         return visitor.BinaryExpr(self)

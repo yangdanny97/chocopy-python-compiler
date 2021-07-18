@@ -2,7 +2,6 @@ from .astnodes import *
 from .types import *
 from .typechecker import TypeChecker
 from .parser import Parser, ParseError
-from .llvmtranslator import LLVMTranslator
 from .closurevisitor import ClosureVisitor
 from .closuretransformer import ClosureTransformer 
 from .nestedfunchoister import NestedFuncHoister
@@ -47,8 +46,5 @@ class Compiler:
         # given an AST object, typecheck it
         # typechecking mutates the AST, adding types and errors
         ast.visit(self.typechecker)
-
-    def llvm(self, ast: Node):
-        pass # TODO
 
     

@@ -6,8 +6,8 @@ class ClassType(TypeAnnotation):
         super().__init__(location, "ClassType")
         self.className = className
 
-    def visitChildren(self, typechecker):
-        return typechecker.ClassType(self)
+    def visitChildren(self, visitor):
+        return visitor.ClassType(self)
 
     def visit(self, visitor):
         return visitor.ClassType(self)

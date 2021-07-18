@@ -7,8 +7,8 @@ class Identifier(Expr):
         self.name = name
         self.isGlobal = False # whether the identifier points to a global variable, used in LLVM codegen
 
-    def visitChildren(self, typechecker):
-        return typechecker.Identifier(self)
+    def visitChildren(self, visitor):
+        return visitor.Identifier(self)
 
     def visit(self, visitor):
         return visitor.Identifier(self)

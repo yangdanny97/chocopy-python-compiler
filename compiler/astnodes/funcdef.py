@@ -23,8 +23,8 @@ class FuncDef(Declaration):
         self.freevars = [] # used in AST transformations, not printed out
         self.type = None # type signature of function
 
-    def visitChildren(self, typechecker):
-        return typechecker.FuncDef(self)
+    def visitChildren(self, visitor):
+        return visitor.FuncDef(self)
 
     def visit(self, visitor):
         return visitor.FuncDef(self)

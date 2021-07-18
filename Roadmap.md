@@ -1,7 +1,7 @@
-This document is a rough outline of what needs to be implemented for the LLVM phase of the Chocopy compiler.
-Each item is designed to be built on top of the previous item, and represents a milestone where additional test programs can be compiled.
-
-1. add standard library `print` for int and bool, finish basic language features (functions, assignment, control flow) supporting int and bool
-2. lists, indexing, iteration, add standard library `len`
-3. strings
-4. classes, attributes, methods
+JVM Backend Feature Roadmap
+1. Simple expressions, statements, globals, print
+2. Simple functions
+3. Simple classes
+4. Nested functions
+    1. Lifting/hoisting args
+    2. Ref class

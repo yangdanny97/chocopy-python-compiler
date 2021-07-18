@@ -7,8 +7,8 @@ class NonLocalDecl(Declaration):
         super().__init__(location, "NonLocalDecl")
         self.variable = variable
 
-    def visitChildren(self, typechecker):
-        return typechecker.NonLocalDecl(self)
+    def visitChildren(self, visitor):
+        return visitor.NonLocalDecl(self)
 
     def visit(self, visitor):
         return visitor.NonLocalDecl(self)

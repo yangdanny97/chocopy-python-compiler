@@ -7,8 +7,8 @@ class ExprStmt(Stmt):
         super().__init__(location, "ExprStmt")
         self.expr = expr
 
-    def visitChildren(self, typechecker):
-        typechecker.visit(self.expr)
+    def visitChildren(self, visitor):
+        visitor.visit(self.expr)
 
     def visit(self, visitor):
         return visitor.ExprStmt(self)
