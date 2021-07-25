@@ -7,7 +7,7 @@ class Errors(Node):
         super().__init__(location, "Errors")
         self.errors = errors
 
-    def visitChildren(self, visitor):
+    def visitChildrenForTypecheck(self, visitor):
         pass
 
     def visit(self, visitor):

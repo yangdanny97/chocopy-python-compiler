@@ -6,7 +6,7 @@ class ClassType(TypeAnnotation):
         super().__init__(location, "ClassType")
         self.className = className
 
-    def visitChildren(self, visitor):
+    def visitChildrenForTypecheck(self, visitor):
         return visitor.ClassType(self)
 
     def visit(self, visitor):

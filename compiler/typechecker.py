@@ -31,7 +31,7 @@ class TypeChecker:
         self.addErrors = True
 
     def visit(self, node: Node):
-        return node.visitChildren(self)
+        return node.visitChildrenForTypecheck(self)
 
     def enterScope(self):
         self.symbolTable.append(defaultdict(lambda: None))

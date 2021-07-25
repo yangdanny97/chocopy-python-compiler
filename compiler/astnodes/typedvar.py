@@ -10,7 +10,7 @@ class TypedVar(Node):
         self.type = typ
         self.t = None # the typechecked type goes here
 
-    def visitChildren(self, visitor):
+    def visitChildrenForTypecheck(self, visitor):
         return visitor.TypedVar(self)
 
     def visit(self, visitor):

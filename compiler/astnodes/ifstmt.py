@@ -9,7 +9,7 @@ class IfStmt(Stmt):
         self.thenBody = [s for s in thenBody if s is not None]
         self.elseBody = [s for s in elseBody if s is not None]
 
-    def visitChildren(self, visitor):
+    def visitChildrenForTypecheck(self, visitor):
         visitor.visit(self.condition)
         for s in self.thenBody:
             visitor.visit(s)

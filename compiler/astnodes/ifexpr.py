@@ -8,7 +8,7 @@ class IfExpr(Expr):
         self.thenExpr = thenExpr
         self.elseExpr = elseExpr
 
-    def visitChildren(self, visitor):
+    def visitChildrenForTypecheck(self, visitor):
         visitor.visit(self.condition)
         visitor.visit(self.thenExpr)
         visitor.visit(self.elseExpr)

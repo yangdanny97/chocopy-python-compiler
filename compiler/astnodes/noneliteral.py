@@ -6,7 +6,7 @@ class NoneLiteral(Literal):
         super().__init__(location, "NoneLiteral")
         self.value = None
 
-    def visitChildren(self, visitor):
+    def visitChildrenForTypecheck(self, visitor):
         return visitor.NoneLiteral(self)
 
     def visit(self, visitor):

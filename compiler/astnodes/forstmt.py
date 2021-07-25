@@ -10,7 +10,7 @@ class ForStmt(Stmt):
         self.iterable = iterable
         self.body = [s for s in body if s is not None]
 
-    def visitChildren(self, visitor):
+    def visitChildrenForTypecheck(self, visitor):
         visitor.visit(self.identifier)
         visitor.visit(self.iterable)
         for s in self.body:

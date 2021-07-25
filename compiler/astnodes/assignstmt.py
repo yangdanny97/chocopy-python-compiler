@@ -8,7 +8,7 @@ class AssignStmt(Stmt):
         self.targets = targets
         self.value = value
 
-    def visitChildren(self, visitor):
+    def visitChildrenForTypecheck(self, visitor):
         for t in self.targets:
             visitor.visit(t)
         visitor.visit(self.value)

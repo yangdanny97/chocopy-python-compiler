@@ -8,7 +8,7 @@ class MemberExpr(Expr):
         self.object = obj
         self.member = member
 
-    def visitChildren(self, visitor):
+    def visitChildrenForTypecheck(self, visitor):
         visitor.visit(self.object)
         return visitor.MemberExpr(self)
 

@@ -8,7 +8,7 @@ class TypeEraser(Visitor):
     def visit(self, node: Node):
         if isinstance(node, Expr):
             node.inferredType = None
-        return node.visitChildren(self)
+        return node.visitChildrenForTypecheck(self)
 
     def Program(self, node: Program):
         for d in node.declarations:

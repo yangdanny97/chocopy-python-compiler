@@ -8,7 +8,7 @@ class Node:
         self.location = location
         self.errorMsg = None
 
-    def visitChildren(self, visitor):
+    def visitChildrenForTypecheck(self, visitor):
         raise Exception('operation not supported')
 
     def visit(self, visitor):

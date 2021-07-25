@@ -7,7 +7,7 @@ class UnaryExpr(Expr):
         self.operand = operand
         self.operator = operator
 
-    def visitChildren(self, visitor):
+    def visitChildrenForTypecheck(self, visitor):
         visitor.visit(self.operand)
         return visitor.UnaryExpr(self)
 

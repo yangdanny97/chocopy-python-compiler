@@ -7,7 +7,7 @@ class IndexExpr(Expr):
         self.list = lst
         self.index = index
 
-    def visitChildren(self, visitor):
+    def visitChildrenForTypecheck(self, visitor):
         visitor.visit(self.list)
         visitor.visit(self.index)
         return visitor.IndexExpr(self)

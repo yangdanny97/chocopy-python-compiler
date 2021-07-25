@@ -6,7 +6,7 @@ class StringLiteral(Literal):
         super().__init__(location, "StringLiteral")
         self.value = value
 
-    def visitChildren(self, visitor):
+    def visitChildrenForTypecheck(self, visitor):
         visitor.StringLiteral(self)
 
     def visit(self, visitor):

@@ -6,7 +6,7 @@ class IntegerLiteral(Literal):
         super().__init__(location, "IntegerLiteral")
         self.value = value
 
-    def visitChildren(self, visitor):
+    def visitChildrenForTypecheck(self, visitor):
         return visitor.IntegerLiteral(self)
 
     def visit(self, visitor):

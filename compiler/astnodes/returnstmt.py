@@ -8,7 +8,7 @@ class ReturnStmt(Stmt):
         self.value = value
         self.isReturn = True
 
-    def visitChildren(self, visitor):
+    def visitChildrenForTypecheck(self, visitor):
         if self.value is not None:
             visitor.visit(self.value)
         return visitor.ReturnStmt(self)
