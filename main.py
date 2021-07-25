@@ -6,9 +6,9 @@ from compiler.builder import Builder
 from compiler.astnodes import Node
 
 mode_help = (
-    'modes:\n' +
-    'parse - output AST before typechecking\n' +
-    'tc - output typechecked AST\n' +
+    'Modes:\n' +
+    'parse - output AST as JSON\n' +
+    'tc - output typechecked AST as JSON\n' +
     'python - output untyped Python 3 source code'
 )
 
@@ -48,7 +48,8 @@ def main():
     tc = compiler.typechecker
     tree = compiler.parse(infile)
 
-    if len(astparser.errors) > 0:
+    if len(astparser.errors) > 0 or not isinstance(tree, Node):
+        print("Encountered parse errors. Exiting.")
         for e in astparser.errors:
             print(e)
             return
@@ -62,10 +63,7 @@ def main():
     if args.mode in {"parse", "tc"}:
         ast_json = tree.toJSON(False)
         if args.should_print: 
-            if isinstance(tree, Node):
-                print(json.dumps(ast_json, indent=2))
-            else:
-                print("Parse Error: no AST to print")
+            print(json.dumps(ast_json, indent=2))
         else:
             with open(outfile, "w") as f:
                 json.dump(ast_json, f, indent=2)
