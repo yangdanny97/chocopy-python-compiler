@@ -14,9 +14,9 @@ mode_help = (
 
 def main():
     parser = argparse.ArgumentParser(description='Chocopy frontend')
-    parser.add_argument('-m', '--mode', dest='mode', choices=["parse", "tc", "python"], default="python",
+    parser.add_argument('--mode', dest='mode', choices=["parse", "tc", "python"], default="python",
                         help=mode_help)
-    parser.add_argument('-p', '--print', dest='print', action='store_false',
+    parser.add_argument('--print', dest='should_print', action='store_true',
                         help="output to stdout instead of file")
     parser.add_argument('--test', dest='test', action='store_true',
                         help="run all test cases")
@@ -61,17 +61,22 @@ def main():
 
     if args.mode in {"parse", "tc"}:
         ast_json = tree.toJSON(False)
-        if args.print:  # output to file
-            with open(outfile, "w") as f:
-                json.dump(ast_json, f, indent=2)
-        else:  # output to stdout
+        if args.should_print: 
             if isinstance(tree, Node):
                 print(json.dumps(ast_json, indent=2))
+            else:
+                print("Parse Error: no AST to print")
+        else:
+            with open(outfile, "w") as f:
+                json.dump(ast_json, f, indent=2)
     elif args.mode == "python":
         builder = Builder()
         tree.getPythonStr(builder)
-        with open(outfile, "w") as f:
-            f.write(builder.emit())
+        if args.should_print:
+            print(builder.emit())
+        else: 
+            with open(outfile, "w") as f:
+                f.write(builder.emit())
 
 if __name__ == "__main__":
     main()

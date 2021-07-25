@@ -27,8 +27,6 @@ class FuncDef(Declaration):
         builder.newLine("def ")
         self.name.getPythonStr(builder)
         builder.addText("(")
-        if self.isMethod:
-            builder.addText("self, ")
         for i in range(len(self.params)):
             self.params[i].getPythonStr(builder)
             if i != len(self.params) - 1:
