@@ -10,6 +10,9 @@ class TypedVar(Node):
         self.type = typ
         self.t = None # the typechecked type goes here
 
+    def getPythonStr(self, builder):
+        self.identifier.getPythonStr(builder)
+
     def visitChildrenForTypecheck(self, visitor):
         return visitor.TypedVar(self)
 

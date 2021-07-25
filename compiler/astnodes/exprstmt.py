@@ -7,6 +7,10 @@ class ExprStmt(Stmt):
         super().__init__(location, "ExprStmt")
         self.expr = expr
 
+    def getPythonStr(self, builder):
+        builder.newLine()
+        self.expr.getPythonStr(builder)
+
     def visitChildrenForTypecheck(self, visitor):
         visitor.visit(self.expr)
 

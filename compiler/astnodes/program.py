@@ -12,6 +12,12 @@ class Program(Node):
         self.statements = [s for s in statements if s is not None]
         self.errors = errors
 
+    def getPythonStr(self, builder):
+        for d in self.declarations:
+            d.getPythonStr(builder)
+        for s in self.statements:
+            s.getPythonStr(builder)
+
     def visitChildrenForTypecheck(self, visitor):
         return visitor.Program(self)
 

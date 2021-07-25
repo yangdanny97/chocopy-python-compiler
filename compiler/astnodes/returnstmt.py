@@ -8,6 +8,11 @@ class ReturnStmt(Stmt):
         self.value = value
         self.isReturn = True
 
+    def getPythonStr(self, builder):
+        builder.newLine("return ")
+        if self.value is not None:
+            self.value.getPythonStr(builder)
+
     def visitChildrenForTypecheck(self, visitor):
         if self.value is not None:
             visitor.visit(self.value)

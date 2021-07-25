@@ -8,6 +8,13 @@ class AssignStmt(Stmt):
         self.targets = targets
         self.value = value
 
+    def getPythonStr(self, builder):
+        builder.newLine()
+        for t in self.targets:
+            t.getPythonStr(builder)
+            builder.addText(" = ")
+        self.value.getPythonStr(builder)
+
     def visitChildrenForTypecheck(self, visitor):
         for t in self.targets:
             visitor.visit(t)

@@ -8,6 +8,15 @@ class CallExpr(Expr):
         self.function = function
         self.args = args
 
+    def getPythonStr(self, builder):
+        self.function.getPythonStr(builder)
+        builder.addText("(")
+        for i in range(len(self.args)):
+            self.args[i].getPythonStr(builder)
+            if i != len(self.args) - 1:
+                builder.addText(", ")
+        builder.addText(")")
+
     def visitChildrenForTypecheck(self, visitor):
         for a in self.args:
             visitor.visit(a)

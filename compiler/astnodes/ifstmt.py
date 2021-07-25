@@ -9,6 +9,24 @@ class IfStmt(Stmt):
         self.thenBody = [s for s in thenBody if s is not None]
         self.elseBody = [s for s in elseBody if s is not None]
 
+    def getPythonStr(self, builder):
+        builder.newLine("if ")
+        self.condition.getPythonStr(builder)
+        builder.addText(":")
+        builder.indent()
+        for s in self.thenBody:
+            s.getPythonStr(builder)
+        if len(self.thenBody) == 0:
+            builder.addText("pass")
+        builder.unindent()
+        builder.newLine("else:")
+        builder.indent()
+        for s in self.elseBody:
+            s.getPythonStr(builder)
+        if len(self.elseBody) == 0:
+            builder.addText("pass")
+        builder.unindent()
+
     def visitChildrenForTypecheck(self, visitor):
         visitor.visit(self.condition)
         for s in self.thenBody:

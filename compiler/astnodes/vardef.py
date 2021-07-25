@@ -10,6 +10,12 @@ class VarDef(Declaration):
         self.value = value
         self.isAttr = isAttr
 
+    def getPythonStr(self, builder):
+        builder.newLine()
+        self.var.getPythonStr(builder)
+        builder.addText(" = ")
+        self.value.getPythonStr(builder)
+
     def visitChildrenForTypecheck(self, visitor):
         visitor.visit(self.value)
         return visitor.VarDef(self)

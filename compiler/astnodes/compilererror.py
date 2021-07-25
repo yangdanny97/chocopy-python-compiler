@@ -7,6 +7,9 @@ class CompilerError(Node):
         self.message = message
         self.syntax = syntax
 
+    def getPythonStr(self, builder):
+        pass
+
     def toJSON(self, dump_location=True):
         d = super().toJSON(dump_location)
         d["message"] = self.message

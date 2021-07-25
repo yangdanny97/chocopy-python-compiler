@@ -6,6 +6,9 @@ class ClassType(TypeAnnotation):
         super().__init__(location, "ClassType")
         self.className = className
 
+    def getPythonStr(self, builder):
+        builder.addText(self.className)
+
     def visitChildrenForTypecheck(self, visitor):
         return visitor.ClassType(self)
 

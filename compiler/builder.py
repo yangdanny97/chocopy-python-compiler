@@ -1,14 +1,14 @@
 class Builder:
     def __init__(self):
         self.lines = []
-        self.indentatation = 0
+        self.indentation = 0
 
-    def addLine(self, line):
-        self.lines.append(("    " * self.indent) + line)
+    def newLine(self, line=""):
+        self.lines.append((self.indentation*"    ") + line)
 
-    def addText(self, text):
+    def addText(self, text=""):
         if len(self.lines) == 0:
-            self.lines = [[""]]
+            self.newLine()
         self.lines[-1] = self.lines[-1] + text
 
     def indent(self):

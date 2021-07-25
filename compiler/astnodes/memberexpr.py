@@ -8,6 +8,11 @@ class MemberExpr(Expr):
         self.object = obj
         self.member = member
 
+    def getPythonStr(self, builder):
+        self.object.getPythonStr(builder)
+        builder.addText(".")
+        self.member.getPythonStr(builder)
+
     def visitChildrenForTypecheck(self, visitor):
         visitor.visit(self.object)
         return visitor.MemberExpr(self)

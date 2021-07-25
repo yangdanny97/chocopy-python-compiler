@@ -8,6 +8,15 @@ class IfExpr(Expr):
         self.thenExpr = thenExpr
         self.elseExpr = elseExpr
 
+    def getPythonStr(self, builder):
+        builder.addText("(")
+        self.thenExpr.getPythonStr(builder)
+        builder.addText(" if ")
+        self.condition.getPythonStr(builder)
+        builder.addText(" else ")
+        self.elseExpr.getPythonStr(builder)
+        builder.addText(")")
+
     def visitChildrenForTypecheck(self, visitor):
         visitor.visit(self.condition)
         visitor.visit(self.thenExpr)

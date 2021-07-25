@@ -8,6 +8,9 @@ class Node:
         self.location = location
         self.errorMsg = None
 
+    def getPythonStr(self, builder):
+        raise Exception('operation not supported')
+
     def visitChildrenForTypecheck(self, visitor):
         raise Exception('operation not supported')
 

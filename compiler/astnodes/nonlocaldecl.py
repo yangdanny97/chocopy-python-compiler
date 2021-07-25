@@ -7,6 +7,10 @@ class NonLocalDecl(Declaration):
         super().__init__(location, "NonLocalDecl")
         self.variable = variable
 
+    def getPythonStr(self, builder):
+        builder.newLine("nonlocal ")
+        self.variable.getPythonStr(builder)
+
     def visitChildrenForTypecheck(self, visitor):
         return visitor.NonLocalDecl(self)
 

@@ -8,6 +8,13 @@ class BinaryExpr(Expr):
         self.right = right
         self.operator = operator
 
+    def getPythonStr(self, builder):
+        builder.addText("(")
+        self.left.getPythonStr(builder)
+        builder.addText(" " + self.operator + " ")
+        self.right.getPythonStr(builder)
+        builder.addText(")")
+
     def visitChildrenForTypecheck(self, visitor):
         visitor.visit(self.left)
         visitor.visit(self.right)

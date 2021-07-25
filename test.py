@@ -1,6 +1,8 @@
 from pathlib import Path
 from compiler.compiler import Compiler
+from compiler.builder import Builder
 import json
+import ast
 from compiler.typechecker import TypeChecker
 from compiler.typeeraser import TypeEraser
 from compiler.typesystem import TypeSystem
@@ -12,6 +14,7 @@ def run_all_tests():
     run_parse_tests()
     run_typecheck_tests()
     run_closure_tests()
+    run_python_emit_tests()
 
 def run_parse_tests():
     print("Running parser tests...\n")
@@ -68,6 +71,20 @@ def run_closure_tests():
                 n_passed += 1
     print("\nPassed {:d} out of {:d} closure transformation test cases\n".format(n_passed, total))
 
+def run_python_emit_tests():
+    print("Running Python backend tests...\n")
+    total = 0
+    n_passed = 0
+    tc_tests_dir = (Path(__file__).parent / "tests/typecheck/").resolve()
+    for test in tc_tests_dir.glob('*.py'):
+        passed = run_python_emit_test(test)
+        total += 1
+        if not passed:
+            print("Failed: " + test.name)
+        else:
+            n_passed += 1
+    print("\nPassed {:d} out of {:d} python backend test cases\n".format(n_passed, total))
+
 def run_parse_test(test, bad=True)->bool:
     # if bad=True, then test cases prefixed with bad are expected to fail
     compiler = Compiler()
@@ -95,7 +112,6 @@ def run_typecheck_test(test)->bool:
         ast = compiler.parse(test)
         if len(astparser.errors) > 0:
             return False
-        tc = compiler.typechecker
         compiler.typecheck(ast)
         ast_json = ast.toJSON(dump_location)
         with test.with_suffix(".py.ast.typed").open("r") as f:
@@ -134,6 +150,26 @@ def run_closure_test(test)->bool:
         track = traceback.format_exc()
         print(e)
         print(track)
+        return False
+
+def run_python_emit_test(test)->bool:
+    builder = Builder()
+    try:
+        compiler = Compiler()
+        astparser = compiler.parser
+        chocopy_ast = compiler.parse(test)
+        if len(astparser.errors) > 0:
+            return False
+        compiler.typecheck(chocopy_ast)
+        chocopy_ast.getPythonStr(builder)
+        ast.parse(builder.emit())
+        return True
+    except Exception as e:
+        print("Internal compiler error:", test)
+        track = traceback.format_exc()
+        print(e)
+        print(track)
+        print(builder.emit())
         return False
 
 def ast_equals(d1, d2)->bool:

@@ -23,6 +23,27 @@ class FuncDef(Declaration):
         self.freevars = [] # used in AST transformations, not printed out
         self.type = None # type signature of function
 
+    def getPythonStr(self, builder):
+        builder.newLine("def ")
+        self.name.getPythonStr(builder)
+        builder.addText("(")
+        if self.isMethod:
+            builder.addText("self, ")
+        for i in range(len(self.params)):
+            self.params[i].getPythonStr(builder)
+            if i != len(self.params) - 1:
+                builder.addText(", ")
+        builder.addText("):")
+        builder.indent()
+        for d in self.declarations:
+            d.getPythonStr(builder)
+        for s in self.statements:
+            s.getPythonStr(builder)
+        if len(self.declarations) == 0 and len(self.statements) == 0:
+            builder.addText("pass")
+        builder.unindent()
+        builder.newLine()
+
     def visitChildrenForTypecheck(self, visitor):
         return visitor.FuncDef(self)
 

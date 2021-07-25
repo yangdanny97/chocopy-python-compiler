@@ -7,6 +7,12 @@ class IndexExpr(Expr):
         self.list = lst
         self.index = index
 
+    def getPythonStr(self, builder):
+        self.list.getPythonStr(builder)
+        builder.addText("[")
+        self.index.getPythonStr(builder)
+        builder.addText("]")
+
     def visitChildrenForTypecheck(self, visitor):
         visitor.visit(self.list)
         visitor.visit(self.index)
