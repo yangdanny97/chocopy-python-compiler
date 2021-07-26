@@ -198,3 +198,5 @@ class JvmBackend(Visitor):
     def ClassType(self, node: ClassType):
         pass
 
+    def emit(self)->str:
+        return self.builder.emit()
