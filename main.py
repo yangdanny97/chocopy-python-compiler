@@ -14,8 +14,9 @@ mode_help = (
     'jvm - output JVM bytecode as text formatted for the Krakatau assembler'
 )
 
-def out_msg(path):
-    print("Output to {}".format(path))
+def out_msg(path, verbose):
+    if verbose:
+        print("Output to {}".format(path))
 
 def main():
     parser = argparse.ArgumentParser(description='Chocopy frontend')
@@ -25,6 +26,8 @@ def main():
                         help="output to stdout instead of file")
     parser.add_argument('--test', dest='test', action='store_true',
                         help="run all test cases")
+    parser.add_argument('--verbose', dest='verbose', action='store_true',
+                        help="verbose output")
     parser.add_argument('infile', nargs='?', type=str, default=None)
     parser.add_argument('outfile', nargs='?', type=str, default=None)
     args = parser.parse_args()
@@ -36,13 +39,11 @@ def main():
     infile = args.infile
     outfile = args.outfile
     if args.infile == None:
-        print("Error: must specify input file")
         parser.print_help()
-        return
+        raise Exception("Error: must specify input file")
 
     if args.infile[-3:] != ".py":
-        print("Error: input file must end with .py")
-        return
+        raise Exception("Error: input file must end with .py")
 
     infile_name = infile[:-3].split("/")[-1]
     infile_no_extension = infile[:-3]
@@ -63,16 +64,15 @@ def main():
     tree = compiler.parse(infile)
 
     if len(astparser.errors) > 0 or not isinstance(tree, Node):
-        print("Encountered parse errors. Exiting.")
         for e in astparser.errors:
             print(e)
-            return
+        raise Exception("Encountered parse errors. Exiting.")
     elif args.mode != "parse":
         compiler.typecheck(tree)
         if len(tc.errors) > 0:
             for e in astparser.errors:
                 print(e)
-                return
+            raise Exception("Encountered typecheck errors. Exiting.")
 
     if args.mode in {"parse", "tc"}:
         ast_json = tree.toJSON(False)
@@ -80,7 +80,7 @@ def main():
             print(json.dumps(ast_json, indent=2))
         else:
             with open(outfile, "w") as f:
-                out_msg(outfile)
+                out_msg(outfile, args.verbose)
                 json.dump(ast_json, f, indent=2)
     elif args.mode == "python":
         builder = Builder()
@@ -89,7 +89,7 @@ def main():
             print(builder.emit())
         else: 
             with open(outfile, "w") as f:
-                out_msg(outfile)
+                out_msg(outfile, args.verbose)
                 f.write(builder.emit())
     elif args.mode == "jvm":
         jvm_emitter = JvmBackend(infile_name)
@@ -98,7 +98,7 @@ def main():
             print(jvm_emitter.emit())
         else: 
             with open(outfile, "w") as f:
-                out_msg(outfile)
+                out_msg(outfile, args.verbose)
                 f.write(jvm_emitter.emit())       
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ from compiler.typesystem import TypeSystem
 from compiler.jvm_backend import JvmBackend
 import traceback
 import subprocess
+import time
 
 dump_location = True
 
@@ -100,9 +101,9 @@ def run_jvm_tests():
             print("Failed: " + test.name)
         else:
             n_passed += 1
-    subprocess.run("cd {} && rm *.j && rm *.class".format(
-        str(Path(__file__).parent.resolve())
-    ), shell=True)
+    # subprocess.run("cd {} && rm *.j && rm *.class".format(
+    #     str(Path(__file__).parent.resolve())
+    # ), shell=True)
     print("\nPassed {:d} out of {:d} JVM backend test cases\n".format(n_passed, total))
 
 def run_parse_test(test, bad=True)->bool:
@@ -193,13 +194,19 @@ def run_python_emit_test(test)->bool:
 
 def run_jvm_test(test)->bool:
     passed = True
+    subprocess.run("cd {} && python3 main.py --mode jvm tests/jvm/{} {}.j".format(
+        str(Path(__file__).parent.resolve()),
+        str(test.name),
+        str(test.name[:-3])
+    ), shell=True, stderr=subprocess.STDOUT)
     try:
-        output  = subprocess.check_output("cd {} && ./run_jvm_test.sh tests/jvm/{}".format(
+        output = subprocess.check_output("cd {} && python3 ../Krakatau/assemble.py -q {}.j && java -cp . {}".format(
             str(Path(__file__).parent.resolve()),
-            str(test.name)
+            str(test.name[:-3]),
+            str(test.name[:-3])
         ), shell=True)
         lines = output.decode().split("\n")
-        error_flags = {"error", "Error", "Exception", "exception"}
+        error_flags = {"error", "Error", "Exception", "exception", "Expected", "expected"}
         for l in lines:
             for e in error_flags:
                 if e in l:
@@ -207,7 +214,9 @@ def run_jvm_test(test)->bool:
                     print(l)
                     break
     except Exception as e:
+        print("AAA")
         print(e)
+        passed = False
     return passed
 
 def ast_equals(d1, d2)->bool:

@@ -73,55 +73,6 @@ class JvmBackend(Visitor):
         self.locals[-1][name] = n
         return n
 
-    def emit_assert(self, arg:Expr):
-        label = self.newLabelName()
-        self.visit(arg)
-        self.instr("ifne {}".format(label))
-        msg = "failed assertion on line {}".format(arg.location[0])
-        self.instr("new java/lang/Exception")
-        self.instr("dup")
-        self.instr("ldc {}".format(json.dumps(msg)))
-        self.instr("invokespecial Method java/lang/Exception <init> (Ljava/lang/String;)V")
-        self.instr("athrow")
-        self.label(label)
-
-    def emit_input(self):
-        self.instr("new java/util/Scanner")
-        self.instr("dup")
-        self.instr("getstatic Field java/lang/System in Ljava/io/InputStream;")
-        self.instr("invokespecial Method java/util/Scanner <init> (Ljava/io/InputStream;)V") 
-        l = self.newLocal()
-        self.instr("aload {}".format(l))
-        self.builder.addLine("invokevirtual Method java/util/Scanner nextLine ()Ljava/lang/String;")
-
-    def emit_len(self, arg:Expr):
-        t = arg.inferredType
-        is_list = False
-        if isinstance(t, ListValueType):
-            is_list = True
-        else:
-            if t.className == "<None>":
-                pass
-            elif t.className == "<Empty>":
-                is_list = True
-            elif t.className == "str":
-                pass
-            else:
-                # TODO - runtime abort
-                raise Exception("Built-in function len is unsupported for values of type "+arg.inferredType.classname)
-        if is_list:
-            pass # TODO
-        else:
-            pass
-
-    def emit_print(self, arg:Expr):
-        if isinstance(arg.inferredType, ListValueType):
-            raise Exception("Built-in function print is unsupported for lists")
-        t = arg.inferredType.getJavaSignature()
-        self.instr("getstatic Field java/lang/System out Ljava/io/PrintStream;")
-        self.visit(arg)
-        self.instr("invokevirtual Method java/io/PrintStream println ({})V".format(t))
-
     def Program(self, node: Program):
         self.instr(".version 49 0")
         self.instr(".class public super {}".format(self.main))
@@ -155,12 +106,6 @@ class JvmBackend(Visitor):
             self.newLocal(node.var.identifier.name, node.value.inferredType.isJavaRef())
 
     # STATEMENTS
-
-    def NonLocalDecl(self, node: NonLocalDecl):
-        pass
-
-    def GlobalDecl(self, node: GlobalDecl):
-        pass
 
     def processAssignmentTarget(self, target:Expr):
         if isinstance(target, Identifier):
@@ -355,3 +300,61 @@ class JvmBackend(Visitor):
 
     def emit(self)->str:
         return self.builder.emit()
+
+    # SUGAR
+
+    def NonLocalDecl(self, node: NonLocalDecl):
+        pass
+
+    def GlobalDecl(self, node: GlobalDecl):
+        pass
+
+    # BUILT-INS
+    def emit_assert(self, arg:Expr):
+        label = self.newLabelName()
+        self.visit(arg)
+        self.instr("ifne {}".format(label))
+        msg = "failed assertion on line {}".format(arg.location[0])
+        self.instr("new java/lang/Exception")
+        self.instr("dup")
+        self.instr("ldc {}".format(json.dumps(msg)))
+        self.instr("invokespecial Method java/lang/Exception <init> (Ljava/lang/String;)V")
+        self.instr("athrow")
+        self.label(label)
+
+    def emit_input(self):
+        self.instr("new java/util/Scanner")
+        self.instr("dup")
+        self.instr("getstatic Field java/lang/System in Ljava/io/InputStream;")
+        self.instr("invokespecial Method java/util/Scanner <init> (Ljava/io/InputStream;)V") 
+        l = self.newLocal()
+        self.instr("aload {}".format(l))
+        self.builder.addLine("invokevirtual Method java/util/Scanner nextLine ()Ljava/lang/String;")
+
+    def emit_len(self, arg:Expr):
+        t = arg.inferredType
+        is_list = False
+        if isinstance(t, ListValueType):
+            is_list = True
+        else:
+            if t.className == "<None>":
+                pass
+            elif t.className == "<Empty>":
+                is_list = True
+            elif t.className == "str":
+                pass
+            else:
+                # TODO - runtime abort
+                raise Exception("Built-in function len is unsupported for values of type "+arg.inferredType.classname)
+        if is_list:
+            pass # TODO
+        else:
+            pass
+
+    def emit_print(self, arg:Expr):
+        if isinstance(arg.inferredType, ListValueType):
+            raise Exception("Built-in function print is unsupported for lists")
+        t = arg.inferredType.getJavaSignature()
+        self.instr("getstatic Field java/lang/System out Ljava/io/PrintStream;")
+        self.visit(arg)
+        self.instr("invokevirtual Method java/io/PrintStream println ({})V".format(t))
