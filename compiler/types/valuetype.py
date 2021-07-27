@@ -12,3 +12,6 @@ class ValueType(SymbolType):
 
     def getJavaSignature(self)->str:
         raise Exception("unsupported")
+
+    def isJavaRef(self)->bool:
+        return True

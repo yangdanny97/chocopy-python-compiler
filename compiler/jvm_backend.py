@@ -12,9 +12,22 @@ class JvmBackend(Visitor):
         self.builder = Builder()
         self.main = main # name of main class
         self.locals = [defaultdict(lambda: None)]
-    
+        self.counter = 0 # for labels
+
     def visit(self, node: Node):
         node.visit(self)
+
+    def instr(self, instr:str):
+        self.builder.newLine(instr)
+
+    def newLabelName(self)->str:
+        self.counter += 1
+        return "L"+str(self.counter)
+
+    def label(self, name:str)->str:
+        self.builder.unindent()
+        self.builder.newLine(name+":")
+        self.builder.indent()
 
     def enterScope(self):
         self.locals.append(defaultdict(lambda: None))
@@ -22,56 +35,51 @@ class JvmBackend(Visitor):
     def exitScope(self):
         self.locals.pop()
 
-    def typeIsRef(self, t: ValueType)->bool:
-        if isinstance(t, ClassValueType):
-            return t.className not in {"int", "bool"}
-        return False
-
     def returnInstr(self, exprType: ValueType):
-        if self.typeIsRef(exprType):
-            self.builder.newLine("areturn")
+        if exprType.isJavaRef():
+            self.instr("areturn")
         else:
-            self.builder.newLine("ireturn")
+            self.instr("ireturn")
 
     def store(self, name:str, t:ValueType):
         # TODO arrays
         n = self.locals[-1][name]
         if n is None:
             raise Exception("unexpected")
-        if self.typeIsRef(t):
-            self.builder.newLine("astore {}".format(n))
+        if t.isJavaRef():
+            self.instr("astore {}".format(n))
         else:
-            self.builder.newLine("istore {}".format(n))
+            self.instr("istore {}".format(n))
 
     def load(self, name:str, t:ValueType):
         # TODO arrays
         n = self.locals[-1][name]
         if n is None:
             raise Exception("unexpected")
-        if self.typeIsRef(t):
-            self.builder.newLine("aload {}".format(n))
+        if t.isJavaRef():
+            self.instr("aload {}".format(n))
         else:
-            self.builder.newLine("iload {}".format(n))
+            self.instr("iload {}".format(n))
 
     def newLocal(self, name:str=None, isRef:bool=True)->int:
         # store the top of stack as a new local
         n = len(self.locals[-1])
         if isRef:
-            self.builder.newLine("astore {}".format(n))
+            self.instr("astore {}".format(n))
         else:
-            self.builder.newLine("istore {}".format(n))
+            self.instr("istore {}".format(n))
         if name is None:
             name = "__local__{}".format(n)
         self.locals[-1][name] = n
         return n
 
     def emit_input(self):
-        self.builder.newLine("new java/util/Scanner")
-        self.builder.newLine("dup")
-        self.builder.newLine("getstatic Field java/lang/System in Ljava/io/InputStream;")
-        self.builder.newLine("invokespecial Method java/util/Scanner <init> (Ljava/io/InputStream;)V") 
+        self.instr("new java/util/Scanner")
+        self.instr("dup")
+        self.instr("getstatic Field java/lang/System in Ljava/io/InputStream;")
+        self.instr("invokespecial Method java/util/Scanner <init> (Ljava/io/InputStream;)V") 
         l = self.newLocal()
-        self.builder.newLine("aload {}".format(l))
+        self.instr("aload {}".format(l))
         self.builder.addLine("invokevirtual Method java/util/Scanner nextLine ()Ljava/lang/String;")
 
     def emit_len(self, arg:Expr):
@@ -98,26 +106,26 @@ class JvmBackend(Visitor):
         if isinstance(arg.inferredType, ListValueType):
             raise Exception("Built-in function print is unsupported for lists")
         t = arg.inferredType.getJavaSignature()
-        self.builder.newLine("getstatic Field java/lang/System out Ljava/io/PrintStream;")
+        self.instr("getstatic Field java/lang/System out Ljava/io/PrintStream;")
         self.visit(arg)
-        self.builder.newLine("invokevirtual Method java/io/PrintStream println ({})V".format(t))
+        self.instr("invokevirtual Method java/io/PrintStream println ({})V".format(t))
 
     def Program(self, node: Program):
-        self.builder.newLine(".version 49 0")
-        self.builder.newLine(".class public super {}".format(self.main))
-        self.builder.newLine(".super java/lang/Object")
-        self.builder.newLine(".method public static main : ([Ljava/lang/String;)V")
+        self.instr(".version 49 0")
+        self.instr(".class public super {}".format(self.main))
+        self.instr(".super java/lang/Object")
+        self.instr(".method public static main : ([Ljava/lang/String;)V")
         self.builder.indent()
-        self.builder.newLine(".limit stack 100") # TODO
-        self.builder.newLine(".limit locals {}".format(len(node.declarations) + 100))
+        self.instr(".limit stack 100") # TODO
+        self.instr(".limit locals {}".format(len(node.declarations) + 100))
         for d in node.declarations:
             self.visit(d)
         for s in node.statements:
             self.visit(s)
-        self.builder.newLine("return")
+        self.instr("return")
         self.builder.unindent()
-        self.builder.newLine(".end method")
-        self.builder.newLine(".end class")
+        self.instr(".end method")
+        self.instr(".end class")
 
     def ClassDef(self, node: ClassDef):
         pass # TODO
@@ -132,7 +140,7 @@ class JvmBackend(Visitor):
             pass # TODO field defs
         else:
             self.visit(node.value)
-            self.newLocal(node.var.identifier.name, self.typeIsRef(node.value.inferredType))
+            self.newLocal(node.var.identifier.name, node.value.inferredType.isJavaRef())
 
     # STATEMENTS
 
@@ -156,7 +164,7 @@ class JvmBackend(Visitor):
         self.visit(node.value)
         targets = node.targets[::-1]
         if len(targets) > 1:
-            self.builder.newLine("dup")
+            self.instr("dup")
             for t in targets:
                 self.processAssignmentTarget(t)
         else:
@@ -168,14 +176,87 @@ class JvmBackend(Visitor):
     def ExprStmt(self, node: ExprStmt):
         self.visit(node.expr)
 
+    def comparator(self, instr:str, firstBranchTrue:bool=False):
+        l1 = self.newLabelName()
+        l2 = self.newLabelName()
+        self.instr("{} {}".format(instr, l1))
+        if firstBranchTrue:
+            self.instr("iconst_1")
+        else:
+            self.instr("iconst_0")
+        self.instr("goto {}".format(l2))
+        self.label(l1)
+        if firstBranchTrue:
+            self.instr("iconst_0")
+        else:
+            self.instr("iconst_1") 
+        self.label(l2)
+
     def BinaryExpr(self, node: BinaryExpr):
-        pass
+        operator = node.operator
+        leftType = node.left.inferredType
+        rightType = node.right.inferredType
+        self.visit(node.left)
+        self.visit(node.right)
+
+        # concatenation and addition
+        if operator == "+":
+            if isinstance(leftType, ListValueType) and isinstance(rightType, ListValueType):
+                pass
+            elif leftType.className == "str":
+                pass
+            elif leftType.className == "int":
+                self.instr("iadd")
+            else:
+                raise Exception("unexpected")
+        # other arithmetic operators
+        elif operator == "-":
+            self.instr("isub")
+        elif operator == "*":
+            self.instr("imul")
+        elif operator == "//":
+            self.instr("invokestatic Method java/lang/Math floorDiv (II)I")
+        elif operator == "%":
+            self.instr("irem")
+        # relational operators
+        elif operator == "<":
+            self.comparator("if_icmplt")
+        elif operator == "<=":
+            self.comparator("if_icmple")
+        elif operator == ">":
+            self.comparator("if_icmpgt")
+        elif operator == ">=":
+            self.comparator("if_icmpge")
+        elif operator == "==":
+            if leftType.isJavaRef():
+                self.instr("invokevirtual Method java/lang/String equals (Ljava/lang/Object;)Z")
+            else:
+                self.comparator("if_icmpeq")
+        elif operator == "!=":
+            if leftType.isJavaRef():
+                self.instr("invokevirtual Method java/lang/String equals (Ljava/lang/Object;)Z")
+                self.comparator("ifne", True)
+            else:
+                self.comparator("if_icmpne")
+        elif operator == "is":
+            self.comparator("if_acmpeq")
+        # logical operators
+        elif operator == "and":
+            self.instr("iand")
+        elif operator == "or":
+            self.instr("ior")
+        else:
+            raise Exception("unexpected")
 
     def IndexExpr(self, node: IndexExpr):
         pass
 
     def UnaryExpr(self, node: UnaryExpr):
-        pass
+        self.visit(node.operand)
+        if node.operator == "-":
+            self.instr("ineg")
+        elif node.operator == "not":
+            self.comparator("ifne", True)
 
     def CallExpr(self, node: CallExpr):
         signature = node.function.inferredType.getJavaSignature()
@@ -189,7 +270,7 @@ class JvmBackend(Visitor):
         else:
             for arg in node.args:
                 self.visit(arg)
-            self.builder.newLine("invokestatic Method {} {} {};".format(self.main, name, signature))
+            self.instr("invokestatic Method {} {} {};".format(self.main, name, signature))
 
     def ForStmt(self, node: ForStmt):
         pass
@@ -217,7 +298,15 @@ class JvmBackend(Visitor):
         pass
 
     def IfExpr(self, node: IfExpr):
-        pass
+        self.visit(node.condition)
+        l1 = self.newLabelName()
+        l2 = self.newLabelName()
+        self.instr("{} {}".format("ifne", l1))
+        self.visit(node.elseExpr)
+        self.instr("goto {}".format(l2))
+        self.label(l1)
+        self.visit(node.thenExpr)
+        self.label(l2)
 
     def MethodCallExpr(self, node: MethodCallExpr):
         pass
@@ -226,18 +315,18 @@ class JvmBackend(Visitor):
 
     def BooleanLiteral(self, node: BooleanLiteral):
         if node.value:
-            self.builder.newLine("iconst_1")
+            self.instr("iconst_1")
         else:
-            self.builder.newLine("iconst_0")
+            self.instr("iconst_0")
 
     def IntegerLiteral(self, node: IntegerLiteral):
-        self.builder.newLine("ldc {}".format(node.value))
+        self.instr("ldc {}".format(node.value))
 
     def NoneLiteral(self, node: NoneLiteral):
-        self.builder.newLine("aconst_null")
+        self.instr("aconst_null")
 
     def StringLiteral(self, node: StringLiteral):
-        self.builder.newLine("ldc "+json.dumps(node.value))
+        self.instr("ldc "+json.dumps(node.value))
 
     # TYPES
 

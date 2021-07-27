@@ -13,6 +13,9 @@ class ListValueType(ValueType):
     def isListType():
         return True
 
+    def isJavaRef(self):
+        return False # TODO
+
     def __str__(self):
         return "[{}]".format(str(self.elementType))
 

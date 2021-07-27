@@ -31,6 +31,9 @@ class ClassValueType(ValueType):
     def isSpecialType(self):
         return self.className in ["int", "str", "bool"]
 
+    def isJavaRef(self):
+        return self.className not in ["int", "bool"]
+
     def getJavaName(self):
         if self.className == "bool":
             return "boolean"
