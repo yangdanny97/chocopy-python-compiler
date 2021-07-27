@@ -20,6 +20,7 @@ class TypeChecker:
         self.symbolTable[0]["print"] = FuncType([ObjectType()], NoneType())
         self.symbolTable[0]["input"] = FuncType([], StrType())
         self.symbolTable[0]["len"] = FuncType([ObjectType()], IntType())
+        self.symbolTable[0]["__assert__"] = FuncType([BoolType()], NoneType())
 
         self.ts = ts
 

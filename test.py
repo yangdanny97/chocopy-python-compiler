@@ -193,18 +193,21 @@ def run_python_emit_test(test)->bool:
 
 def run_jvm_test(test)->bool:
     passed = True
-    output  = subprocess.check_output("cd {} && ./compile_jvm.sh tests/jvm/{}".format(
-        str(Path(__file__).parent.resolve()),
-        str(test.name)
-    ), shell=True)
-    lines = output.decode().split("\n")
-    error_flags = {"error", "Error", "Exception", "exception"}
-    for l in lines:
-        for e in error_flags:
-            if e in l:
-                passed = False
-                print(l)
-                break
+    try:
+        output  = subprocess.check_output("cd {} && ./run_jvm_test.sh tests/jvm/{}".format(
+            str(Path(__file__).parent.resolve()),
+            str(test.name)
+        ), shell=True)
+        lines = output.decode().split("\n")
+        error_flags = {"error", "Error", "Exception", "exception"}
+        for l in lines:
+            for e in error_flags:
+                if e in l:
+                    passed = False
+                    print(l)
+                    break
+    except Exception as e:
+        print(e)
     return passed
 
 def ast_equals(d1, d2)->bool:

@@ -73,6 +73,18 @@ class JvmBackend(Visitor):
         self.locals[-1][name] = n
         return n
 
+    def emit_assert(self, arg:Expr):
+        label = self.newLabelName()
+        self.visit(arg)
+        self.instr("ifne {}".format(label))
+        msg = "failed assertion on line {}".format(arg.location[0])
+        self.instr("new java/lang/Exception")
+        self.instr("dup")
+        self.instr("ldc {}".format(json.dumps(msg)))
+        self.instr("invokespecial Method java/lang/Exception <init> (Ljava/lang/String;)V")
+        self.instr("athrow")
+        self.label(label)
+
     def emit_input(self):
         self.instr("new java/util/Scanner")
         self.instr("dup")
@@ -267,6 +279,8 @@ class JvmBackend(Visitor):
             self.emit_len(node.args[0])
         elif name == "input":
             self.emit_input()
+        elif name == "__assert__":
+            self.emit_assert(node.args[0])
         else:
             for arg in node.args:
                 self.visit(arg)
