@@ -101,9 +101,9 @@ def run_jvm_tests():
             print("Failed: " + test.name)
         else:
             n_passed += 1
-    # subprocess.run("cd {} && rm *.j && rm *.class".format(
-    #     str(Path(__file__).parent.resolve())
-    # ), shell=True)
+    subprocess.run("cd {} && rm *.j && rm *.class".format(
+        str(Path(__file__).parent.resolve())
+    ), shell=True)
     print("\nPassed {:d} out of {:d} JVM backend test cases\n".format(n_passed, total))
 
 def run_parse_test(test, bad=True)->bool:
