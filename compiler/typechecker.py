@@ -405,6 +405,7 @@ class TypeChecker:
         t = None
         if self.ts.classExists(fname):
             # constructor
+            node.isConstructor = True
             t = self.ts.getMethod(fname, "__init__")
             if len(t.parameters) != len(node.args) + 1:
                 self.addError(

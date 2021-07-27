@@ -13,6 +13,7 @@ class JvmBackend(Visitor):
         self.main = main # name of main class
         self.locals = [defaultdict(lambda: None)]
         self.counter = 0 # for labels
+        self.returnType = None
 
     def visit(self, node: Node):
         node.visit(self)
@@ -61,6 +62,12 @@ class JvmBackend(Visitor):
         else:
             self.instr("iload {}".format(n))
 
+    def newLocalEntry(self, name:str)->int:
+        # add a new entry to locals
+        n = len(self.locals[-1])
+        self.locals[-1][name] = n
+        return n
+
     def newLocal(self, name:str=None, isRef:bool=True)->int:
         # store the top of stack as a new local
         n = len(self.locals[-1])
@@ -74,6 +81,10 @@ class JvmBackend(Visitor):
         return n
 
     def Program(self, node: Program):
+        func_decls = [d for d in node.declarations if isinstance(d, FuncDef)]
+        cls_decls = [d for d in node.declarations if isinstance(d, ClassDef)]
+        var_decls = [d for d in node.declarations if isinstance(d, VarDef)]
+
         self.instr(".version 49 0")
         self.instr(".class public super {}".format(self.main))
         self.instr(".super java/lang/Object")
@@ -81,22 +92,45 @@ class JvmBackend(Visitor):
         self.builder.indent()
         self.instr(".limit stack 100") # TODO
         self.instr(".limit locals {}".format(len(node.declarations) + 100))
-        for d in node.declarations:
+        for d in var_decls:
             self.visit(d)
         for s in node.statements:
             self.visit(s)
         self.instr("return")
         self.builder.unindent()
         self.instr(".end method")
+        for d in func_decls:
+            self.visit(d)
         self.instr(".end class")
+        for d in cls_decls:
+            self.visit(d)
 
     def ClassDef(self, node: ClassDef):
         pass # TODO
 
     def FuncDef(self, node: FuncDef):
         self.enterScope()
-        # TODO
+        self.instr(".method public static {} : {}".format(node.name.name, node.type.getJavaSignature()))
+        self.builder.indent()
+        self.instr(".limit stack 100") # TODO
+        self.instr(".limit locals {}".format(len(node.declarations) + 100))
+        for i in range(len(node.params)):
+            self.newLocalEntry(node.params[i].identifier.name)
+        for d in node.declarations:
+            # TODO build nested funcs (probably by hoisting)
+            self.visit(d)
+        self.returnType = node.type.returnType
+        # handle last return
+        hasReturn = False
+        for s in node.statements:
+            self.visit(s)
+            if s.isReturn:
+                hasReturn = True
+        if not hasReturn:
+            self.buildReturn(None)
         self.exitScope()
+        self.builder.unindent()
+        self.instr(".end method")
 
     def VarDef(self, node: VarDef):
         if node.isAttr:
@@ -215,9 +249,19 @@ class JvmBackend(Visitor):
         elif node.operator == "not":
             self.comparator("ifne", True)
 
+    def buildConstructor(self, node: CallExpr):
+        className = node.function.name
+        self.builder.newLine("new {}".format(className))
+        self.builder.newLine("dup")
+        self.builder.newLine("invokespecial Method {} <init> ()V".format(className))
+
     def CallExpr(self, node: CallExpr):
         signature = node.function.inferredType.getJavaSignature()
         name = node.function.name
+        if node.isConstructor:
+            self.buildConstructor(node)
+            return
+        # TODO build shadowing
         if name == "print":
             self.emit_print(node.args[0])
         elif name == "len":
@@ -229,7 +273,9 @@ class JvmBackend(Visitor):
         else:
             for arg in node.args:
                 self.visit(arg)
-            self.instr("invokestatic Method {} {} {};".format(self.main, name, signature))
+            self.instr("invokestatic Method {} {} {}".format(self.main, name, signature))
+            if node.function.inferredType.returnType.isNone():
+                self.NoneLiteral(None) # push null for void return
 
     def ForStmt(self, node: ForStmt):
         pass
@@ -240,15 +286,18 @@ class JvmBackend(Visitor):
     def WhileStmt(self, node: WhileStmt):
         pass
 
-    def ReturnStmt(self, node: ReturnStmt):
-        if node.expType.isNone():
-            pass # TODO handle void
+    def buildReturn(self, value:Expr):
+        if self.returnType.isNone():
+            self.builder.newLine("return")
         else:
-            if node.value is None:
+            if value is None:
                 self.NoneLiteral(None)
             else:
-                self.visit(node.value)
-            self.returnInstr(node.expType)
+                self.visit(value)
+            self.returnInstr(self.returnType)
+
+    def ReturnStmt(self, node: ReturnStmt):
+        self.buildReturn(node.value)
 
     def Identifier(self, node: Identifier):
         self.load(node.name, node.inferredType)
@@ -268,6 +317,7 @@ class JvmBackend(Visitor):
         self.label(l2)
 
     def MethodCallExpr(self, node: MethodCallExpr):
+        # TODO special case for init
         pass
 
     # LITERALS
@@ -358,3 +408,4 @@ class JvmBackend(Visitor):
         self.instr("getstatic Field java/lang/System out Ljava/io/PrintStream;")
         self.visit(arg)
         self.instr("invokevirtual Method java/io/PrintStream println ({})V".format(t))
+        self.NoneLiteral(None) # push None for void return

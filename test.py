@@ -1,15 +1,13 @@
 from pathlib import Path
-from compiler.compiler import Compiler
-from compiler.builder import Builder
 import json
 import ast
+import traceback
+import subprocess
 from compiler.typechecker import TypeChecker
 from compiler.typeeraser import TypeEraser
 from compiler.typesystem import TypeSystem
-from compiler.jvm_backend import JvmBackend
-import traceback
-import subprocess
-import time
+from compiler.compiler import Compiler
+from compiler.builder import Builder
 
 dump_location = True
 
