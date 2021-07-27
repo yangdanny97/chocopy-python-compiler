@@ -6,7 +6,9 @@ import ast
 from compiler.typechecker import TypeChecker
 from compiler.typeeraser import TypeEraser
 from compiler.typesystem import TypeSystem
+from compiler.jvm_backend import JvmBackend
 import traceback
+import subprocess
 
 dump_location = True
 
@@ -15,6 +17,7 @@ def run_all_tests():
     run_typecheck_tests()
     run_closure_tests()
     run_python_emit_tests()
+    run_jvm_tests()
 
 def run_parse_tests():
     print("Running parser tests...\n")
@@ -83,7 +86,24 @@ def run_python_emit_tests():
             print("Failed: " + test.name)
         else:
             n_passed += 1
-    print("\nPassed {:d} out of {:d} python backend test cases\n".format(n_passed, total))
+    print("\nPassed {:d} out of {:d} Python backend test cases\n".format(n_passed, total))
+
+def run_jvm_tests():
+    print("Running JVM backend tests...\n")
+    total = 0
+    n_passed = 0
+    jvm_tests_dir = (Path(__file__).parent / "tests/jvm/").resolve()
+    for test in jvm_tests_dir.glob('*.py'):
+        passed = run_jvm_test(test)
+        total += 1
+        if not passed:
+            print("Failed: " + test.name)
+        else:
+            n_passed += 1
+    subprocess.run("cd {} && rm *.j && rm *.class".format(
+        str(Path(__file__).parent.resolve())
+    ), shell=True)
+    print("\nPassed {:d} out of {:d} JVM backend test cases\n".format(n_passed, total))
 
 def run_parse_test(test, bad=True)->bool:
     # if bad=True, then test cases prefixed with bad are expected to fail
@@ -169,8 +189,23 @@ def run_python_emit_test(test)->bool:
         track = traceback.format_exc()
         print(e)
         print(track)
-        print(builder.emit())
         return False
+
+def run_jvm_test(test)->bool:
+    passed = True
+    output  = subprocess.check_output("cd {} && ./compile_jvm.sh tests/jvm/{}".format(
+        str(Path(__file__).parent.resolve()),
+        str(test.name)
+    ), shell=True)
+    lines = output.decode().split("\n")
+    error_flags = {"error", "Error", "Exception", "exception"}
+    for l in lines:
+        for e in error_flags:
+            if e in l:
+                passed = False
+                print(l)
+                break
+    return passed
 
 def ast_equals(d1, d2)->bool:
     # precondition: the input dict must represent a well-formed AST

@@ -14,8 +14,6 @@ class JvmBackend(Visitor):
         self.locals = [defaultdict(lambda: None)]
     
     def visit(self, node: Node):
-        if isinstance(node, Expr):
-            node.visitChildrenForTypecheck(self)
         node.visit(self)
 
     def enterScope(self):
@@ -24,22 +22,33 @@ class JvmBackend(Visitor):
     def exitScope(self):
         self.locals.pop()
 
-    def exprTypeIsRef(self, expr: Expr)->bool:
-        t = expr.inferredType
+    def typeIsRef(self, t: ValueType)->bool:
         if isinstance(t, ClassValueType):
             return t.className not in {"int", "bool"}
         return False
 
-    def store(self, name):
-        n, isRef = self.locals[-1][name]
-        if isRef:
+    def returnInstr(self, exprType: ValueType):
+        if self.typeIsRef(exprType):
+            self.builder.newLine("areturn")
+        else:
+            self.builder.newLine("ireturn")
+
+    def store(self, name:str, t:ValueType):
+        # TODO arrays
+        n = self.locals[-1][name]
+        if n is None:
+            raise Exception("unexpected")
+        if self.typeIsRef(t):
             self.builder.newLine("astore {}".format(n))
         else:
             self.builder.newLine("istore {}".format(n))
 
-    def load(self, name):
-        n, isRef = self.locals[-1][name]
-        if isRef:
+    def load(self, name:str, t:ValueType):
+        # TODO arrays
+        n = self.locals[-1][name]
+        if n is None:
+            raise Exception("unexpected")
+        if self.typeIsRef(t):
             self.builder.newLine("aload {}".format(n))
         else:
             self.builder.newLine("iload {}".format(n))
@@ -53,7 +62,7 @@ class JvmBackend(Visitor):
             self.builder.newLine("istore {}".format(n))
         if name is None:
             name = "__local__{}".format(n)
-        self.locals[-1][name] = (n, isRef)
+        self.locals[-1][name] = n
         return n
 
     def emit_input(self):
@@ -65,47 +74,65 @@ class JvmBackend(Visitor):
         self.builder.newLine("aload {}".format(l))
         self.builder.addLine("invokevirtual Method java/util/Scanner nextLine ()Ljava/lang/String;")
 
-    def emit_len(self):
-        pass # TODO
+    def emit_len(self, arg:Expr):
+        t = arg.inferredType
+        is_list = False
+        if isinstance(t, ListValueType):
+            is_list = True
+        else:
+            if t.className == "<None>":
+                pass
+            elif t.className == "<Empty>":
+                is_list = True
+            elif t.className == "str":
+                pass
+            else:
+                # TODO - runtime abort
+                raise Exception("Built-in function len is unsupported for values of type "+arg.inferredType.classname)
+        if is_list:
+            pass # TODO
+        else:
+            pass
 
     def emit_print(self, arg:Expr):
-        t = ""
-        if arg.inferredType.classname == "int":
-            t = "I"
-        elif arg.inferredType.classname == "str":
-            t = "Ljava/lang/String;"
-        elif arg.inferredType.classname == "bool":
-            t = "Z"
-        else:
-            # TODO - runtime abort
-            raise Exception("Printing is unsupported for values of type "+arg.inferredType.classname)
+        if isinstance(arg.inferredType, ListValueType):
+            raise Exception("Built-in function print is unsupported for lists")
+        t = arg.inferredType.getJavaSignature()
         self.builder.newLine("getstatic Field java/lang/System out Ljava/io/PrintStream;")
+        self.visit(arg)
         self.builder.newLine("invokevirtual Method java/io/PrintStream println ({})V".format(t))
 
     def Program(self, node: Program):
         self.builder.newLine(".version 49 0")
-        self.builder.newLine(".class super {}".format(self.main))
+        self.builder.newLine(".class public super {}".format(self.main))
         self.builder.newLine(".super java/lang/Object")
         self.builder.newLine(".method public static main : ([Ljava/lang/String;)V")
         self.builder.indent()
-        # TODO
+        self.builder.newLine(".limit stack 100") # TODO
+        self.builder.newLine(".limit locals {}".format(len(node.declarations) + 100))
+        for d in node.declarations:
+            self.visit(d)
+        for s in node.statements:
+            self.visit(s)
         self.builder.newLine("return")
         self.builder.unindent()
         self.builder.newLine(".end method")
         self.builder.newLine(".end class")
 
     def ClassDef(self, node: ClassDef):
-        pass
+        pass # TODO
 
     def FuncDef(self, node: FuncDef):
-        pass
+        self.enterScope()
+        # TODO
+        self.exitScope()
 
     def VarDef(self, node: VarDef):
-        if self.isAttr:
-            pass # TODO
+        if node.isAttr:
+            pass # TODO field defs
         else:
             self.visit(node.value)
-            self.newLocal(node.var, self.exprTypeIsRef(node.value))
+            self.newLocal(node.var.identifier.name, self.typeIsRef(node.value.inferredType))
 
     # STATEMENTS
 
@@ -115,8 +142,15 @@ class JvmBackend(Visitor):
     def GlobalDecl(self, node: GlobalDecl):
         pass
 
-    def processAssignmentTarget(target:Expr):
-        pass # TODO
+    def processAssignmentTarget(self, target:Expr):
+        if isinstance(target, Identifier):
+            self.store(target.name, target.inferredType)
+        elif isinstance(target, IndexExpr):
+            pass # TODO
+        elif isinstance(target, MemberExpr):
+            pass # TODO
+        else:
+            raise Exception("unsupported")
 
     def AssignStmt(self, node: AssignStmt):
         self.visit(node.value)
@@ -132,7 +166,7 @@ class JvmBackend(Visitor):
         pass
 
     def ExprStmt(self, node: ExprStmt):
-        pass
+        self.visit(node.expr)
 
     def BinaryExpr(self, node: BinaryExpr):
         pass
@@ -144,7 +178,18 @@ class JvmBackend(Visitor):
         pass
 
     def CallExpr(self, node: CallExpr):
-        pass
+        signature = node.function.inferredType.getJavaSignature()
+        name = node.function.name
+        if name == "print":
+            self.emit_print(node.args[0])
+        elif name == "len":
+            self.emit_len(node.args[0])
+        elif name == "input":
+            self.emit_input()
+        else:
+            for arg in node.args:
+                self.visit(arg)
+            self.builder.newLine("invokestatic Method {} {} {};".format(self.main, name, signature))
 
     def ForStmt(self, node: ForStmt):
         pass
@@ -156,10 +201,17 @@ class JvmBackend(Visitor):
         pass
 
     def ReturnStmt(self, node: ReturnStmt):
-        pass
+        if node.expType.isNone():
+            pass # TODO handle void
+        else:
+            if node.value is None:
+                self.NoneLiteral(None)
+            else:
+                self.visit(node.value)
+            self.returnInstr(node.expType)
 
     def Identifier(self, node: Identifier):
-        self.load(node.name)
+        self.load(node.name, node.inferredType)
 
     def MemberExpr(self, node: MemberExpr):
         pass

@@ -485,6 +485,7 @@ class TypeChecker:
         elif not self.ts.canAssign(node.value.inferredType, self.expReturnType):
             self.addError(
                 node, F"Expected {self.expReturnType}, got {node.value.inferredType}")
+        node.expType = self.expReturnType
         return
 
     def Identifier(self, node: Identifier):

@@ -14,6 +14,9 @@ mode_help = (
     'jvm - output JVM bytecode as text formatted for the Krakatau assembler'
 )
 
+def out_msg(path):
+    print("Output to {}".format(path))
+
 def main():
     parser = argparse.ArgumentParser(description='Chocopy frontend')
     parser.add_argument('--mode', dest='mode', choices=["parse", "tc", "python", "jvm"], default="python",
@@ -37,9 +40,12 @@ def main():
         parser.print_help()
         return
 
-    if args.infile[-2:] != ".py":
+    if args.infile[-3:] != ".py":
         print("Error: input file must end with .py")
         return
+
+    infile_name = infile[:-3].split("/")[-1]
+    infile_no_extension = infile[:-3]
 
     if args.outfile is None:
         if args.mode == "tc":
@@ -47,9 +53,9 @@ def main():
         elif args.mode == "parse":
             outfile = infile + ".ast"
         elif args.mode == "python":
-            outfile = infile[:-3] + ".out.py"
+            outfile = infile_no_extension + ".out.py"
         elif args.mode == "jvm":
-            outfile = infile[:-3] + ".j"
+            outfile = infile_no_extension + ".j"
 
     compiler = Compiler()
     astparser = compiler.parser
@@ -74,6 +80,7 @@ def main():
             print(json.dumps(ast_json, indent=2))
         else:
             with open(outfile, "w") as f:
+                out_msg(outfile)
                 json.dump(ast_json, f, indent=2)
     elif args.mode == "python":
         builder = Builder()
@@ -82,14 +89,16 @@ def main():
             print(builder.emit())
         else: 
             with open(outfile, "w") as f:
+                out_msg(outfile)
                 f.write(builder.emit())
     elif args.mode == "jvm":
-        jvm_emitter = JvmBackend()
+        jvm_emitter = JvmBackend(infile_name)
         jvm_emitter.visit(tree)
         if args.should_print:
             print(jvm_emitter.emit())
         else: 
             with open(outfile, "w") as f:
+                out_msg(outfile)
                 f.write(jvm_emitter.emit())       
 
 if __name__ == "__main__":

@@ -9,6 +9,25 @@ class ClassValueType(ValueType):
             return self.className == other.className
         return False
 
+    def getJavaSignature(self)->str:
+        if self.className == "bool":
+            return "Z"
+        elif self.className == "str":
+            return "Ljava/lang/String;"
+        elif self.className == "object":
+            return "Ljava/lang/Object;"
+        elif self.className == "int":
+            return "I"
+        elif self.className == "<None>":
+            raise Exception("unsupported class type")
+        elif self.className == "<Empty>":
+            raise Exception("unsupported class type")
+        else:
+            return self.className
+
+    def isNone(self):
+        return self.className == "<None>"
+
     def isSpecialType(self):
         return self.className in ["int", "str", "bool"]
 
