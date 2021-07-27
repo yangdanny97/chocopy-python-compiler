@@ -7,7 +7,6 @@ class ReturnStmt(Stmt):
         super().__init__(location, "ReturnStmt")
         self.value = value
         self.isReturn = True
-        self.expType = None
 
     def getPythonStr(self, builder):
         builder.newLine("return ")

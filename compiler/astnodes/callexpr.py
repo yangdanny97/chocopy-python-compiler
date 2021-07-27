@@ -7,6 +7,7 @@ class CallExpr(Expr):
         super().__init__(location, "CallExpr")
         self.function = function
         self.args = args
+        self.isConstructor = False
 
     def getPythonStr(self, builder):
         self.function.getPythonStr(builder)
