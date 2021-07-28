@@ -47,7 +47,7 @@ class ClassValueType(ValueType):
         elif self.className == "<None>":
             return "java/lang/Object"
         elif self.className == "<Empty>":
-            return "[java/lang/Object"
+            return "[Ljava/lang/Object;"
         elif self.className == "int":
             return self.className
         else:

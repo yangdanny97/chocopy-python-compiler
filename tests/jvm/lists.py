@@ -49,9 +49,13 @@ z = [None]
 __assert__(len([None]) == 1)
 __assert__([None][0] is None)
 
-# z = [[]]
-# __assert__(len([[]]) == 1)
-# __assert__(len([[]][0]) == 0)
+z = [[]]
+__assert__(len([[]]) == 1)
+__assert__(len([[]][0]) == 0)
+
+a = [[object()]]
+__assert__(len(a) == 1)
+__assert__(len(a[0]) == 1)
 
 y = ["1", "2", "3"]
 y = y + y
@@ -119,12 +123,12 @@ y2[1] = "aa"
 __assert__(y2[1] == "aa")
 __assert__(y2[1] == "aa")
 
-# a = [None, [], [object(), None]]
-# __assert__(a[0] is None)
-# __assert__(len(a[1]) == 0)
-# __assert__(len(a[2]) == 2)
-# __assert__(not (a[2][0] is None))
-# __assert__(a[2][1] is None)
+a = [None, [], [object(), None]]
+__assert__(a[0] is None)
+__assert__(len(a[1]) == 0)
+__assert__(len(a[2]) == 2)
+__assert__(not (a[2][0] is None))
+__assert__(a[2][1] is None)
 
 w = []
 __assert__(len(w) == 0)
@@ -138,7 +142,11 @@ __assert__(len(x) == 0)
 # y = ["1"]
 # w = x + y
 
-# TODO nested array creation
+# y = []
+# y = y + [""]
+# __assert__(len(y) == 1)
+# __assert__(len(y[0]) == 0)
+
 # TODO empty array type wrongly defaults to Object[]
 # TODO concatenating arrays of diff types into [object]
 

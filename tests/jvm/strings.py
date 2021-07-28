@@ -59,6 +59,4 @@ __assert__(y == "123")
 __assert__(len(x) == 1)
 __assert__(len(y) == 3)
 
-# TODO indexing
-
 
