@@ -28,7 +28,7 @@ def main():
     parser.add_argument('--verbose', dest='verbose', action='store_true',
                         help="verbose output")
     parser.add_argument('infile', nargs='?', type=str, default=None)
-    parser.add_argument('outfile', nargs='?', type=str, default=None)
+    parser.add_argument('outdir', nargs='?', type=str, default=None)
     args = parser.parse_args()
 
     if args.test:
@@ -36,7 +36,7 @@ def main():
         return
 
     infile = args.infile
-    outfile = args.outfile
+    outdir = args.outdir
     if args.infile == None:
         parser.print_help()
         raise Exception("Error: must specify input file")
@@ -47,15 +47,20 @@ def main():
     infile_name = infile[:-3].split("/")[-1]
     infile_no_extension = infile[:-3]
 
-    if args.outfile is None:
-        if args.mode == "tc":
-            outfile = infile + ".ast.typed"
-        elif args.mode == "parse":
-            outfile = infile + ".ast"
-        elif args.mode == "python":
-            outfile = infile_no_extension + ".out.py"
-        elif args.mode == "jvm":
-            outfile = infile_no_extension + ".j"
+    if outdir is None:
+        outdir = "./"
+    elif outdir[-1] != "/":
+        outdir = outdir + "/"
+    
+    outfile = None
+    if args.mode == "tc":
+        outfile = outdir + infile_name + ".ast.typed"
+    elif args.mode == "parse":
+        outfile = outdir + infile_name + ".ast"
+    elif args.mode == "python":
+        outfile = outdir + infile_name + ".out.py"
+    elif args.mode == "jvm":
+        outfile = outdir + infile_name + ".j"
 
     compiler = Compiler()
     astparser = compiler.parser
@@ -82,7 +87,7 @@ def main():
                 out_msg(outfile, args.verbose)
                 json.dump(ast_json, f, indent=2)
     elif args.mode == "python":
-        builder = Builder()
+        builder = Builder(infile_name)
         tree.getPythonStr(builder)
         if args.should_print:
             print(builder.emit())
@@ -91,13 +96,16 @@ def main():
                 out_msg(outfile, args.verbose)
                 f.write(builder.emit())
     elif args.mode == "jvm":
-        jvm_emitter = compiler.emitJVM(infile_name, tree)
-        if args.should_print:
-            print(jvm_emitter.emit())
-        else: 
-            with open(outfile, "w") as f:
-                out_msg(outfile, args.verbose)
-                f.write(jvm_emitter.emit())       
+        jvm_emitters = compiler.emitJVM(infile_name, tree)
+        for cls in jvm_emitters:
+            jvm_emitter = jvm_emitters[cls]
+            if args.should_print:
+                print(jvm_emitter.emit())
+            else: 
+                fname = outdir + cls + ".j"
+                with open(fname, "w") as f:
+                    out_msg(fname, args.verbose)
+                    f.write(jvm_emitter.emit())       
 
 if __name__ == "__main__":
     main()

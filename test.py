@@ -176,7 +176,8 @@ def run_closure_test(test)->bool:
         return False
 
 def run_python_emit_test(test)->bool:
-    builder = Builder()
+    infile_name = str(test)[:-3].split("/")[-1]
+    builder = Builder(infile_name)
     try:
         compiler = Compiler()
         astparser = compiler.parser
@@ -198,7 +199,7 @@ def run_jvm_test(test)->bool:
     passed = True
     try:
         infile_name = str(test)[:-3].split("/")[-1]
-        outfile = "./{}.j".format(infile_name)
+        outdir = "./"
         compiler = Compiler()
         astparser = compiler.parser
         ast = compiler.parse(test)
@@ -208,9 +209,12 @@ def run_jvm_test(test)->bool:
         if len(ast.errors.errors) > 0:
             print(ast.errors.toJSON(False))
             return False
-        jvm_emitter = compiler.emitJVM(infile_name, ast)
-        with open(outfile, "w") as f:
-            f.write(jvm_emitter.emit())    
+        jvm_emitters = compiler.emitJVM(infile_name, ast)
+        for cls in jvm_emitters:
+            jvm_emitter = jvm_emitters[cls]
+            fname = outdir + cls + ".j"
+            with open(fname, "w") as f:
+                f.write(jvm_emitter.emit()) 
     except Exception as e:
         print("Internal compiler error:", test)
         track = traceback.format_exc()
@@ -218,9 +222,10 @@ def run_jvm_test(test)->bool:
         print(track)
         return False
     try:
-        output = subprocess.check_output("cd {} && python3 ../Krakatau/assemble.py -q {}.j && java -cp . {}".format(
+        assembler_commands = ["python3 ../Krakatau/assemble.py -q ./{}.j".format(cls) for cls in jvm_emitters]
+        output = subprocess.check_output("cd {} && {} && java -cp . {}".format(
             str(Path(__file__).parent.resolve()),
-            str(test.name[:-3]),
+            " && ".join(assembler_commands),
             str(test.name[:-3])
         ), shell=True)
         lines = output.decode().split("\n")

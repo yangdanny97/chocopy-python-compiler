@@ -1,7 +1,10 @@
 - constructors
+    - calling __init__
 - classes
-- members
-- methods
+    - members
+    - methods
 - globals
+    - autoboxing, in a sense
 - nonlocals
-- nested func hoisting
+    - nested func hoisting
+- see TODOs in source + test cases for full list

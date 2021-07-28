@@ -10,7 +10,9 @@ class JvmBackend(Visitor):
     # record all free vars from nested functions
 
     def __init__(self, main: str, ts:TypeSystem):
-        self.builder = Builder()
+        self.classes = dict()
+        self.classes[main] = Builder(main)
+        self.currentClass = main
         self.main = main # name of main class
         self.locals = [defaultdict(lambda: None)]
         self.counter = 0 # for labels
@@ -19,20 +21,23 @@ class JvmBackend(Visitor):
         self.localLimit = 50
         self.ts = ts
 
+    def currentBuilder(self):
+        return self.classes[self.currentClass]
+
     def visit(self, node: Node):
         node.visit(self)
 
     def instr(self, instr:str):
-        self.builder.newLine(instr)
+        self.currentBuilder().newLine(instr)
 
     def newLabelName(self)->str:
         self.counter += 1
         return "L"+str(self.counter)
 
     def label(self, name:str)->str:
-        self.builder.unindent()
-        self.builder.newLine(name+":")
-        self.builder.indent()
+        self.currentBuilder().unindent()
+        self.instr(name+":")
+        self.currentBuilder().indent()
 
     def enterScope(self):
         self.locals.append(defaultdict(lambda: None))
@@ -108,7 +113,7 @@ class JvmBackend(Visitor):
         self.instr(".class public super {}".format(self.main))
         self.instr(".super java/lang/Object")
         self.instr(".method public static main : ([Ljava/lang/String;)V")
-        self.builder.indent()
+        self.currentBuilder().indent()
         self.instr(".limit stack {}".format(self.stackLimit))
         self.instr(".limit locals {}".format(len(node.declarations) + self.localLimit))
         for d in var_decls:
@@ -116,7 +121,7 @@ class JvmBackend(Visitor):
         for s in node.statements:
             self.visit(s)
         self.instr("return")
-        self.builder.unindent()
+        self.currentBuilder().unindent()
         self.instr(".end method")
         for d in func_decls:
             self.visit(d)
@@ -130,7 +135,7 @@ class JvmBackend(Visitor):
     def FuncDef(self, node: FuncDef):
         self.enterScope()
         self.instr(".method public static {} : {}".format(node.name.name, node.type.getJavaSignature()))
-        self.builder.indent()
+        self.currentBuilder().indent()
         self.instr(".limit stack {}".format(self.stackLimit))
         self.instr(".limit locals {}".format(len(node.declarations) + self.localLimit))
         for i in range(len(node.params)):
@@ -148,7 +153,7 @@ class JvmBackend(Visitor):
         if not hasReturn:
             self.buildReturn(None)
         self.exitScope()
-        self.builder.unindent()
+        self.currentBuilder().unindent()
         self.instr(".end method")
 
     def VarDef(self, node: VarDef):
@@ -319,9 +324,9 @@ class JvmBackend(Visitor):
         className = node.function.name
         classType = ClassValueType(className)
         javaName = classType.getJavaName()
-        self.builder.newLine("new {}".format(javaName))
-        self.builder.newLine("dup")
-        self.builder.newLine("invokespecial Method {} <init> ()V".format(javaName))
+        self.instr("new {}".format(javaName))
+        self.instr("dup")
+        self.instr("invokespecial Method {} <init> ()V".format(javaName))
 
     def CallExpr(self, node: CallExpr):
         signature = node.function.inferredType.getJavaSignature()
@@ -372,7 +377,7 @@ class JvmBackend(Visitor):
 
     def buildReturn(self, value:Expr):
         if self.returnType.isNone():
-            self.builder.newLine("return")
+            self.instr("return")
         else:
             if value is None:
                 self.NoneLiteral(None)
@@ -433,7 +438,7 @@ class JvmBackend(Visitor):
         pass
 
     def emit(self)->str:
-        return self.builder.emit()
+        return self.currentBuilder().emit()
 
     # SUGAR
 
@@ -466,7 +471,7 @@ class JvmBackend(Visitor):
         self.instr("invokespecial Method java/util/Scanner <init> (Ljava/io/InputStream;)V") 
         l = self.newLocal()
         self.instr("aload {}".format(l))
-        self.builder.addLine("invokevirtual Method java/util/Scanner nextLine ()Ljava/lang/String;")
+        self.currentBuilder().addLine("invokevirtual Method java/util/Scanner nextLine ()Ljava/lang/String;")
 
     def emit_len(self, arg:Expr):
         t = arg.inferredType

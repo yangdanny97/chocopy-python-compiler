@@ -1,5 +1,6 @@
 class Builder:
-    def __init__(self):
+    def __init__(self, name:str):
+        self.name = name
         self.lines = []
         self.indentation = 0
 

@@ -51,6 +51,6 @@ class Compiler:
     def emitJVM(self, main:str, ast: Node):
         jvm_backend = JvmBackend(main, self.typechecker.ts)
         jvm_backend.visit(ast)
-        return jvm_backend.builder
+        return jvm_backend.classes
         
     
