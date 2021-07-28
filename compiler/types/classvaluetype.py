@@ -9,6 +9,9 @@ class ClassValueType(ValueType):
             return self.className == other.className
         return False
 
+    def isListType(self)->bool:
+        return self.className in {"<Empty>", "<None>"}
+
     def getJavaSignature(self)->str:
         if self.className == "bool":
             return "Z"
@@ -19,9 +22,9 @@ class ClassValueType(ValueType):
         elif self.className == "int":
             return "I"
         elif self.className == "<None>":
-            raise Exception("unsupported class type")
+            return "Ljava/lang/Object;"
         elif self.className == "<Empty>":
-            raise Exception("unsupported class type")
+            return "[Ljava/lang/Object;"
         else:
             return self.className
 
@@ -41,11 +44,12 @@ class ClassValueType(ValueType):
             return "java/lang/String"
         elif self.className == "object":
             return "java/lang/Object"
-        # TODO - handle None and Empty
         elif self.className == "<None>":
             return "java/lang/Object"
         elif self.className == "<Empty>":
-            raise Exception("unsupported class type")
+            return "[java/lang/Object"
+        elif self.className == "int":
+            return self.className
         else:
             return self.className
     

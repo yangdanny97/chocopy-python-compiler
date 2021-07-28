@@ -1,0 +1,7 @@
+- constructors
+- classes
+- members
+- methods
+- globals
+- nonlocals
+- nested func hoisting

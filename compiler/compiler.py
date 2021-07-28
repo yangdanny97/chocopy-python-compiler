@@ -6,6 +6,7 @@ from .closurevisitor import ClosureVisitor
 from .closuretransformer import ClosureTransformer 
 from .nestedfunchoister import NestedFuncHoister
 from .typesystem import TypeSystem
+from .jvm_backend import JvmBackend
 import ast
 from pathlib import Path
 
@@ -47,4 +48,9 @@ class Compiler:
         # typechecking mutates the AST, adding types and errors
         ast.visit(self.typechecker)
 
+    def emitJVM(self, main:str, ast: Node):
+        jvm_backend = JvmBackend(main, self.typechecker.ts)
+        jvm_backend.visit(ast)
+        return jvm_backend.builder
+        
     

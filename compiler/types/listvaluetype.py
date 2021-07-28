@@ -10,11 +10,17 @@ class ListValueType(ValueType):
             return self.elementType == other.elementType
         return False
 
-    def isListType():
+    def getJavaSignature(self):
+        return "["+self.elementType.getJavaSignature()
+
+    def getJavaName(self):
+        return "["+self.elementType.getJavaName()
+
+    def isListType(self):
         return True
 
     def isJavaRef(self):
-        return False # TODO
+        return True
 
     def __str__(self):
         return "[{}]".format(str(self.elementType))

@@ -99,9 +99,12 @@ def run_jvm_tests():
             print("Failed: " + test.name)
         else:
             n_passed += 1
-    subprocess.run("cd {} && rm *.j && rm *.class".format(
-        str(Path(__file__).parent.resolve())
-    ), shell=True)
+    if total == n_passed:
+        subprocess.run("cd {} && rm *.j && rm *.class".format(
+            str(Path(__file__).parent.resolve())
+        ), shell=True)
+    else:
+        print("\nNot all test cases passed. Please run `make clean` after inspecting the output")
     print("\nPassed {:d} out of {:d} JVM backend test cases\n".format(n_passed, total))
 
 def run_parse_test(test, bad=True)->bool:
@@ -135,7 +138,8 @@ def run_typecheck_test(test)->bool:
         ast_json = ast.toJSON(dump_location)
         with test.with_suffix(".py.ast.typed").open("r") as f:
             correct_json = json.load(f)
-            return ast_equals(ast_json, correct_json)
+            match = ast_equals(ast_json, correct_json)
+            return match
     except Exception as e:
         print("Internal compiler error:", test)
         track = traceback.format_exc()
@@ -192,11 +196,27 @@ def run_python_emit_test(test)->bool:
 
 def run_jvm_test(test)->bool:
     passed = True
-    subprocess.run("cd {} && python3 main.py --mode jvm tests/jvm/{} {}.j".format(
-        str(Path(__file__).parent.resolve()),
-        str(test.name),
-        str(test.name[:-3])
-    ), shell=True, stderr=subprocess.STDOUT)
+    try:
+        infile_name = str(test)[:-3].split("/")[-1]
+        outfile = "./{}.j".format(infile_name)
+        compiler = Compiler()
+        astparser = compiler.parser
+        ast = compiler.parse(test)
+        if len(astparser.errors) > 0:
+            return False
+        compiler.typecheck(ast)
+        if len(ast.errors.errors) > 0:
+            print(ast.errors.toJSON(False))
+            return False
+        jvm_emitter = compiler.emitJVM(infile_name, ast)
+        with open(outfile, "w") as f:
+            f.write(jvm_emitter.emit())    
+    except Exception as e:
+        print("Internal compiler error:", test)
+        track = traceback.format_exc()
+        print(e)
+        print(track)
+        return False
     try:
         output = subprocess.check_output("cd {} && python3 ../Krakatau/assemble.py -q {}.j && java -cp . {}".format(
             str(Path(__file__).parent.resolve()),
@@ -212,9 +232,8 @@ def run_jvm_test(test)->bool:
                     print(l)
                     break
     except Exception as e:
-        print("AAA")
         print(e)
-        passed = False
+        return False
     return passed
 
 def ast_equals(d1, d2)->bool:

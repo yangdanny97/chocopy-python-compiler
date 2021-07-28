@@ -14,4 +14,7 @@ class ValueType(SymbolType):
         raise Exception("unsupported")
 
     def isJavaRef(self)->bool:
-        return True
+        raise Exception("unsupported")
+
+    def isListType(self):
+        raise Exception("unsupported")

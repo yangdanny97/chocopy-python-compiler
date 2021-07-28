@@ -4,7 +4,6 @@ from test import run_all_tests, run_parse_tests, run_typecheck_tests
 from compiler.compiler import Compiler
 from compiler.builder import Builder
 from compiler.astnodes import Node
-from compiler.jvm_backend import JvmBackend
 
 mode_help = (
     'Modes:\n' +
@@ -92,8 +91,7 @@ def main():
                 out_msg(outfile, args.verbose)
                 f.write(builder.emit())
     elif args.mode == "jvm":
-        jvm_emitter = JvmBackend(infile_name)
-        jvm_emitter.visit(tree)
+        jvm_emitter = compiler.emitJVM(infile_name, tree)
         if args.should_print:
             print(jvm_emitter.emit())
         else: 

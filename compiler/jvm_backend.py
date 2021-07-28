@@ -1,6 +1,7 @@
 from .astnodes import *
 from .types import *
 from .builder import Builder
+from .typesystem import TypeSystem
 from .visitor import Visitor
 from collections import defaultdict
 import json
@@ -8,12 +9,15 @@ import json
 class JvmBackend(Visitor):
     # record all free vars from nested functions
 
-    def __init__(self, main: str):
+    def __init__(self, main: str, ts:TypeSystem):
         self.builder = Builder()
         self.main = main # name of main class
         self.locals = [defaultdict(lambda: None)]
         self.counter = 0 # for labels
         self.returnType = None
+        self.stackLimit = 50
+        self.localLimit = 50
+        self.ts = ts
 
     def visit(self, node: Node):
         node.visit(self)
@@ -43,30 +47,45 @@ class JvmBackend(Visitor):
             self.instr("ireturn")
 
     def store(self, name:str, t:ValueType):
-        # TODO arrays
         n = self.locals[-1][name]
         if n is None:
-            raise Exception("unexpected")
+            raise Exception("Internal compiler error: unknown name {} for store".format(name))
         if t.isJavaRef():
             self.instr("astore {}".format(n))
         else:
             self.instr("istore {}".format(n))
 
     def load(self, name:str, t:ValueType):
-        # TODO arrays
         n = self.locals[-1][name]
         if n is None:
-            raise Exception("unexpected")
+            raise Exception("Internal compiler error: unknown name {} for load".format(name))
         if t.isJavaRef():
             self.instr("aload {}".format(n))
         else:
             self.instr("iload {}".format(n))
 
+    def arrayStore(self, t:ValueType):
+        # expect the stack to be array, idx, value
+        if t.isJavaRef():
+            self.instr("aastore")
+        else:
+            self.instr("iastore")
+
+    def arrayLoad(self, t:ValueType):
+        # expect the stack to be array, idx
+        if t.isJavaRef():
+            self.instr("aaload")
+        else:
+            self.instr("iaload")
+
     def newLocalEntry(self, name:str)->int:
-        # add a new entry to locals
+        # add a new entry to locals table w/o storing anything
         n = len(self.locals[-1])
         self.locals[-1][name] = n
         return n
+
+    def genLocalName(self, offset:int)->str:
+        return "__local__{}".format(offset)
 
     def newLocal(self, name:str=None, isRef:bool=True)->int:
         # store the top of stack as a new local
@@ -76,7 +95,7 @@ class JvmBackend(Visitor):
         else:
             self.instr("istore {}".format(n))
         if name is None:
-            name = "__local__{}".format(n)
+            name = self.genLocalName(n)
         self.locals[-1][name] = n
         return n
 
@@ -90,8 +109,8 @@ class JvmBackend(Visitor):
         self.instr(".super java/lang/Object")
         self.instr(".method public static main : ([Ljava/lang/String;)V")
         self.builder.indent()
-        self.instr(".limit stack 100") # TODO
-        self.instr(".limit locals {}".format(len(node.declarations) + 100))
+        self.instr(".limit stack {}".format(self.stackLimit))
+        self.instr(".limit locals {}".format(len(node.declarations) + self.localLimit))
         for d in var_decls:
             self.visit(d)
         for s in node.statements:
@@ -112,8 +131,8 @@ class JvmBackend(Visitor):
         self.enterScope()
         self.instr(".method public static {} : {}".format(node.name.name, node.type.getJavaSignature()))
         self.builder.indent()
-        self.instr(".limit stack 100") # TODO
-        self.instr(".limit locals {}".format(len(node.declarations) + 100))
+        self.instr(".limit stack {}".format(self.stackLimit))
+        self.instr(".limit locals {}".format(len(node.declarations) + self.localLimit))
         for i in range(len(node.params)):
             self.newLocalEntry(node.params[i].identifier.name)
         for d in node.declarations:
@@ -145,11 +164,16 @@ class JvmBackend(Visitor):
         if isinstance(target, Identifier):
             self.store(target.name, target.inferredType)
         elif isinstance(target, IndexExpr):
-            pass # TODO
+            # stack should be array, idx, value
+            self.visit(target.list)
+            self.instr("swap")
+            self.visit(target.index)
+            self.instr("swap")
+            self.arrayStore(target.inferredType)
         elif isinstance(target, MemberExpr):
             pass # TODO
         else:
-            raise Exception("unsupported")
+            raise Exception("Internal compiler error: unsupported assignment target")
 
     def AssignStmt(self, node: AssignStmt):
         self.visit(node.value)
@@ -162,6 +186,7 @@ class JvmBackend(Visitor):
             self.processAssignmentTarget(targets[0])
 
     def IfStmt(self, node: IfStmt):
+        # TODO nop for empty
         pass
 
     def ExprStmt(self, node: ExprStmt):
@@ -183,23 +208,61 @@ class JvmBackend(Visitor):
             self.instr("iconst_1") 
         self.label(l2)
 
+    def isListConcat(self, operator:str, leftType:ValueType, rightType:ValueType)->bool:
+        return leftType.isListType() and rightType.isListType() and operator == "+"
+
     def BinaryExpr(self, node: BinaryExpr):
         operator = node.operator
         leftType = node.left.inferredType
         rightType = node.right.inferredType
-        self.visit(node.left)
-        self.visit(node.right)
-
+        if not self.isListConcat(operator, leftType, rightType):
+            self.visit(node.left)
+            self.visit(node.right)
         # concatenation and addition
         if operator == "+":
-            if isinstance(leftType, ListValueType) and isinstance(rightType, ListValueType):
-                pass
-            elif leftType.className == "str":
-                pass
-            elif leftType.className == "int":
+            if self.isListConcat(operator, leftType, rightType):
+                self.visit(node.left)
+                self.visit(node.right)
+                self.instr("dup2")
+                arrR = self.newLocal(None, True)
+                # stack is L, R, L
+                self.instr("arraylength")
+                lenL = self.newLocal(None, False)
+                self.instr("arraylength")
+                lenR = self.newLocal(None, False)
+                self.instr("iload {}".format(lenL))
+                self.instr("iload {}".format(lenR))
+                self.instr("iadd")
+                # stack is L, total_length
+                t = node.inferredType
+                if ((isinstance(t, ListValueType) and t.elementType.isJavaRef()) 
+                    or t == EmptyType()):
+                    # refs
+                    self.instr("invokestatic Method java/util/Arrays copyOf ([Ljava/lang/Object;I)[Ljava/lang/Object;")
+                    self.instr("checkcast {}".format(t.getJavaSignature()))
+                else:
+                    # primitives
+                    self.instr("invokestatic Method java/util/Arrays copyOf ({}I){}"
+                        .format(
+                            self.ts.join(leftType, rightType).getJavaSignature(), 
+                            t.getJavaSignature()
+                        ))
+                # stack is new_array
+                newArr = self.newLocal(None, True)
+                self.instr("aload {}".format(arrR))
+                self.instr("iconst_0")
+                self.instr("aload {}".format(newArr))
+                self.instr("iload {}".format(lenL))
+                self.instr("iload {}".format(lenR))
+                # stack is R, 0, new_array, len(L), len(R)
+                self.instr("invokestatic Method java/lang/System arraycopy (Ljava/lang/Object;ILjava/lang/Object;II)V")
+                self.instr("aload {}".format(newArr))
+            elif leftType == StrType():
+                self.instr("invokevirtual Method java/lang/String concat (Ljava/lang/String;)Ljava/lang/String;")
+            elif leftType == IntType():
                 self.instr("iadd")
             else:
-                raise Exception("unexpected")
+                raise Exception("Internal compiler error: unexpected operand types for +")
         # other arithmetic operators
         elif operator == "-":
             self.instr("isub")
@@ -237,10 +300,13 @@ class JvmBackend(Visitor):
         elif operator == "or":
             self.instr("ior")
         else:
-            raise Exception("unexpected")
+            raise Exception("Internal compiler error: unexpected operator {}".format(operator))
 
     def IndexExpr(self, node: IndexExpr):
-        pass
+        # TODO string indexing
+        self.visit(node.list)
+        self.visit(node.index)
+        self.arrayLoad(node.inferredType)
 
     def UnaryExpr(self, node: UnaryExpr):
         self.visit(node.operand)
@@ -251,9 +317,11 @@ class JvmBackend(Visitor):
 
     def buildConstructor(self, node: CallExpr):
         className = node.function.name
-        self.builder.newLine("new {}".format(className))
+        classType = ClassValueType(className)
+        javaName = classType.getJavaName()
+        self.builder.newLine("new {}".format(javaName))
         self.builder.newLine("dup")
-        self.builder.newLine("invokespecial Method {} <init> ()V".format(className))
+        self.builder.newLine("invokespecial Method {} <init> ()V".format(javaName))
 
     def CallExpr(self, node: CallExpr):
         signature = node.function.inferredType.getJavaSignature()
@@ -261,7 +329,7 @@ class JvmBackend(Visitor):
         if node.isConstructor:
             self.buildConstructor(node)
             return
-        # TODO build shadowing
+        # TODO shadowing
         if name == "print":
             self.emit_print(node.args[0])
         elif name == "len":
@@ -281,7 +349,23 @@ class JvmBackend(Visitor):
         pass
 
     def ListExpr(self, node: ListExpr):
-        pass
+        t = node.inferredType
+        length = len(node.elements)
+        self.instr("ldc {}".format(length))
+        elementType = None
+        if isinstance(t, ClassValueType):
+            elementType = ClassValueType("object")
+        else:
+            elementType = t.elementType
+        if isinstance(t, ClassValueType) or elementType.isJavaRef():
+            self.instr("anewarray {}".format(elementType.getJavaName()))
+        else:
+            self.instr("newarray {}".format(elementType.getJavaName()))
+        for i in range (len(node.elements)):
+            self.instr("dup")
+            self.instr("ldc {}".format(i))
+            self.visit(node.elements[i])
+            self.arrayStore(elementType)
 
     def WhileStmt(self, node: WhileStmt):
         pass
@@ -359,18 +443,21 @@ class JvmBackend(Visitor):
     def GlobalDecl(self, node: GlobalDecl):
         pass
 
-    # BUILT-INS
+    # BUILT-INS - note: these are in-lined
     def emit_assert(self, arg:Expr):
         label = self.newLabelName()
         self.visit(arg)
         self.instr("ifne {}".format(label))
         msg = "failed assertion on line {}".format(arg.location[0])
+        self.emit_exn(msg)
+        self.label(label)
+
+    def emit_exn(self, msg:str):
         self.instr("new java/lang/Exception")
         self.instr("dup")
         self.instr("ldc {}".format(json.dumps(msg)))
         self.instr("invokespecial Method java/lang/Exception <init> (Ljava/lang/String;)V")
         self.instr("athrow")
-        self.label(label)
 
     def emit_input(self):
         self.instr("new java/util/Scanner")
@@ -387,23 +474,23 @@ class JvmBackend(Visitor):
         if isinstance(t, ListValueType):
             is_list = True
         else:
-            if t.className == "<None>":
-                pass
-            elif t.className == "<Empty>":
+            if t == NoneType():
                 is_list = True
-            elif t.className == "str":
-                pass
+            elif t == EmptyType():
+                is_list = True
+            elif t == StrType():
+                is_list = False
             else:
-                # TODO - runtime abort
-                raise Exception("Built-in function len is unsupported for values of type "+arg.inferredType.classname)
+                self.emit_exn("Built-in function len is unsupported for values of type {}".format(arg.inferredType.classname))
+        self.visit(arg)
         if is_list:
-            pass # TODO
+            self.instr("arraylength")
         else:
-            pass
+            self.instr("invokevirtual Method java/lang/String length ()I")
 
     def emit_print(self, arg:Expr):
-        if isinstance(arg.inferredType, ListValueType):
-            raise Exception("Built-in function print is unsupported for lists")
+        if isinstance(arg.inferredType, ListValueType) or arg.inferredType.className not in {"bool", "int", "str"}:
+            self.emit_exn("Built-in function print is unsupported for values of type {}".format(arg.inferredType.classname))
         t = arg.inferredType.getJavaSignature()
         self.instr("getstatic Field java/lang/System out Ljava/io/PrintStream;")
         self.visit(arg)
