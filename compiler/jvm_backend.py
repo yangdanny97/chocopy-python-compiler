@@ -308,10 +308,15 @@ class JvmBackend(Visitor):
             raise Exception("Internal compiler error: unexpected operator {}".format(operator))
 
     def IndexExpr(self, node: IndexExpr):
-        # TODO string indexing
         self.visit(node.list)
         self.visit(node.index)
-        self.arrayLoad(node.inferredType)
+        if node.list.inferredType.isListType():
+            self.arrayLoad(node.inferredType)
+        else:
+            self.instr("dup")
+            self.instr("iconst_1")
+            self.instr("iadd")
+            self.instr("invokevirtual Method java/lang/String substring (II)Ljava/lang/String;")
 
     def UnaryExpr(self, node: UnaryExpr):
         self.visit(node.operand)

@@ -6,21 +6,34 @@ __assert__(x == y)
 __assert__(x == "123")
 __assert__(y == x)
 __assert__(x != "456")
+__assert__(x[0] == "1")
+__assert__(x[1] == "2")
+__assert__(x[2] == "3")
 
 x = "123"
 x = x + ""
 __assert__(x == "123")
 __assert__(len(x) == 3)
+__assert__(x[0] == "1")
+__assert__(x[1] == "2")
+__assert__(x[2] == "3")
 
 x = "123"
 x = "" + x
 __assert__(x == "123")
 __assert__(len(x) == 3)
+__assert__(x[0] == "1")
+__assert__(x[1] == "2")
+__assert__(x[2] == "3")
 
 x = "123"
 x = x + "4"
 __assert__(x == "1234")
 __assert__(len(x) == 4)
+__assert__(x[0] == "1")
+__assert__(x[1] == "2")
+__assert__(x[2] == "3")
+__assert__(x[3] == "4")
 
 x = "123"
 x = "0" + x
