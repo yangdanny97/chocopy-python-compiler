@@ -191,8 +191,19 @@ class JvmBackend(Visitor):
             self.processAssignmentTarget(targets[0])
 
     def IfStmt(self, node: IfStmt):
-        # TODO nop for empty
-        pass
+        startLabel = self.newLabelName()
+        elseLabel = self.newLabelName()
+        endLabel = self.newLabelName()
+        self.label(startLabel)
+        self.visit(node.condition)
+        self.instr("ifeq {}".format(elseLabel))
+        for s in node.thenBody:
+            self.visit(s)
+        self.instr("goto {}".format(endLabel))
+        self.label(elseLabel)
+        for s in node.elseBody:
+            self.visit(s)
+        self.label(endLabel)
 
     def ExprStmt(self, node: ExprStmt):
         self.visit(node.expr)
@@ -356,7 +367,45 @@ class JvmBackend(Visitor):
                 self.NoneLiteral(None) # push null for void return
 
     def ForStmt(self, node: ForStmt):
-        pass
+        # itr = {expr}
+        self.visit(node.iterable)
+        itr = self.newLocal(None, True)
+        # idx = 0
+        self.instr("iconst_0")
+        idx = self.newLocal(None, False)
+        startLabel = self.newLabelName()
+        endLabel = self.newLabelName()
+        self.label(startLabel)
+        # while idx < len(itr)
+        self.load(self.genLocalName(idx), IntType())
+        self.load(self.genLocalName(itr), node.iterable.inferredType)
+        if node.iterable.inferredType.isListType():
+            self.instr("arraylength")
+        else:
+            self.instr("invokevirtual Method java/lang/String length ()I")
+        self.instr("isub")
+        self.instr("ifge {}".format(endLabel))
+        # x = itr[idx]
+        self.load(self.genLocalName(itr), node.iterable.inferredType)
+        self.load(self.genLocalName(idx), IntType())
+        if node.iterable.inferredType.isListType():
+            self.arrayLoad(node.iterable.inferredType)
+        else:
+            self.instr("dup")
+            self.instr("iconst_1")
+            self.instr("iadd")
+            self.instr("invokevirtual Method java/lang/String substring (II)Ljava/lang/String;")
+        self.store(node.identifier.name, node.identifier.inferredType)
+        # body
+        for s in node.body:
+            self.visit(s)
+        # idx = idx + 1
+        self.load(self.genLocalName(idx), IntType())
+        self.instr("iconst_1")
+        self.instr("iadd")
+        self.store(self.genLocalName(idx), IntType())
+        self.instr("goto {}".format(startLabel))
+        self.label(endLabel)
 
     def ListExpr(self, node: ListExpr):
         t = node.inferredType
@@ -378,7 +427,15 @@ class JvmBackend(Visitor):
             self.arrayStore(elementType)
 
     def WhileStmt(self, node: WhileStmt):
-        pass
+        startLabel = self.newLabelName()
+        endLabel = self.newLabelName()
+        self.label(startLabel)
+        self.visit(node.condition)
+        self.instr("ifeq {}".format(endLabel))
+        for s in node.body:
+            self.visit(s)
+        self.instr("goto {}".format(startLabel))
+        self.label(endLabel)
 
     def buildReturn(self, value:Expr):
         if self.returnType.isNone():
@@ -481,7 +538,7 @@ class JvmBackend(Visitor):
     def emit_len(self, arg:Expr):
         t = arg.inferredType
         is_list = False
-        if isinstance(t, ListValueType):
+        if t.isListType():
             is_list = True
         else:
             if t == NoneType():

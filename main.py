@@ -74,7 +74,7 @@ def main():
     elif args.mode != "parse":
         compiler.typecheck(tree)
         if len(tc.errors) > 0:
-            for e in astparser.errors:
+            for e in tc.errors:
                 print(e)
             raise Exception("Encountered typecheck errors. Exiting.")
 

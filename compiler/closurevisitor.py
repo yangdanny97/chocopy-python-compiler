@@ -31,6 +31,12 @@ class ClosureVisitor(Visitor):
                 self.globals.add(d.getIdentifier().name)
         for d in node.declarations:
             self.visit(d)
+        # mark all top-level vars to be global
+        self.vars = []
+        for s in node.statements:
+            self.visit(s)
+        for v in self.vars:
+            v.isGlobal = True
 
     def ClassDef(self, node: ClassDef):
         for d in node.declarations:

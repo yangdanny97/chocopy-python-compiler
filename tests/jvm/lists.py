@@ -147,8 +147,5 @@ __assert__(len(x) == 0)
 # __assert__(len(y) == 1)
 # __assert__(len(y[0]) == 0)
 
-# TODO empty array type wrongly defaults to Object[]
-# TODO concatenating arrays of diff types into [object]
-
 
 

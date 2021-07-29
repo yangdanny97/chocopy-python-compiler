@@ -7,4 +7,6 @@
     - autoboxing, in a sense
 - nonlocals
     - nested func hoisting
-- see TODOs in source + test cases for full list
+
+- empty array type wrongly defaults to Object[]
+- concatenating arrays of diff types into [object]
