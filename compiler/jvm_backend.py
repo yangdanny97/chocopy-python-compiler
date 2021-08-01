@@ -21,7 +21,7 @@ class JvmBackend(Visitor):
         self.stackLimit = 50
         self.localLimit = 50
         self.ts = ts
-        self.defaultToGlobals = False # treat all vars as global if this is true
+        self.defaultToGlobals = False  # treat all vars as global if this is true
 
     def currentBuilder(self):
         return self.classes[self.currentClass]
@@ -118,7 +118,8 @@ class JvmBackend(Visitor):
         self.instr(".super java/lang/Object")
         # global decls
         for v in var_decls:
-            self.instr(f".field static {v.var.identifier.name} {v.var.t.getJavaSignature()}")
+            self.instr(
+                f".field static {v.var.identifier.name} {v.var.t.getJavaSignature()}")
 
         # main
         self.instr(".method public static main : ([Ljava/lang/String;)V")
@@ -139,7 +140,8 @@ class JvmBackend(Visitor):
         self.instr(".code stack 1 locals 0")
         for v in var_decls:
             self.visit(v.value)
-            self.instr(f"putstatic Field {self.main} {v.var.identifier.name} {v.var.t.getJavaSignature()}")
+            self.instr(
+                f"putstatic Field {self.main} {v.var.identifier.name} {v.var.t.getJavaSignature()}")
         self.instr("return")
         self.instr(".end code")
         self.instr(".end method")
@@ -160,23 +162,30 @@ class JvmBackend(Visitor):
         func_decls = [d for d in node.declarations if isinstance(d, FuncDef)]
         var_decls = [d for d in node.declarations if isinstance(d, VarDef)]
 
+        superclass = ClassValueType(node.superclass.name).getJavaName()
+
         self.instr(".version 49 0")
         self.instr(f".class public super {self.currentClass}")
-        self.instr(f".super {node.superclass.name}")
-        # TODO
-        for d in var_decls:
-            self.visit(d)
+        self.instr(f".super {superclass}")
+
+        constructor_def = None
+        # field decls
+        for v in var_decls:
+            self.instr(
+                f".field {v.var.identifier.name} {v.var.t.getJavaSignature()}")
         for d in func_decls:
-            self.visit(d)
+            if d.name.name == "__init__":
+                constructor_def = d
+                d.declarations = var_decls + d.declarations
+                self.constructor(superclass, d)
+            else:
+                self.method(d)
+        if constructor_def == None:
+            self.constructor(superclass, FuncDef([], Identifier([], "__init__"), [
+                             ClassValueType(self.currentClass)], NoneType(), var_decls, [], True))
         self.instr(".end class")
 
-    def FuncDef(self, node: FuncDef):
-        self.enterScope()
-        self.instr(
-            f".method public static {node.name.name} : {node.type.getJavaSignature()}")
-        self.currentBuilder().indent()
-        self.instr(f".limit stack {self.stackLimit}")
-        self.instr(f".limit locals {len(node.declarations) + self.localLimit}")
+    def funcDefHelper(self, node: FuncDef):
         for i in range(len(node.params)):
             self.newLocalEntry(node.params[i].identifier.name)
         for d in node.declarations:
@@ -195,20 +204,59 @@ class JvmBackend(Visitor):
         self.currentBuilder().unindent()
         self.instr(".end method")
 
+    def constructor(self, superclass:str, node: FuncDef):
+        self.enterScope()
+        constructorSig = FuncType(
+            node.type.parameters[1:], node.type.returnType)
+        self.instr(
+            f".method public <init> : {constructorSig.getJavaSignature()}")
+        self.currentBuilder().indent()
+        self.instr(f".limit stack {self.stackLimit}")
+        self.instr(f".limit locals {len(node.declarations) + self.localLimit}")
+        # call superclass constructor
+        self.instr("aload 0")
+        self.instr(f"invokespecial Method {superclass} <init> ()V ")
+        self.funcDefHelper(node)
+
+    def method(self, node: FuncDef):
+        self.enterScope()
+        methodSig = FuncType(
+            node.type.parameters[1:], node.type.returnType)
+        self.instr(
+            f".method public {node.name.name} : {methodSig.getJavaSignature()}")
+        self.currentBuilder().indent()
+        self.instr(f".limit stack {self.stackLimit}")
+        self.instr(f".limit locals {len(node.declarations) + self.localLimit}")
+        self.funcDefHelper(node)
+
+    def FuncDef(self, node: FuncDef):
+        self.enterScope()
+        self.instr(
+            f".method public static {node.name.name} : {node.type.getJavaSignature()}")
+        self.currentBuilder().indent()
+        self.instr(f".limit stack {self.stackLimit}")
+        self.instr(f".limit locals {len(node.declarations) + self.localLimit}")
+        self.funcDefHelper(node)
+
     def VarDef(self, node: VarDef):
+        varName = node.var.identifier.name
         if node.isAttr:
-            pass  # TODO field defs
+            className = ClassValueType(self.currentClass)
+            self.instr("aload 0")
+            self.visit(node.value)
+            self.instr(
+                f"putfield Field {className.getJavaName()} {varName} {node.var.t.getJavaSignature()}")
         else:
             self.visit(node.value)
-            self.newLocal(node.var.identifier.name,
-                          node.value.inferredType.isJavaRef())
+            self.newLocal(varName, node.value.inferredType.isJavaRef())
 
     # STATEMENTS
 
     def processAssignmentTarget(self, target: Expr):
         if isinstance(target, Identifier):
             if self.defaultToGlobals or target.isGlobal:
-                self.instr(f"putstatic Field {self.main} {target.name} {target.inferredType.getJavaSignature()}")
+                self.instr(
+                    f"putstatic Field {self.main} {target.name} {target.inferredType.getJavaSignature()}")
             else:
                 self.store(target.name, target.inferredType)
         elif isinstance(target, IndexExpr):
@@ -219,7 +267,10 @@ class JvmBackend(Visitor):
             self.instr("swap")
             self.arrayStore(target.inferredType)
         elif isinstance(target, MemberExpr):
-            pass  # TODO
+            self.visit(target.object)
+            self.instr("swap")
+            self.instr(
+                f"putfield Field {target.object.inferredType.className} {target.member.name} {target.inferredType.getJavaSignature()}")
         else:
             raise Exception(
                 "Internal compiler error: unsupported assignment target")
@@ -446,7 +497,8 @@ class JvmBackend(Visitor):
             self.instr(
                 "invokevirtual Method java/lang/String substring (II)Ljava/lang/String;")
         if self.defaultToGlobals or node.identifier.isGlobal:
-            self.instr(f"putstatic Field {self.main} {node.identifier.name} {node.identifier.inferredType.getJavaSignature()}")
+            self.instr(
+                f"putstatic Field {self.main} {node.identifier.name} {node.identifier.inferredType.getJavaSignature()}")
         else:
             self.store(node.identifier.name, node.identifier.inferredType)
         # body
@@ -508,12 +560,15 @@ class JvmBackend(Visitor):
 
     def Identifier(self, node: Identifier):
         if self.defaultToGlobals or node.isGlobal:
-            self.instr(f"getstatic Field {self.main} {node.name} {node.inferredType.getJavaSignature()}")
+            self.instr(
+                f"getstatic Field {self.main} {node.name} {node.inferredType.getJavaSignature()}")
         else:
             self.load(node.name, node.inferredType)
 
     def MemberExpr(self, node: MemberExpr):
-        pass
+        self.visit(node.object)
+        self.instr(
+            f"getfield Field {node.object.inferredType.className} {node.member.name} {node.inferredType.getJavaSignature()}")
 
     def IfExpr(self, node: IfExpr):
         self.visit(node.condition)
@@ -527,8 +582,20 @@ class JvmBackend(Visitor):
         self.label(l2)
 
     def MethodCallExpr(self, node: MethodCallExpr):
-        # TODO special case for init
-        pass
+        className = node.method.object.inferredType.className
+        methodName = node.method.member.name
+        if methodName == "__init__" and className in {"int", "bool"}:
+            return
+        self.visit(node.method.object)
+        for arg in node.args:
+            self.visit(arg)
+        methodType = node.method.inferredType
+        javaMethodType = FuncType(
+            methodType.parameters[1:], methodType.returnType)
+        self.instr(
+            f"invokevirtual Method {className} {methodName} {javaMethodType.getJavaSignature()}")
+        if node.method.inferredType.returnType.isNone():
+            self.NoneLiteral(None)  # push null for void return
 
     # LITERALS
 

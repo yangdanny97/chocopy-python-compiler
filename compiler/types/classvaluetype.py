@@ -26,7 +26,7 @@ class ClassValueType(ValueType):
         elif self.className == "<Empty>":
             return "[Ljava/lang/Object;"
         else:
-            return self.className
+            return "L" + self.className + ";"
 
     def isNone(self):
         return self.className == "<None>"

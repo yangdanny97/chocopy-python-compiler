@@ -159,10 +159,9 @@ class TypeChecker(Visitor):
                         self.addError(d.getIdentifier(),
                                       F"Method name shadows attribute: {funcName}")
                         continue
-                    # if funcName != "__init__":  # for all methods besides constructor, check signatures match
                     if not t.methodEquals(funcType):  # excluding self argument
                         self.addError(d.getIdentifier(),
-                                      F"Redefined method doesn't match superclass signature: {funcName}")
+                                    F"Redefined method doesn't match superclass signature: {funcName}")
                         continue
                 self.ts.classes[className].methods[funcName] = funcType
             if isinstance(d, VarDef):  # attributes
