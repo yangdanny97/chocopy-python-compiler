@@ -132,3 +132,4 @@ unused/
 ./Roadmap.md
 *.class
 *.j
+**/.DS_Store

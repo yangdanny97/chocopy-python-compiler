@@ -1,0 +1,522 @@
+{
+  "kind" : "Program",
+  "location" : [ 1, 1, 16, 28 ],
+  "declarations" : [ {
+    "kind" : "ClassDef",
+    "location" : [ 1, 1, 12, 0 ],
+    "name" : {
+      "kind" : "Identifier",
+      "location" : [ 1, 7, 1, 9 ],
+      "name" : "Rat"
+    },
+    "superClass" : {
+      "kind" : "Identifier",
+      "location" : [ 1, 11, 1, 16 ],
+      "name" : "object"
+    },
+    "declarations" : [ {
+      "kind" : "VarDef",
+      "location" : [ 2, 5, 2, 15 ],
+      "var" : {
+        "kind" : "TypedVar",
+        "location" : [ 2, 5, 2, 11 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 2, 5, 2, 5 ],
+          "name" : "n"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 2, 9, 2, 11 ],
+          "className" : "int"
+        }
+      },
+      "value" : {
+        "kind" : "IntegerLiteral",
+        "location" : [ 2, 15, 2, 15 ],
+        "value" : 0
+      }
+    }, {
+      "kind" : "VarDef",
+      "location" : [ 3, 5, 3, 15 ],
+      "var" : {
+        "kind" : "TypedVar",
+        "location" : [ 3, 5, 3, 11 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 3, 5, 3, 5 ],
+          "name" : "d"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 3, 9, 3, 11 ],
+          "className" : "int"
+        }
+      },
+      "value" : {
+        "kind" : "IntegerLiteral",
+        "location" : [ 3, 15, 3, 15 ],
+        "value" : 0
+      }
+    }, {
+      "kind" : "FuncDef",
+      "location" : [ 4, 5, 5, 13 ],
+      "name" : {
+        "kind" : "Identifier",
+        "location" : [ 4, 9, 4, 16 ],
+        "name" : "__init__"
+      },
+      "params" : [ {
+        "kind" : "TypedVar",
+        "location" : [ 4, 18, 4, 27 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 4, 18, 4, 21 ],
+          "name" : "self"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 4, 25, 4, 27 ],
+          "className" : "Rat"
+        }
+      } ],
+      "returnType" : {
+        "kind" : "ClassType",
+        "location" : [ 4, 29, 4, 29 ],
+        "className" : "<None>"
+      },
+      "declarations" : [ ],
+      "statements" : [ ]
+    }, {
+      "kind" : "FuncDef",
+      "location" : [ 6, 5, 9, 20 ],
+      "name" : {
+        "kind" : "Identifier",
+        "location" : [ 6, 9, 6, 11 ],
+        "name" : "new"
+      },
+      "params" : [ {
+        "kind" : "TypedVar",
+        "location" : [ 6, 13, 6, 22 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 6, 13, 6, 16 ],
+          "name" : "self"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 6, 20, 6, 22 ],
+          "className" : "Rat"
+        }
+      }, {
+        "kind" : "TypedVar",
+        "location" : [ 6, 25, 6, 31 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 6, 25, 6, 25 ],
+          "name" : "n"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 6, 29, 6, 31 ],
+          "className" : "int"
+        }
+      }, {
+        "kind" : "TypedVar",
+        "location" : [ 6, 34, 6, 40 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 6, 34, 6, 34 ],
+          "name" : "d"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 6, 38, 6, 40 ],
+          "className" : "int"
+        }
+      } ],
+      "returnType" : {
+        "kind" : "ClassType",
+        "location" : [ 6, 46, 6, 48 ],
+        "className" : "Rat"
+      },
+      "declarations" : [ ],
+      "statements" : [ {
+        "kind" : "AssignStmt",
+        "location" : [ 7, 9, 7, 18 ],
+        "targets" : [ {
+          "kind" : "MemberExpr",
+          "location" : [ 7, 9, 7, 14 ],
+          "object" : {
+            "kind" : "Identifier",
+            "location" : [ 7, 9, 7, 12 ],
+            "name" : "self"
+          },
+          "member" : {
+            "kind" : "Identifier",
+            "location" : [ 7, 14, 7, 14 ],
+            "name" : "n"
+          }
+        } ],
+        "value" : {
+          "kind" : "Identifier",
+          "location" : [ 7, 18, 7, 18 ],
+          "name" : "n"
+        }
+      }, {
+        "kind" : "AssignStmt",
+        "location" : [ 8, 9, 8, 18 ],
+        "targets" : [ {
+          "kind" : "MemberExpr",
+          "location" : [ 8, 9, 8, 14 ],
+          "object" : {
+            "kind" : "Identifier",
+            "location" : [ 8, 9, 8, 12 ],
+            "name" : "self"
+          },
+          "member" : {
+            "kind" : "Identifier",
+            "location" : [ 8, 14, 8, 14 ],
+            "name" : "d"
+          }
+        } ],
+        "value" : {
+          "kind" : "Identifier",
+          "location" : [ 8, 18, 8, 18 ],
+          "name" : "d"
+        }
+      }, {
+        "kind" : "ReturnStmt",
+        "location" : [ 9, 9, 9, 19 ],
+        "value" : {
+          "kind" : "Identifier",
+          "location" : [ 9, 16, 9, 19 ],
+          "name" : "self"
+        }
+      } ]
+    }, {
+      "kind" : "FuncDef",
+      "location" : [ 10, 5, 11, 61 ],
+      "name" : {
+        "kind" : "Identifier",
+        "location" : [ 10, 9, 10, 11 ],
+        "name" : "mul"
+      },
+      "params" : [ {
+        "kind" : "TypedVar",
+        "location" : [ 10, 13, 10, 22 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 10, 13, 10, 16 ],
+          "name" : "self"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 10, 20, 10, 22 ],
+          "className" : "Rat"
+        }
+      }, {
+        "kind" : "TypedVar",
+        "location" : [ 10, 25, 10, 35 ],
+        "identifier" : {
+          "kind" : "Identifier",
+          "location" : [ 10, 25, 10, 29 ],
+          "name" : "other"
+        },
+        "type" : {
+          "kind" : "ClassType",
+          "location" : [ 10, 33, 10, 35 ],
+          "className" : "Rat"
+        }
+      } ],
+      "returnType" : {
+        "kind" : "ClassType",
+        "location" : [ 10, 41, 10, 43 ],
+        "className" : "Rat"
+      },
+      "declarations" : [ ],
+      "statements" : [ {
+        "kind" : "ReturnStmt",
+        "location" : [ 11, 9, 11, 60 ],
+        "value" : {
+          "kind" : "MethodCallExpr",
+          "location" : [ 11, 16, 11, 60 ],
+          "method" : {
+            "kind" : "MemberExpr",
+            "location" : [ 11, 16, 11, 24 ],
+            "object" : {
+              "kind" : "CallExpr",
+              "location" : [ 11, 16, 11, 20 ],
+              "function" : {
+                "kind" : "Identifier",
+                "location" : [ 11, 16, 11, 18 ],
+                "name" : "Rat"
+              },
+              "args" : [ ]
+            },
+            "member" : {
+              "kind" : "Identifier",
+              "location" : [ 11, 22, 11, 24 ],
+              "name" : "new"
+            }
+          },
+          "args" : [ {
+            "kind" : "BinaryExpr",
+            "location" : [ 11, 26, 11, 41 ],
+            "left" : {
+              "kind" : "MemberExpr",
+              "location" : [ 11, 26, 11, 31 ],
+              "object" : {
+                "kind" : "Identifier",
+                "location" : [ 11, 26, 11, 29 ],
+                "name" : "self"
+              },
+              "member" : {
+                "kind" : "Identifier",
+                "location" : [ 11, 31, 11, 31 ],
+                "name" : "n"
+              }
+            },
+            "operator" : "*",
+            "right" : {
+              "kind" : "MemberExpr",
+              "location" : [ 11, 35, 11, 41 ],
+              "object" : {
+                "kind" : "Identifier",
+                "location" : [ 11, 35, 11, 39 ],
+                "name" : "other"
+              },
+              "member" : {
+                "kind" : "Identifier",
+                "location" : [ 11, 41, 11, 41 ],
+                "name" : "n"
+              }
+            }
+          }, {
+            "kind" : "BinaryExpr",
+            "location" : [ 11, 44, 11, 59 ],
+            "left" : {
+              "kind" : "MemberExpr",
+              "location" : [ 11, 44, 11, 49 ],
+              "object" : {
+                "kind" : "Identifier",
+                "location" : [ 11, 44, 11, 47 ],
+                "name" : "self"
+              },
+              "member" : {
+                "kind" : "Identifier",
+                "location" : [ 11, 49, 11, 49 ],
+                "name" : "d"
+              }
+            },
+            "operator" : "*",
+            "right" : {
+              "kind" : "MemberExpr",
+              "location" : [ 11, 53, 11, 59 ],
+              "object" : {
+                "kind" : "Identifier",
+                "location" : [ 11, 53, 11, 57 ],
+                "name" : "other"
+              },
+              "member" : {
+                "kind" : "Identifier",
+                "location" : [ 11, 59, 11, 59 ],
+                "name" : "d"
+              }
+            }
+          } ]
+        }
+      } ]
+    } ]
+  }, {
+    "kind" : "VarDef",
+    "location" : [ 12, 1, 12, 15 ],
+    "var" : {
+      "kind" : "TypedVar",
+      "location" : [ 12, 1, 12, 8 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 12, 1, 12, 2 ],
+        "name" : "r1"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 12, 6, 12, 8 ],
+        "className" : "Rat"
+      }
+    },
+    "value" : {
+      "kind" : "NoneLiteral",
+      "location" : [ 12, 12, 12, 15 ]
+    }
+  }, {
+    "kind" : "VarDef",
+    "location" : [ 13, 1, 13, 15 ],
+    "var" : {
+      "kind" : "TypedVar",
+      "location" : [ 13, 1, 13, 8 ],
+      "identifier" : {
+        "kind" : "Identifier",
+        "location" : [ 13, 1, 13, 2 ],
+        "name" : "r2"
+      },
+      "type" : {
+        "kind" : "ClassType",
+        "location" : [ 13, 6, 13, 8 ],
+        "className" : "Rat"
+      }
+    },
+    "value" : {
+      "kind" : "NoneLiteral",
+      "location" : [ 13, 12, 13, 15 ]
+    }
+  } ],
+  "statements" : [ {
+    "kind" : "AssignStmt",
+    "location" : [ 14, 1, 14, 20 ],
+    "targets" : [ {
+      "kind" : "Identifier",
+      "location" : [ 14, 1, 14, 2 ],
+      "name" : "r1"
+    } ],
+    "value" : {
+      "kind" : "MethodCallExpr",
+      "location" : [ 14, 6, 14, 20 ],
+      "method" : {
+        "kind" : "MemberExpr",
+        "location" : [ 14, 6, 14, 14 ],
+        "object" : {
+          "kind" : "CallExpr",
+          "location" : [ 14, 6, 14, 10 ],
+          "function" : {
+            "kind" : "Identifier",
+            "location" : [ 14, 6, 14, 8 ],
+            "name" : "Rat"
+          },
+          "args" : [ ]
+        },
+        "member" : {
+          "kind" : "Identifier",
+          "location" : [ 14, 12, 14, 14 ],
+          "name" : "new"
+        }
+      },
+      "args" : [ {
+        "kind" : "IntegerLiteral",
+        "location" : [ 14, 16, 14, 16 ],
+        "value" : 4
+      }, {
+        "kind" : "IntegerLiteral",
+        "location" : [ 14, 19, 14, 19 ],
+        "value" : 5
+      } ]
+    }
+  }, {
+    "kind" : "AssignStmt",
+    "location" : [ 15, 1, 15, 20 ],
+    "targets" : [ {
+      "kind" : "Identifier",
+      "location" : [ 15, 1, 15, 2 ],
+      "name" : "r2"
+    } ],
+    "value" : {
+      "kind" : "MethodCallExpr",
+      "location" : [ 15, 6, 15, 20 ],
+      "method" : {
+        "kind" : "MemberExpr",
+        "location" : [ 15, 6, 15, 14 ],
+        "object" : {
+          "kind" : "CallExpr",
+          "location" : [ 15, 6, 15, 10 ],
+          "function" : {
+            "kind" : "Identifier",
+            "location" : [ 15, 6, 15, 8 ],
+            "name" : "Rat"
+          },
+          "args" : [ ]
+        },
+        "member" : {
+          "kind" : "Identifier",
+          "location" : [ 15, 12, 15, 14 ],
+          "name" : "new"
+        }
+      },
+      "args" : [ {
+        "kind" : "IntegerLiteral",
+        "location" : [ 15, 16, 15, 16 ],
+        "value" : 2
+      }, {
+        "kind" : "IntegerLiteral",
+        "location" : [ 15, 19, 15, 19 ],
+        "value" : 3
+      } ]
+    }
+  }, {
+    "kind" : "ExprStmt",
+    "location" : [ 16, 1, 16, 27 ],
+    "expr" : {
+      "kind" : "CallExpr",
+      "location" : [ 16, 1, 16, 27 ],
+      "function" : {
+        "kind" : "Identifier",
+        "location" : [ 16, 1, 16, 5 ],
+        "name" : "print"
+      },
+      "args" : [ {
+        "kind" : "MemberExpr",
+        "location" : [ 16, 7, 16, 26 ],
+        "object" : {
+          "kind" : "MethodCallExpr",
+          "location" : [ 16, 7, 16, 24 ],
+          "method" : {
+            "kind" : "MemberExpr",
+            "location" : [ 16, 7, 16, 20 ],
+            "object" : {
+              "kind" : "MethodCallExpr",
+              "location" : [ 16, 7, 16, 16 ],
+              "method" : {
+                "kind" : "MemberExpr",
+                "location" : [ 16, 7, 16, 12 ],
+                "object" : {
+                  "kind" : "Identifier",
+                  "location" : [ 16, 7, 16, 8 ],
+                  "name" : "r1"
+                },
+                "member" : {
+                  "kind" : "Identifier",
+                  "location" : [ 16, 10, 16, 12 ],
+                  "name" : "mul"
+                }
+              },
+              "args" : [ {
+                "kind" : "Identifier",
+                "location" : [ 16, 14, 16, 15 ],
+                "name" : "r2"
+              } ]
+            },
+            "member" : {
+              "kind" : "Identifier",
+              "location" : [ 16, 18, 16, 20 ],
+              "name" : "mul"
+            }
+          },
+          "args" : [ {
+            "kind" : "Identifier",
+            "location" : [ 16, 22, 16, 23 ],
+            "name" : "r2"
+          } ]
+        },
+        "member" : {
+          "kind" : "Identifier",
+          "location" : [ 16, 26, 16, 26 ],
+          "name" : "n"
+        }
+      } ]
+    }
+  } ],
+  "errors" : {
+    "errors" : [ ],
+    "kind" : "Errors",
+    "location" : [ 0, 0, 0, 0 ]
+  }
+}

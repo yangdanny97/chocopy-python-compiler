@@ -50,6 +50,7 @@ class Compiler:
         self.typechecker.visit(ast)
 
     def emitJVM(self, main:str, ast: Node):
+        ClosureVisitor().visit(ast)
         EmptyListTyper().visit(ast)
         jvm_backend = JvmBackend(main, self.typechecker.ts)
         jvm_backend.visit(ast)
