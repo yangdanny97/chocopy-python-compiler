@@ -1,9 +1,3 @@
-- constructors
-    - calling __init__
-- classes
-    - members
-    - methods
-- nonlocals
-    - nested func hoisting
-
-- concatenating arrays of diff types into [object]
+- nonlocals (nested func hoisting, refs)
+- concatenating arrays of different types into [object]
+- control flow bugs
