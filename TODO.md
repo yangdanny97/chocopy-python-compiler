@@ -3,10 +3,7 @@
 - classes
     - members
     - methods
-- globals
-    - autoboxing, in a sense
 - nonlocals
     - nested func hoisting
 
-- empty array type wrongly defaults to Object[]
 - concatenating arrays of diff types into [object]

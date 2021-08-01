@@ -6,41 +6,68 @@ from .visitor import Visitor
 class EmptyListTyper(Visitor):
 
     def __init__(self):
-        self.expectedListType = None
+        self.expectedType = None
+        self.expReturnType = None
 
     def visit(self, node: Node):
-        return node.preOrder(self)
+        return node.preorder(self)
+
+    def isEmptyListMultiAssign(self, node: Node):
+        if not isinstance(node, AssignStmt):
+            return False
+        if len(node.targets) == 1 or not isinstance(node.value, ListExpr):
+            return False
+        if len(node.value.elements) > 0:
+            return False
+        return True
+            
+    def transformMultiAssign(self, node:AssignStmt)->[AssignStmt]:
+        statements = []
+        for t in node.targets:
+            statements.append(AssignStmt(node.location, [t], node.value))
+        return statements
 
     def Program(self, node: Program):
-        for d in node.declarations:
-            self.visit(d)
+        statements = []
         for s in node.statements:
-            self.visit(s)
-
-    def ClassDef(self, node: ClassDef):
-        for d in node.declarations:
-            self.visit(d)
+            if self.isEmptyListMultiAssign(s):
+                statements = statements + self.transformMultiAssign(s)
+            else:
+                statements.append(s)
+        node.statements = statements
 
     def FuncDef(self, node: FuncDef):
-        for d in node.declarations:
-            self.visit(d)
+        self.expReturnType = node.type.returnType
+        statements = []
         for s in node.statements:
-            self.visit(s)
+            if self.isEmptyListMultiAssign(s):
+                statements = statements + self.transformMultiAssign(s)
+            else:
+                statements.append(s)
+        node.statements = statements
 
     def CallExpr(self, node: CallExpr):
-        pass
-        # for i in range(len(node.args)):
+        for i in range(len(node.args)):
+            self.expectedType = node.function.inferredType.parameters[i]
+            self.visit(node.args[i])
+        self.expectedType = None
 
     def AssignStmt(self, node: AssignStmt):
-        pass
+        self.expectedType = node.targets[0].inferredType
 
     def ListExpr(self, node: ListExpr):
-        pass
+        if self.expectedType == None:
+            return
+        if isinstance(self.expectedType, ListValueType) and len(node.elements) == 0:
+            node.emptyListType = self.expectedType.elementType
 
     def MethodCallExpr(self, node: MethodCallExpr):
-        pass
+        for i in range(len(node.args)):
+            self.expectedType = node.method.inferredType.parameters[i]
+            self.visit(node.args[i])
+        self.expectedType = None
 
     def ReturnStmt(self, node: ReturnStmt):
-        pass
+        self.expectedType = self.expReturnType
 
 

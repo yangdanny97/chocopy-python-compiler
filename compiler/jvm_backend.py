@@ -125,8 +125,6 @@ class JvmBackend(Visitor):
         self.currentBuilder().indent()
         self.instr(f".limit stack {self.stackLimit}")
         self.instr(f".limit locals {len(node.declarations) + self.localLimit}")
-        for d in var_decls:
-            self.visit(d)
         self.defaultToGlobals = True
         for s in node.statements:
             self.visit(s)
@@ -447,7 +445,10 @@ class JvmBackend(Visitor):
             self.instr("iadd")
             self.instr(
                 "invokevirtual Method java/lang/String substring (II)Ljava/lang/String;")
-        self.store(node.identifier.name, node.identifier.inferredType)
+        if self.defaultToGlobals or node.identifier.isGlobal:
+            self.instr(f"putstatic Field {self.main} {node.identifier.name} {node.identifier.inferredType.getJavaSignature()}")
+        else:
+            self.store(node.identifier.name, node.identifier.inferredType)
         # body
         for s in node.body:
             self.visit(s)
@@ -465,10 +466,13 @@ class JvmBackend(Visitor):
         self.instr(f"ldc {length}")
         elementType = None
         if isinstance(t, ClassValueType):
-            elementType = ClassValueType("object")
+            if node.emptyListType:
+                elementType = node.emptyListType
+            else:
+                elementType = ClassValueType("object")
         else:
             elementType = t.elementType
-        if isinstance(t, ClassValueType) or elementType.isJavaRef():
+        if elementType.isJavaRef():
             self.instr(f"anewarray {elementType.getJavaName()}")
         else:
             self.instr(f"newarray {elementType.getJavaName()}")

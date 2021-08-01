@@ -5,6 +5,7 @@ class ListExpr(Expr):
     def __init__(self, location:[int], elements:[Expr]):
         super().__init__(location, "ListExpr")
         self.elements = elements
+        self.emptyListType = None
 
     def getPythonStr(self, builder):
         builder.addText("[")

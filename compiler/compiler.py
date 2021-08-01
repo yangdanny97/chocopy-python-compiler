@@ -1,3 +1,4 @@
+from compiler.empty_list_typer import EmptyListTyper
 from .astnodes import *
 from .types import *
 from .typechecker import TypeChecker
@@ -38,17 +39,18 @@ class Compiler:
             return None
 
     def closurepass(self, ast: Node):
-        ast.visit(ClosureVisitor())
-        ast.visit(NestedFuncHoister())
-        ast.visit(ClosureTransformer())
-        ast.visit(TypeChecker(TypeSystem()))
+        ClosureVisitor().visit(ast)
+        NestedFuncHoister().visit(ast)
+        ClosureTransformer().visit(ast)
+        TypeChecker(TypeSystem()).visit(ast)
 
     def typecheck(self, ast: Node):
         # given an AST object, typecheck it
         # typechecking mutates the AST, adding types and errors
-        ast.visit(self.typechecker)
+        self.typechecker.visit(ast)
 
     def emitJVM(self, main:str, ast: Node):
+        EmptyListTyper().visit(ast)
         jvm_backend = JvmBackend(main, self.typechecker.ts)
         jvm_backend.visit(ast)
         return jvm_backend.classes
