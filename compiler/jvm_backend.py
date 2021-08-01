@@ -21,6 +21,7 @@ class JvmBackend(Visitor):
         self.stackLimit = 50
         self.localLimit = 50
         self.ts = ts
+        self.defaultToGlobals = False # treat all vars as global if this is true
 
     def currentBuilder(self):
         return self.classes[self.currentClass]
@@ -115,20 +116,42 @@ class JvmBackend(Visitor):
         self.instr(".version 49 0")
         self.instr(f".class public super {self.main}")
         self.instr(".super java/lang/Object")
+        # global decls
+        for v in var_decls:
+            self.instr(f".field static {v.var.identifier.name} {v.var.t.getJavaSignature()}")
+
+        # main
         self.instr(".method public static main : ([Ljava/lang/String;)V")
         self.currentBuilder().indent()
         self.instr(f".limit stack {self.stackLimit}")
         self.instr(f".limit locals {len(node.declarations) + self.localLimit}")
         for d in var_decls:
             self.visit(d)
+        self.defaultToGlobals = True
         for s in node.statements:
             self.visit(s)
+        self.defaultToGlobals = False
         self.instr("return")
         self.currentBuilder().unindent()
         self.instr(".end method")
+
+        # global inits
+        self.instr(".method static <clinit> : ()V")
+        self.currentBuilder().indent()
+        self.instr(".code stack 1 locals 0")
+        for v in var_decls:
+            self.visit(v.value)
+            self.instr(f"putstatic Field {self.main} {v.var.identifier.name} {v.var.t.getJavaSignature()}")
+        self.instr("return")
+        self.instr(".end code")
+        self.instr(".end method")
+
+        # global functions (static funcs)
         for d in func_decls:
             self.visit(d)
         self.instr(".end class")
+
+        # other classes
         for d in cls_decls:
             self.visit(d)
 
@@ -142,17 +165,9 @@ class JvmBackend(Visitor):
         self.instr(".version 49 0")
         self.instr(f".class public super {self.currentClass}")
         self.instr(f".super {node.superclass.name}")
-        self.instr(".method public static main : ([Ljava/lang/String;)V")
-        self.currentBuilder().indent()
-        self.instr(f".limit stack {self.stackLimit}")
-        self.instr(f".limit locals {len(node.declarations) + self.localLimit}")
+        # TODO
         for d in var_decls:
             self.visit(d)
-        for s in node.statements:
-            self.visit(s)
-        self.instr("return")
-        self.currentBuilder().unindent()
-        self.instr(".end method")
         for d in func_decls:
             self.visit(d)
         self.instr(".end class")
@@ -194,7 +209,10 @@ class JvmBackend(Visitor):
 
     def processAssignmentTarget(self, target: Expr):
         if isinstance(target, Identifier):
-            self.store(target.name, target.inferredType)
+            if self.defaultToGlobals or target.isGlobal:
+                self.instr(f"putstatic Field {self.main} {target.name} {target.inferredType.getJavaSignature()}")
+            else:
+                self.store(target.name, target.inferredType)
         elif isinstance(target, IndexExpr):
             # stack should be array, idx, value
             self.visit(target.list)
@@ -284,7 +302,7 @@ class JvmBackend(Visitor):
                     # refs
                     self.instr(
                         "invokestatic Method java/util/Arrays copyOf ([Ljava/lang/Object;I)[Ljava/lang/Object;")
-                    self.instr(f"checkcast {t.getJavaSignature()}")
+                    self.instr(f"checkcast {t.getJavaName()}")
                 else:
                     # primitives
                     self.instr("invokestatic Method java/util/Arrays copyOf (" +
@@ -485,7 +503,10 @@ class JvmBackend(Visitor):
         self.buildReturn(node.value)
 
     def Identifier(self, node: Identifier):
-        self.load(node.name, node.inferredType)
+        if self.defaultToGlobals or node.isGlobal:
+            self.instr(f"getstatic Field {self.main} {node.name} {node.inferredType.getJavaSignature()}")
+        else:
+            self.load(node.name, node.inferredType)
 
     def MemberExpr(self, node: MemberExpr):
         pass

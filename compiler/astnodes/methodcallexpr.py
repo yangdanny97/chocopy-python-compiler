@@ -17,7 +17,14 @@ class MethodCallExpr(Expr):
                 builder.addText(", ")
         builder.addText(")")
 
-    def visitChildrenForTypecheck(self, visitor):
+    def preorder(self, visitor):
+        visitor.MethodCallExpr(self)
+        visitor.visit(self.method.object)
+        for a in self.args:
+            visitor.visit(a)
+        return self
+
+    def postorder(self, visitor):
         visitor.visit(self.method.object)
         for a in self.args:
             visitor.visit(a)

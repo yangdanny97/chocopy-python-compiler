@@ -14,10 +14,16 @@ class ReturnStmt(Stmt):
         if self.value is not None:
             self.value.getPythonStr(builder)
 
-    def visitChildrenForTypecheck(self, visitor):
+    def postorder(self, visitor):
         if self.value is not None:
             visitor.visit(self.value)
         return visitor.ReturnStmt(self)
+
+    def preorder(self, visitor):
+        visitor.ReturnStmt(self)
+        if self.value is not None:
+            visitor.visit(self.value)
+        return self
 
     def visit(self, visitor):
         return visitor.ReturnStmt(self)

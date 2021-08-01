@@ -18,7 +18,19 @@ class Program(Node):
         for s in self.statements:
             s.getPythonStr(builder)
 
-    def visitChildrenForTypecheck(self, visitor):
+    def preorder(self, visitor):
+        visitor.Program(self)
+        for d in self.declarations:
+            visitor.visit(d)
+        for s in self.statements:
+            visitor.visit(s)
+        return self
+
+    def postorder(self, visitor):
+        for d in self.declarations:
+            visitor.visit(d)
+        for s in self.statements:
+            visitor.visit(s)
         return visitor.Program(self)
 
     def visit(self, visitor):

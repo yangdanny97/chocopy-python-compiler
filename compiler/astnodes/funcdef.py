@@ -42,7 +42,19 @@ class FuncDef(Declaration):
         builder.unindent()
         builder.newLine()
 
-    def visitChildrenForTypecheck(self, visitor):
+    def preorder(self, visitor):
+        visitor.FuncDef(self)
+        for d in self.declarations:
+            visitor.visit(d)
+        for s in self.statements:
+            visitor.visit(s)
+        return self
+
+    def postorder(self, visitor):
+        for d in self.declarations:
+            visitor.visit(d)
+        for s in self.statements:
+            visitor.visit(s)
         return visitor.FuncDef(self)
 
     def visit(self, visitor):

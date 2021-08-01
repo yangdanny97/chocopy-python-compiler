@@ -13,9 +13,6 @@ class TypedVar(Node):
     def getPythonStr(self, builder):
         self.identifier.getPythonStr(builder)
 
-    def visitChildrenForTypecheck(self, visitor):
-        return visitor.TypedVar(self)
-
     def visit(self, visitor):
         return visitor.TypedVar(self)
 

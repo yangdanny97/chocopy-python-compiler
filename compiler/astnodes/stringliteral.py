@@ -10,8 +10,5 @@ class StringLiteral(Literal):
     def getPythonStr(self, builder):
         builder.addText(json.dumps(self.value))
 
-    def visitChildrenForTypecheck(self, visitor):
-        visitor.StringLiteral(self)
-
     def visit(self, visitor):
         return visitor.StringLiteral(self)

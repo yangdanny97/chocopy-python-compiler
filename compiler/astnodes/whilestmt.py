@@ -19,11 +19,18 @@ class WhileStmt(Stmt):
             builder.addText("pass")
         builder.unindent()
 
-    def visitChildrenForTypecheck(self, visitor):
+    def postorder(self, visitor):
         visitor.visit(self.condition)
         for s in self.body:
             visitor.visit(s)
         return visitor.WhileStmt(self)
+
+    def preorder(self, visitor):
+        visitor.WhileStmt(self)
+        visitor.visit(self.condition)
+        for s in self.body:
+            visitor.visit(s)
+        return self
 
     def visit(self, visitor):
         return visitor.WhileStmt(self)

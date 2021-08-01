@@ -9,9 +9,6 @@ class ClassType(TypeAnnotation):
     def getPythonStr(self, builder):
         builder.addText(self.className)
 
-    def visitChildrenForTypecheck(self, visitor):
-        return visitor.ClassType(self)
-
     def visit(self, visitor):
         return visitor.ClassType(self)
 

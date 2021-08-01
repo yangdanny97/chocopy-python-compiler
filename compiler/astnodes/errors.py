@@ -10,9 +10,6 @@ class Errors(Node):
     def getPythonStr(self, builder):
         pass
 
-    def visitChildrenForTypecheck(self, visitor):
-        pass
-
     def visit(self, visitor):
         pass
 

@@ -13,7 +13,12 @@ class UnaryExpr(Expr):
         self.operand.getPythonStr(builder)
         builder.addText(")")
 
-    def visitChildrenForTypecheck(self, visitor):
+    def preorder(self, visitor):
+        visitor.UnaryExpr(self)
+        visitor.visit(self.operand)
+        return self
+
+    def postorder(self, visitor):
         visitor.visit(self.operand)
         return visitor.UnaryExpr(self)
 

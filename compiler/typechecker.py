@@ -2,9 +2,9 @@ from .astnodes import *
 from .types import *
 from collections import defaultdict
 from .typesystem import TypeSystem, ClassInfo
+from .visitor import Visitor
 
-
-class TypeChecker:
+class TypeChecker(Visitor):
     def __init__(self, ts: TypeSystem):
         # typechecker attributes and their chocopy typing judgement analogues:
         # O : symbolTable
@@ -32,7 +32,10 @@ class TypeChecker:
         self.addErrors = True
 
     def visit(self, node: Node):
-        return node.visitChildrenForTypecheck(self)
+        if isinstance(node, Program) or isinstance(node, ClassDef) or isinstance(node, FuncDef):
+            return node.visit(self)
+        else:
+            return node.postorder(self)
 
     def enterScope(self):
         self.symbolTable.append(defaultdict(lambda: None))
@@ -132,7 +135,6 @@ class TypeChecker:
             self.visit(s)
 
     def VarDef(self, node: VarDef):
-        varName = node.getIdentifier().name
         annotationType = self.visit(node.var)
         if not self.ts.canAssign(node.value.inferredType, annotationType):
             self.addError(

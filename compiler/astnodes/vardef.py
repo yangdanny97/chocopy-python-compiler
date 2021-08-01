@@ -16,7 +16,12 @@ class VarDef(Declaration):
         builder.addText(" = ")
         self.value.getPythonStr(builder)
 
-    def visitChildrenForTypecheck(self, visitor):
+    def preorder(self, visitor):
+        visitor.VarDef(self)
+        visitor.visit(self.value)
+        return self
+
+    def postorder(self, visitor):
         visitor.visit(self.value)
         return visitor.VarDef(self)
 

@@ -17,11 +17,18 @@ class IfExpr(Expr):
         self.elseExpr.getPythonStr(builder)
         builder.addText(")")
 
-    def visitChildrenForTypecheck(self, visitor):
+    def postorder(self, visitor):
         visitor.visit(self.condition)
         visitor.visit(self.thenExpr)
         visitor.visit(self.elseExpr)
         return visitor.IfExpr(self)
+
+    def preorder(self, visitor):
+        visitor.IfExpr(self)
+        visitor.visit(self.condition)
+        visitor.visit(self.thenExpr)
+        visitor.visit(self.elseExpr)
+        return self
 
     def visit(self, visitor):
         return visitor.IfExpr(self)

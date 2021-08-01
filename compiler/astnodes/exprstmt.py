@@ -11,8 +11,14 @@ class ExprStmt(Stmt):
         builder.newLine()
         self.expr.getPythonStr(builder)
 
-    def visitChildrenForTypecheck(self, visitor):
+    def preorder(self, visitor):
+        visitor.ExprStmt(self)
         visitor.visit(self.expr)
+        return self
+
+    def postorder(self, visitor):
+        visitor.visit(self.expr)
+        return visitor.ExprStmt(self)
 
     def visit(self, visitor):
         return visitor.ExprStmt(self)

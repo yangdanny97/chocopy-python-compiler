@@ -27,13 +27,22 @@ class IfStmt(Stmt):
             builder.addText("pass")
         builder.unindent()
 
-    def visitChildrenForTypecheck(self, visitor):
+    def postorder(self, visitor):
         visitor.visit(self.condition)
         for s in self.thenBody:
             visitor.visit(s)
         for s in self.elseBody:
             visitor.visit(s)
         return visitor.IfStmt(self)
+
+    def preorder(self, visitor):
+        visitor.IfStmt(self)
+        visitor.visit(self.condition)
+        for s in self.thenBody:
+            visitor.visit(s)
+        for s in self.elseBody:
+            visitor.visit(s)
+        return self
 
     def visit(self, visitor):
         return visitor.IfStmt(self)

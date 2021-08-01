@@ -23,12 +23,20 @@ class ForStmt(Stmt):
             builder.addText("pass")
         builder.unindent()
 
-    def visitChildrenForTypecheck(self, visitor):
+    def postorder(self, visitor):
         visitor.visit(self.identifier)
         visitor.visit(self.iterable)
         for s in self.body:
             visitor.visit(s)
         return visitor.ForStmt(self)
+
+    def preorder(self, visitor):
+        visitor.ForStmt(self)
+        visitor.visit(self.identifier)
+        visitor.visit(self.iterable)
+        for s in self.body:
+            visitor.visit(s)
+        return self
 
     def visit(self, visitor):
         return visitor.ForStmt(self)

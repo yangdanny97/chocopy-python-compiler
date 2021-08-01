@@ -11,9 +11,6 @@ class NonLocalDecl(Declaration):
         builder.newLine("nonlocal ")
         self.variable.getPythonStr(builder)
 
-    def visitChildrenForTypecheck(self, visitor):
-        return visitor.NonLocalDecl(self)
-
     def visit(self, visitor):
         return visitor.NonLocalDecl(self)
 

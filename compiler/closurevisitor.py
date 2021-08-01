@@ -12,7 +12,7 @@ class ClosureVisitor(Visitor):
     
     def visit(self, node: Node):
         if isinstance(node, Expr) or isinstance(node, Stmt):
-            return node.visitChildrenForTypecheck(self)
+            return node.postorder(self)
         return node.visit(self)
 
     def deduplicate(self, ids):

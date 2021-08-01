@@ -15,7 +15,14 @@ class AssignStmt(Stmt):
             builder.addText(" = ")
         self.value.getPythonStr(builder)
 
-    def visitChildrenForTypecheck(self, visitor):
+    def preorder(self, visitor):
+        visitor.AssignStmt(self)
+        for t in self.targets:
+            visitor.visit(t)
+        visitor.visit(self.value)
+        return self
+
+    def postorder(self, visitor):
         for t in self.targets:
             visitor.visit(t)
         visitor.visit(self.value)

@@ -15,7 +15,13 @@ class BinaryExpr(Expr):
         self.right.getPythonStr(builder)
         builder.addText(")")
 
-    def visitChildrenForTypecheck(self, visitor):
+    def preorder(self, visitor):
+        visitor.BinaryExpr(self)
+        visitor.visit(self.left)
+        visitor.visit(self.right)
+        return self
+
+    def postorder(self, visitor):
         visitor.visit(self.left)
         visitor.visit(self.right)
         return visitor.BinaryExpr(self)

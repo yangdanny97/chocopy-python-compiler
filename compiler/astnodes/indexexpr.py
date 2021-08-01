@@ -13,10 +13,16 @@ class IndexExpr(Expr):
         self.index.getPythonStr(builder)
         builder.addText("]")
 
-    def visitChildrenForTypecheck(self, visitor):
+    def postorder(self, visitor):
         visitor.visit(self.list)
         visitor.visit(self.index)
         return visitor.IndexExpr(self)
+
+    def preorder(self, visitor):
+        visitor.IndexExpr(self)
+        visitor.visit(self.list)
+        visitor.visit(self.index)
+        return self
 
     def visit(self, visitor):
         return visitor.IndexExpr(self)

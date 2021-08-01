@@ -11,9 +11,6 @@ class GlobalDecl(Declaration):
         builder.newLine("global ")
         self.variable.getPythonStr(builder)
 
-    def visitChildrenForTypecheck(self, visitor):
-        return visitor.GlobalDecl(self)
-
     def visit(self, visitor):
         return visitor.GlobalDecl(self)
 

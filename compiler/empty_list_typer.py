@@ -2,13 +2,14 @@ from .astnodes import *
 from .types import *
 from .visitor import Visitor
 
-# A utility visitor to erase the inferred types of expressions
-class TypeEraser(Visitor):
+# A visitor to refine the types of empty list literals
+class EmptyListTyper(Visitor):
+
+    def __init__(self):
+        self.expectedListType = None
 
     def visit(self, node: Node):
-        if isinstance(node, Expr):
-            node.inferredType = None
-        return node.postorder(self)
+        return node.preOrder(self)
 
     def Program(self, node: Program):
         for d in node.declarations:
@@ -27,14 +28,19 @@ class TypeEraser(Visitor):
             self.visit(s)
 
     def CallExpr(self, node: CallExpr):
-        self.visit(node.function)
+        pass
+        # for i in range(len(node.args)):
+
+    def AssignStmt(self, node: AssignStmt):
+        pass
+
+    def ListExpr(self, node: ListExpr):
+        pass
 
     def MethodCallExpr(self, node: MethodCallExpr):
-        self.visit(node.method)
+        pass
 
-    def NonLocalDecl(self, node: NonLocalDecl):
-        self.visit(node.variable)
+    def ReturnStmt(self, node: ReturnStmt):
+        pass
 
-    def GlobalDecl(self, node: GlobalDecl):
-        self.visit(node.variable)
 

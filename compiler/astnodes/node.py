@@ -11,11 +11,14 @@ class Node:
     def getPythonStr(self, builder):
         raise Exception('operation not supported')
 
-    def visitChildrenForTypecheck(self, visitor):
-        raise Exception('operation not supported')
-
     def visit(self, visitor):
         return Exception('operation not supported')
+
+    def preorder(self, visitor):
+        return self.visit(visitor)
+
+    def postorder(self, visitor):
+        return self.visit(visitor)
 
     def toJSON(self, dump_location=True):
         d = {}

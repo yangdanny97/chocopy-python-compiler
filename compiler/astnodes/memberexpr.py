@@ -13,7 +13,11 @@ class MemberExpr(Expr):
         builder.addText(".")
         self.member.getPythonStr(builder)
 
-    def visitChildrenForTypecheck(self, visitor):
+    def preorder(self, visitor):
+        visitor.MemberExpr(self)
+        visitor.visit(self.object)
+        return self
+    def postorder(self, visitor):
         visitor.visit(self.object)
         return visitor.MemberExpr(self)
 

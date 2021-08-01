@@ -28,8 +28,16 @@ class ClassDef(Declaration):
         builder.unindent()
         builder.newLine()
 
-    def visitChildrenForTypecheck(self, visitor):
+    def preorder(self, visitor):
         visitor.ClassDef(self)
+        for d in self.declarations:
+            visitor.visit(d)
+        return self
+
+    def postorder(self, visitor):
+        for d in self.declarations:
+            visitor.visit(d)
+        return visitor.ClassDef(self)
 
     def visit(self, visitor):
         return visitor.ClassDef(self)

@@ -22,7 +22,7 @@ class NestedFuncHoister(Visitor):
 
     def visit(self, node: Node):
         if isinstance(node, Stmt) or isinstance(node, Expr):
-            return node.visitChildrenForTypecheck(self)
+            return node.postorder(self)
         else:
             return node.visit(self)
 

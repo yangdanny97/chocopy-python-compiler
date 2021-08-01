@@ -14,7 +14,13 @@ class ListExpr(Expr):
                 builder.addText(", ")
         builder.addText("]")
 
-    def visitChildrenForTypecheck(self, visitor):
+    def preorder(self, visitor):
+        visitor.ListExpr(self)
+        for e in self.elements:
+            visitor.visit(e)
+        return self
+
+    def postorder(self, visitor):
         for e in self.elements:
             visitor.visit(e)
         return visitor.ListExpr(self)

@@ -10,9 +10,6 @@ class Identifier(Expr):
     def getPythonStr(self, builder):
         builder.addText(self.name)
 
-    def visitChildrenForTypecheck(self, visitor):
-        return visitor.Identifier(self)
-
     def visit(self, visitor):
         return visitor.Identifier(self)
 

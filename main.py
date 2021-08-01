@@ -96,6 +96,7 @@ def main():
                 out_msg(outfile, args.verbose)
                 f.write(builder.emit())
     elif args.mode == "jvm":
+        compiler.closurepass(tree)
         jvm_emitters = compiler.emitJVM(infile_name, tree)
         for cls in jvm_emitters:
             jvm_emitter = jvm_emitters[cls]

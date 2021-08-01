@@ -18,10 +18,16 @@ class CallExpr(Expr):
                 builder.addText(", ")
         builder.addText(")")
 
-    def visitChildrenForTypecheck(self, visitor):
+    def postorder(self, visitor):
         for a in self.args:
             visitor.visit(a)
         return visitor.CallExpr(self)
+
+    def preorder(self, visitor):
+        visitor.CallExpr(self)
+        for a in self.args:
+            visitor.visit(a)
+        return self
 
     def visit(self, visitor):
         return visitor.CallExpr(self)
