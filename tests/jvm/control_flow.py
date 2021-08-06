@@ -83,21 +83,19 @@ for char in y:
 __assert__(z == "321")
 __assert__(char == "3")
 
-# x = [1, 2, 3]
-# for b in x:
-#     x[0] = b
-# __assert__(x[0] == 3)
+x = [1, 2, 3]
+for b in x:
+    x[0] = b
+__assert__(x[0] == 3)
 
-# x = [1, 2, 3]
-# for b in x:
-#     c = c * 2
-# __assert__(c == 800)
-# __assert__(b == 3)
+x = [1, 2, 3]
+for b in x:
+    c = c * 2
+__assert__(c == 800)
+__assert__(b == 3)
 
-# c = 100
-# x = []
-# for b in x:
-#     c = c * 2
-# __assert__(c == 100)
-
-# TODO debug this stuff
+c = 100
+x = []
+for b in x:
+    c = c * 2
+__assert__(c == 100)

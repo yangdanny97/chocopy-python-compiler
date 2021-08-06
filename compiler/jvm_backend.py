@@ -489,7 +489,7 @@ class JvmBackend(Visitor):
         self.load(self.genLocalName(itr), node.iterable.inferredType)
         self.load(self.genLocalName(idx), IntType())
         if node.iterable.inferredType.isListType():
-            self.arrayLoad(node.iterable.inferredType)
+            self.arrayLoad(node.identifier.inferredType)
         else:
             self.instr("dup")
             self.instr("iconst_1")
