@@ -136,16 +136,15 @@ __assert__(len(w + w) == 0)
 
 x = []
 __assert__(len(x) == 0)
-# __assert__(len(x + x) == 0)
+__assert__(len(x + x) == 0)
+
+y = []
+y = y + [""]
+__assert__(len(y) == 1)
+__assert__(len(y[0]) == 0)
 
 # x = [1]
 # y = ["1"]
 # w = x + y
-
-# y = []
-# y = y + [""]
-# __assert__(len(y) == 1)
-# __assert__(len(y[0]) == 0)
-
 
 

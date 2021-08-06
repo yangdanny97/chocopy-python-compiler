@@ -6,7 +6,6 @@ a:bool = True
 b:int = 0
 c:int = 100
 d:[bool] = None
-e:[[int]] = None
 
 x = []
 
@@ -107,11 +106,3 @@ d = [True, True, True, False]
 for a in d:
     pass
 __assert__(not a)
-
-# x = None
-# e = [[1],[1,1,1],[1,1],[]]
-# b = 0
-# for x in e:
-#     b = b + len(x)
-# __assert__(len(x) == 0)
-# __assert__(b == 6)

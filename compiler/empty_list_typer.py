@@ -58,8 +58,14 @@ class EmptyListTyper(Visitor):
     def ListExpr(self, node: ListExpr):
         if self.expectedType == None:
             return
+        expType = self.expectedType
         if isinstance(self.expectedType, ListValueType) and len(node.elements) == 0:
-            node.emptyListType = self.expectedType.elementType
+            node.emptyListType = expType.elementType
+        else:
+            for i in node.elements:
+                self.expectedType = expType.elementType
+                self.visit(i)
+            self.expectedType = None
 
     def MethodCallExpr(self, node: MethodCallExpr):
         for i in range(len(node.args)):
