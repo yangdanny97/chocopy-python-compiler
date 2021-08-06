@@ -1,3 +1,3 @@
 - nonlocals (nested func hoisting, refs)
 - concatenating arrays of different types into [object]
-- control flow bugs
+- nested array iteration

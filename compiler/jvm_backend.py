@@ -84,8 +84,12 @@ class JvmBackend(Visitor):
         # expect the stack to be array, idx
         if t.isJavaRef():
             self.instr("aaload")
-        else:
+        elif t == BoolType():
+            self.instr("baload")
+        elif t == IntType():
             self.instr("iaload")
+        else:
+            raise Exception("Internal compiler error: unexpected type for arrayload")
 
     def newLocalEntry(self, name: str) -> int:
         # add a new entry to locals table w/o storing anything
