@@ -1,3 +1,4 @@
+# utility for compiling a Chocopy file to .class files and running it
 base_name="$(basename $1 .py)"
 
 rm *.j

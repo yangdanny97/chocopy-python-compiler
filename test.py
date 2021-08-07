@@ -91,7 +91,7 @@ def run_jvm_tests():
     print("Running JVM backend tests...\n")
     total = 0
     n_passed = 0
-    jvm_tests_dir = (Path(__file__).parent / "tests/jvm/").resolve()
+    jvm_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
     for test in jvm_tests_dir.glob('*.py'):
         passed = run_jvm_test(test)
         total += 1
@@ -99,15 +99,6 @@ def run_jvm_tests():
             print("Failed: " + test.name)
         else:
             n_passed += 1
-    # jvm_tests_dir = (Path(__file__).parent / "tests/typecheck/").resolve()
-    # for test in jvm_tests_dir.glob('*.py'):
-    #     if not test.name.startswith("bad"):
-    #         passed = run_jvm_test(test)
-    #         total += 1
-    #         if not passed:
-    #             print("Failed: " + test.name)
-    #         else:
-    #             n_passed += 1
     if total == n_passed:
         subprocess.run("cd {} && rm *.j && rm *.class".format(
             str(Path(__file__).parent.resolve())

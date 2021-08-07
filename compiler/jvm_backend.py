@@ -529,7 +529,7 @@ class JvmBackend(Visitor):
     def ListExpr(self, node: ListExpr):
         t = node.inferredType
         length = len(node.elements)
-        self.instr(f"ldc {length}")
+        self.loadInt(length)
         elementType = None
         if isinstance(t, ClassValueType):
             if node.emptyListType:
@@ -619,8 +619,14 @@ class JvmBackend(Visitor):
         else:
             self.instr("iconst_0")
 
+    def loadInt(self, value:int):
+        if value >= 0 and value <= 5:
+            self.instr(f"iconst_{value}")
+        else:
+            self.instr(f"ldc {value}")
+
     def IntegerLiteral(self, node: IntegerLiteral):
-        self.instr(f"ldc {node.value}")
+        self.loadInt(node.value)
 
     def NoneLiteral(self, node: NoneLiteral):
         self.instr("aconst_null")
