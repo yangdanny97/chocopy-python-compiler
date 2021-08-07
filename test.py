@@ -15,7 +15,7 @@ def run_all_tests():
     run_parse_tests()
     run_typecheck_tests()
     run_closure_tests()
-    run_python_emit_tests()
+    run_python_backend_tests()
     run_jvm_tests()
 
 def run_parse_tests():
@@ -73,7 +73,7 @@ def run_closure_tests():
                 n_passed += 1
     print("\nPassed {:d} out of {:d} closure transformation test cases\n".format(n_passed, total))
 
-def run_python_emit_tests():
+def run_python_backend_tests():
     print("Running Python backend tests...\n")
     total = 0
     n_passed = 0

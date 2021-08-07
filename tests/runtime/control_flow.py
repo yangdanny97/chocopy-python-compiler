@@ -6,6 +6,8 @@ a:bool = True
 b:int = 0
 c:int = 100
 d:[bool] = None
+e:object = None
+f:[object] = None
 
 x = []
 
@@ -106,3 +108,9 @@ d = [True, True, True, False]
 for a in d:
     pass
 __assert__(not a)
+
+e = None
+f = [None, object(), None, object()]
+for e in f:
+    pass
+__assert__(not (e is None))
