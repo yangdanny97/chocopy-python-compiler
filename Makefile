@@ -1,5 +1,6 @@
 clean:
-	rm *.j
-	rm *.class
-	rm *.ast
-	rm *.ast.typed
+	rm -f *.j
+	rm -f *.class
+	rm -f *.ast
+	rm -f *.ast.typed
+	rm -f *.test.py

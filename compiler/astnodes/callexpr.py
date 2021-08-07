@@ -10,6 +10,10 @@ class CallExpr(Expr):
         self.isConstructor = False
 
     def getPythonStr(self, builder):
+        if self.function.name == "__assert__":
+            builder.addText("assert ")
+            self.args[0].getPythonStr(builder)
+            return
         self.function.getPythonStr(builder)
         builder.addText("(")
         for i in range(len(self.args)):

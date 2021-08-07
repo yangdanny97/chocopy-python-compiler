@@ -85,7 +85,24 @@ def run_python_emit_tests():
             print("Failed: " + test.name)
         else:
             n_passed += 1
-    print("\nPassed {:d} out of {:d} Python backend test cases\n".format(n_passed, total))
+    print("\nPassed {:d} out of {:d} Python backend emit test cases\n".format(n_passed, total))
+    total = 0
+    n_passed = 0
+    tc_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
+    for test in tc_tests_dir.glob('*.py'):
+        passed = run_python_runtime_test(test)
+        total += 1
+        if not passed:
+            print("Failed: " + test.name)
+        else:
+            n_passed += 1
+    if total == n_passed:
+        subprocess.run("cd {} && rm *.test.py".format(
+            str(Path(__file__).parent.resolve())
+        ), shell=True)
+    else:
+        print("\nNot all test cases passed. Please run `make clean` after inspecting the output")
+    print("\nPassed {:d} out of {:d} Python backend runtime test cases\n".format(n_passed, total))
 
 def run_jvm_tests():
     print("Running JVM backend tests...\n")
@@ -96,7 +113,7 @@ def run_jvm_tests():
         passed = run_jvm_test(test)
         total += 1
         if not passed:
-            print("Failed: " + test.name)
+            print("Failed: " + test.name + "\n")
         else:
             n_passed += 1
     if total == n_passed:
@@ -187,6 +204,39 @@ def run_python_emit_test(test)->bool:
         compiler.typecheck(chocopy_ast)
         chocopy_ast.getPythonStr(builder)
         ast.parse(builder.emit())
+        return True
+    except Exception as e:
+        print("Internal compiler error:", test)
+        track = traceback.format_exc()
+        print(e)
+        print(track)
+        return False
+
+def run_python_runtime_test(test)->bool:
+    infile_name = str(test)[:-3].split("/")[-1]
+    builder = Builder(infile_name)
+    try:
+        compiler = Compiler()
+        astparser = compiler.parser
+        chocopy_ast = compiler.parse(test)
+        if len(astparser.errors) > 0:
+            return False
+        compiler.typecheck(chocopy_ast)
+        chocopy_ast.getPythonStr(builder)
+        name = f"./{infile_name}.test.py"
+        with open(name, "w") as f:
+            f.write(builder.emit())
+        output = subprocess.check_output(
+            f"cd {str(Path(__file__).parent.resolve())} && python3 {name}",
+            shell=True)
+        lines = output.decode().split("\n")
+        error_flags = {"error", "Error", "Exception", "exception", "Expected", "expected"}
+        for l in lines:
+            for e in error_flags:
+                if e in l:
+                    passed = False
+                    print(l)
+                    break
         return True
     except Exception as e:
         print("Internal compiler error:", test)

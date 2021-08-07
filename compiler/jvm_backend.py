@@ -18,7 +18,7 @@ class JvmBackend(Visitor):
         self.locals = [defaultdict(lambda: None)]
         self.counter = 0  # for labels
         self.returnType = None
-        self.stackLimit = 50
+        self.stackLimit = 500
         self.localLimit = 50
         self.ts = ts
         self.defaultToGlobals = False  # treat all vars as global if this is true

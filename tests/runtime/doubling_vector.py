@@ -89,13 +89,13 @@ __assert__(vec.items[0] == 0)
 
 vec = vrange(0, 2)
 __assert__(vec.capacity() == 2)
-__assert__(vec.size == 1)
+__assert__(vec.size == 2)
 __assert__(vec.items[0] == 0)
 __assert__(vec.items[1] == 1)
 
 vec = vrange(1, 3)
 __assert__(vec.capacity() == 2)
-__assert__(vec.size == 1)
+__assert__(vec.size == 2)
 __assert__(vec.items[0] == 1)
 __assert__(vec.items[1] == 2)
 
