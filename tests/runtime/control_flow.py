@@ -109,6 +109,12 @@ for a in d:
     pass
 __assert__(not a)
 
+a = True
+d = [True, True, True]
+for a in d:
+    __assert__(a)
+    print(a)
+
 e = None
 f = [None, object(), None, object()]
 for e in f:

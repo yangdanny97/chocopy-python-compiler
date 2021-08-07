@@ -18,8 +18,8 @@ class JvmBackend(Visitor):
         self.locals = [defaultdict(lambda: None)]
         self.counter = 0  # for labels
         self.returnType = None
-        self.stackLimit = 500
         self.localLimit = 50
+        self.stackLimit = 500
         self.ts = ts
         self.defaultToGlobals = False  # treat all vars as global if this is true
 
@@ -116,6 +116,13 @@ class JvmBackend(Visitor):
         self.locals[-1][name] = n
         return n
 
+    def visitStmtList(self, stmts:[Stmt]):
+        if len(stmts) == 0:
+            self.instr("nop")
+        else:
+            for s in stmts:
+                self.visit(s)
+
     def Program(self, node: Program):
         func_decls = [d for d in node.declarations if isinstance(d, FuncDef)]
         cls_decls = [d for d in node.declarations if isinstance(d, ClassDef)]
@@ -132,13 +139,12 @@ class JvmBackend(Visitor):
         # main
         self.instr(".method public static main : ([Ljava/lang/String;)V")
         self.currentBuilder().indent()
-        self.instr(f".limit stack {self.stackLimit}")
-        self.instr(f".limit locals {len(node.declarations) + self.localLimit}")
+        self.instr(f".code stack {self.stackLimit} locals {len(node.declarations) + self.localLimit}")
         self.defaultToGlobals = True
-        for s in node.statements:
-            self.visit(s)
+        self.visitStmtList(node.statements)
         self.defaultToGlobals = False
         self.instr("return")
+        self.instr(".end code")
         self.currentBuilder().unindent()
         self.instr(".end method")
 
@@ -152,6 +158,7 @@ class JvmBackend(Visitor):
                 f"putstatic Field {self.main} {v.var.identifier.name} {v.var.t.getJavaSignature()}")
         self.instr("return")
         self.instr(".end code")
+        self.currentBuilder().unindent()
         self.instr(".end method")
 
         # global functions (static funcs)
@@ -211,16 +218,14 @@ class JvmBackend(Visitor):
             self.visit(d)
         self.returnType = node.type.returnType
         # handle last return
+        self.visitStmtList(node.statements)
         hasReturn = False
         for s in node.statements:
-            self.visit(s)
             if s.isReturn:
                 hasReturn = True
         if not hasReturn:
             self.buildReturn(None)
         self.exitScope()
-        self.currentBuilder().unindent()
-        self.instr(".end method")
 
     def constructor(self, superclass:str, node: FuncDef):
         self.enterScope()
@@ -229,12 +234,14 @@ class JvmBackend(Visitor):
         self.instr(
             f".method public <init> : {constructorSig.getJavaSignature()}")
         self.currentBuilder().indent()
-        self.instr(f".limit stack {self.stackLimit}")
-        self.instr(f".limit locals {len(node.declarations) + self.localLimit}")
+        self.instr(f".code stack {self.stackLimit} locals {len(node.declarations) + self.localLimit}")
         # call superclass constructor
         self.instr("aload 0")
         self.instr(f"invokespecial Method {superclass} <init> ()V ")
         self.funcDefHelper(node)
+        self.instr(".end code")
+        self.currentBuilder().unindent()
+        self.instr(".end method")
 
     def method(self, node: FuncDef):
         self.enterScope()
@@ -243,18 +250,22 @@ class JvmBackend(Visitor):
         self.instr(
             f".method public {node.name.name} : {methodSig.getJavaSignature()}")
         self.currentBuilder().indent()
-        self.instr(f".limit stack {self.stackLimit}")
-        self.instr(f".limit locals {len(node.declarations) + self.localLimit}")
+        self.instr(f".code stack {self.stackLimit} locals {len(node.declarations) + self.localLimit}")
         self.funcDefHelper(node)
+        self.instr(".end code")
+        self.currentBuilder().unindent()
+        self.instr(".end method")
 
     def FuncDef(self, node: FuncDef):
         self.enterScope()
         self.instr(
             f".method public static {node.name.name} : {node.type.getJavaSignature()}")
         self.currentBuilder().indent()
-        self.instr(f".limit stack {self.stackLimit}")
-        self.instr(f".limit locals {len(node.declarations) + self.localLimit}")
+        self.instr(f".code stack {self.stackLimit} locals {len(node.declarations) + self.localLimit}")
         self.funcDefHelper(node)
+        self.instr(".end code")
+        self.currentBuilder().unindent()
+        self.instr(".end method")
 
     def VarDef(self, node: VarDef):
         varName = node.var.identifier.name
@@ -304,22 +315,33 @@ class JvmBackend(Visitor):
             self.processAssignmentTarget(targets[0])
 
     def IfStmt(self, node: IfStmt):
-        startLabel = self.newLabelName()
-        elseLabel = self.newLabelName()
-        endLabel = self.newLabelName()
-        self.label(startLabel)
-        self.visit(node.condition)
-        self.instr(f"ifeq {elseLabel}")
-        for s in node.thenBody:
-            self.visit(s)
-        self.instr(f"goto {endLabel}")
-        self.label(elseLabel)
-        for s in node.elseBody:
-            self.visit(s)
-        self.label(endLabel)
+        if len(node.elseBody) == 0:
+            startLabel = self.newLabelName()
+            endLabel = self.newLabelName()
+            self.label(startLabel)
+            self.visit(node.condition)
+            self.instr(f"ifeq {endLabel}")
+            self.visitStmtList(node.thenBody)
+            self.label(endLabel)
+            self.instr("nop")
+        else:
+            startLabel = self.newLabelName()
+            elseLabel = self.newLabelName()
+            endLabel = self.newLabelName()
+            self.label(startLabel)
+            self.visit(node.condition)
+            self.instr(f"ifeq {elseLabel}")
+            self.visitStmtList(node.thenBody)
+            self.instr(f"goto {endLabel}")
+            self.label(elseLabel)
+            self.visitStmtList(node.elseBody)
+            self.label(endLabel)
+            self.instr("nop")
 
     def ExprStmt(self, node: ExprStmt):
         self.visit(node.expr)
+        if isinstance(node.expr, CallExpr) or isinstance(node.expr, MethodCallExpr):
+            self.instr("pop")
 
     def comparator(self, instr: str, firstBranchTrue: bool = False):
         l1 = self.newLabelName()
@@ -336,6 +358,7 @@ class JvmBackend(Visitor):
         else:
             self.instr("iconst_1")
         self.label(l2)
+        self.instr("nop")
 
     def isListConcat(self, operator: str, leftType: ValueType, rightType: ValueType) -> bool:
         return leftType.isListType() and rightType.isListType() and operator == "+"
@@ -520,8 +543,7 @@ class JvmBackend(Visitor):
         else:
             self.store(node.identifier.name, node.identifier.inferredType)
         # body
-        for s in node.body:
-            self.visit(s)
+        self.visitStmtList(node.body)
         # idx = idx + 1
         self.load(self.genLocalName(idx), IntType())
         self.instr("iconst_1")
@@ -529,6 +551,7 @@ class JvmBackend(Visitor):
         self.store(self.genLocalName(idx), IntType())
         self.instr(f"goto {startLabel}")
         self.label(endLabel)
+        self.instr("nop")
 
     def ListExpr(self, node: ListExpr):
         t = node.inferredType
@@ -558,10 +581,10 @@ class JvmBackend(Visitor):
         self.label(startLabel)
         self.visit(node.condition)
         self.instr(f"ifeq {endLabel}")
-        for s in node.body:
-            self.visit(s)
+        self.visitStmtList(node.body)
         self.instr(f"goto {startLabel}")
         self.label(endLabel)
+        self.instr("nop")
 
     def buildReturn(self, value: Expr):
         if self.returnType.isNone():
@@ -598,6 +621,7 @@ class JvmBackend(Visitor):
         self.label(l1)
         self.visit(node.thenExpr)
         self.label(l2)
+        self.instr("nop")
 
     def MethodCallExpr(self, node: MethodCallExpr):
         className = node.method.object.inferredType.className
@@ -668,6 +692,7 @@ class JvmBackend(Visitor):
         msg = f"failed assertion on line {arg.location[0]}"
         self.emit_exn(msg)
         self.label(label)
+        self.NoneLiteral(None)
 
     def emit_exn(self, msg: str):
         self.instr("new java/lang/Exception")
@@ -676,6 +701,7 @@ class JvmBackend(Visitor):
         self.instr(
             "invokespecial Method java/lang/Exception <init> (Ljava/lang/String;)V")
         self.instr("athrow")
+        self.NoneLiteral(None)
 
     def emit_input(self):
         self.instr("new java/util/Scanner")

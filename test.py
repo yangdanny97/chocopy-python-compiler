@@ -10,6 +10,7 @@ from compiler.compiler import Compiler
 from compiler.builder import Builder
 
 dump_location = True
+error_flags = {"error", "Error", "Exception", "exception", "Expected", "expected"}
 
 def run_all_tests():
     run_parse_tests()
@@ -230,7 +231,6 @@ def run_python_runtime_test(test)->bool:
             f"cd {str(Path(__file__).parent.resolve())} && python3 {name}",
             shell=True)
         lines = output.decode().split("\n")
-        error_flags = {"error", "Error", "Exception", "exception", "Expected", "expected"}
         for l in lines:
             for e in error_flags:
                 if e in l:
@@ -279,7 +279,6 @@ def run_jvm_test(test)->bool:
             str(test.name[:-3])
         ), shell=True)
         lines = output.decode().split("\n")
-        error_flags = {"error", "Error", "Exception", "exception", "Expected", "expected"}
         for l in lines:
             for e in error_flags:
                 if e in l:
