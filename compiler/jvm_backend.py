@@ -185,8 +185,18 @@ class JvmBackend(Visitor):
             else:
                 self.method(d)
         if constructor_def == None:
-            self.constructor(superclass, FuncDef([], Identifier([], "__init__"), [
-                             ClassValueType(self.currentClass)], NoneType(), var_decls, [], True))
+            funcDef = FuncDef(node.location, 
+                Identifier(node.location, "__init__"), 
+                [TypedVar(node.location, 
+                        Identifier(node.location, "self"), 
+                        ClassType(node.location, self.currentClass)
+                )], 
+                ClassType(node.location, "<None>"), 
+                var_decls, 
+                [], True
+            )
+            funcDef.type = FuncType([ClassValueType(self.currentClass)], NoneType())
+            self.constructor(superclass, funcDef)
         self.instr(".end class")
 
     def funcDefHelper(self, node: FuncDef):
