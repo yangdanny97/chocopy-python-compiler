@@ -9,6 +9,7 @@ class TypedVar(Node):
         self.identifier = identifier
         self.type = typ
         self.t = None # the typechecked type goes here
+        self.capturedNonlocal = False
 
     def getPythonStr(self, builder):
         self.identifier.getPythonStr(builder)

@@ -5,6 +5,16 @@ y:[str] = None
 y2:[str] = None
 z:object = None
 a:[[object]] = None
+b:[[int]] = None
+
+def setIdx(lst:[int], idx:int, value:int):
+    lst[idx] = value
+
+def setNestedIdx(lst:[[int]], idx1:int, idx2:int, value:int):
+    lst[idx1][idx2] = value
+
+def getNestedIdx(lst:[[int]], idx:int)->[int]:
+    return lst[idx]
 
 w = []
 x = []
@@ -12,6 +22,8 @@ x2 = []
 y = []
 y2 = []
 z = []
+a = []
+b = []
 
 __assert__(len(x) == 0)
 __assert__(len([]) == 0)
@@ -142,6 +154,25 @@ y = []
 y = y + [""]
 __assert__(len(y) == 1)
 __assert__(len(y[0]) == 0)
+
+x = [1,2,3]
+setIdx(x, 1, 0)
+__assert__(x[1] == 0)
+
+b = [[1, 1], [2], [3]]
+setNestedIdx(b, 0, 0, 1)
+__assert__(b[0][0] == 1)
+
+__assert__(b[1][0] == 2)
+x = getNestedIdx(b, 1)
+__assert__(x[0] == 2)
+x[0] = 1
+__assert__(b[1][0] == 1)
+
+x = [1, 2, 3]
+x2 = x
+x[0] = 0
+__assert__(x2[0] == 0)
 
 # x = [1]
 # y = ["1"]

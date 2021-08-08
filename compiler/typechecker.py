@@ -100,8 +100,6 @@ class TypeChecker(Visitor):
         rType = self.visit(node.returnType)
         return FuncType([self.visit(t) for t in node.params], rType)
 
-    # DECLARATIONS (returns type of declaration, besides Program)
-
     def Program(self, node: Program):
         self.program = node
         for d in node.declarations:

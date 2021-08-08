@@ -1,5 +1,6 @@
 from .stmt import Stmt
 from .expr import Expr
+from .identifier import Identifier
 
 class AssignStmt(Stmt):
 
@@ -9,11 +10,12 @@ class AssignStmt(Stmt):
         self.value = value
 
     def getPythonStr(self, builder):
-        builder.newLine()
-        for t in self.targets:
-            t.getPythonStr(builder)
-            builder.addText(" = ")
+        builder.newLine("__x = ")
         self.value.getPythonStr(builder)
+        for t in self.targets:
+            builder.newLine()
+            t.getPythonStr(builder)
+            builder.addText(" = __x")
 
     def preorder(self, visitor):
         visitor.AssignStmt(self)

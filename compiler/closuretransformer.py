@@ -46,7 +46,7 @@ class ClosureTransformer(TypeChecker):
             return
         for fv in t.freevars:
             ident = Identifier(node.location, fv.name)
-            self.visit(ident)
+            ident.inferredType = fv.inferredType
             node.args.append(ident)
 
     def CallExpr(self, node: CallExpr):
@@ -56,5 +56,13 @@ class ClosureTransformer(TypeChecker):
     def MethodCallExpr(self, node: MethodCallExpr):
         self.callHelper(node)
         return super().MethodCallExpr(node)
+
+    # add ref type annotations
+    def TypedVar(self, node: TypedVar):
+        # return the type of the annotaton
+        node.t = self.visit(node.type)
+        if node.capturedNonlocal:
+            node.t.isRef = True
+        return node.t
         
 

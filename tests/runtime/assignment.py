@@ -33,3 +33,6 @@ d = "456"
 __assert__(c != d)
 d = "123"
 __assert__(c == d)
+
+z = print("1234")
+__assert__(z is None)

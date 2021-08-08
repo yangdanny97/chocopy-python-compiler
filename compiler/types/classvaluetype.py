@@ -3,6 +3,7 @@ from .valuetype import ValueType
 class ClassValueType(ValueType):
     def __init__(self, className:str):
         self.className = className
+        self.isRef = False
 
     def __eq__(self, other):
         if isinstance(other, ClassValueType):

@@ -9,6 +9,12 @@ class CallExpr(Expr):
         self.args = args
         self.isConstructor = False
 
+    def argIsRef(self, idx:int)->bool:
+        if self.isConstructor:
+            return self.function.inferredType.parameters[idx+1].isRef
+        else:
+            return self.function.inferredType.parameters[idx].isRef
+
     def getPythonStr(self, builder):
         # special case for assertions
         if self.function.name == "__assert__":
@@ -18,7 +24,12 @@ class CallExpr(Expr):
         self.function.getPythonStr(builder)
         builder.addText("(")
         for i in range(len(self.args)):
+            isRef = self.argIsRef(i)
+            if isRef:
+                self.builder.addText("[")
             self.args[i].getPythonStr(builder)
+            if isRef:
+                self.builder.addText("]")
             if i != len(self.args) - 1:
                 builder.addText(", ")
         builder.addText(")")

@@ -106,3 +106,6 @@ __assert__(vec.size == 0)
 vec = vrange(0, -1)
 __assert__(vec.capacity() == 1)
 __assert__(vec.size == 0)
+
+vec = vrange(1, 100)
+__assert__(vec.size == 99)

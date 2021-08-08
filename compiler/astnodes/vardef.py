@@ -14,7 +14,12 @@ class VarDef(Declaration):
         builder.newLine()
         self.var.getPythonStr(builder)
         builder.addText(" = ")
-        self.value.getPythonStr(builder)
+        if self.var.capturedNonlocal:
+            builder.addText("[")
+            self.value.getPythonStr(builder)
+            builder.addText("]")
+        else:
+            self.value.getPythonStr(builder)
 
     def preorder(self, visitor):
         visitor.VarDef(self)

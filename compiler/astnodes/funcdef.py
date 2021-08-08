@@ -23,6 +23,9 @@ class FuncDef(Declaration):
         self.freevars = [] # used in AST transformations, not printed out
         self.type = None # type signature of function
 
+    def getFreevarNames(self):
+        return set([v.name for v in self.freevars])
+
     def getPythonStr(self, builder):
         builder.newLine("def ")
         self.name.getPythonStr(builder)

@@ -6,6 +6,7 @@ from .parser import Parser, ParseError
 from .closurevisitor import ClosureVisitor
 from .closuretransformer import ClosureTransformer 
 from .nestedfunchoister import NestedFuncHoister
+from .typeeraser import TypeEraser
 from .typesystem import TypeSystem
 from .jvm_backend import JvmBackend
 import ast
@@ -42,7 +43,6 @@ class Compiler:
         ClosureVisitor().visit(ast)
         NestedFuncHoister().visit(ast)
         ClosureTransformer().visit(ast)
-        TypeChecker(TypeSystem()).visit(ast)
 
     def typecheck(self, ast: Node):
         # given an AST object, typecheck it
@@ -50,7 +50,7 @@ class Compiler:
         self.typechecker.visit(ast)
 
     def emitJVM(self, main:str, ast: Node):
-        ClosureVisitor().visit(ast)
+        self.closurepass(ast)
         EmptyListTyper().visit(ast)
         jvm_backend = JvmBackend(main, self.typechecker.ts)
         jvm_backend.visit(ast)

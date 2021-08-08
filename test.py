@@ -13,11 +13,11 @@ dump_location = True
 error_flags = {"error", "Error", "Exception", "exception", "Expected", "expected"}
 
 def run_all_tests():
-    run_parse_tests()
-    run_typecheck_tests()
-    run_closure_tests()
+    # run_parse_tests()
+    # run_typecheck_tests()
     run_python_backend_tests()
-    run_jvm_tests()
+    # run_closure_tests()
+    # run_jvm_tests()
 
 def run_parse_tests():
     print("Running parser tests...\n")
@@ -57,6 +57,14 @@ def run_typecheck_tests():
             print("Failed: " + test.name)
         else:
             n_passed += 1
+    tc_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
+    for test in tc_tests_dir.glob('*.py'):
+        passed = run_typecheck_test(test, False)
+        total += 1
+        if not passed:
+            print("Failed: " + test.name)
+        else:
+            n_passed += 1
     print("\nPassed {:d} out of {:d} typechecker test cases\n".format(n_passed, total))
 
 def run_closure_tests():
@@ -73,6 +81,18 @@ def run_closure_tests():
             else:
                 n_passed += 1
     print("\nPassed {:d} out of {:d} closure transformation test cases\n".format(n_passed, total))
+    print("Running closure transformation runtime tests...\n")
+    total = 0
+    n_passed = 0
+    tc_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
+    for test in tc_tests_dir.glob('*.py'):
+        passed = run_closure_runtime_test(test)
+        total += 1
+        if not passed:
+            print("Failed: " + test.name)
+        else:
+            n_passed += 1
+    print("\nPassed {:d} out of {:d} closure transformation runtime test cases\n".format(n_passed, total))
 
 def run_python_backend_tests():
     print("Running Python backend tests...\n")
@@ -80,12 +100,13 @@ def run_python_backend_tests():
     n_passed = 0
     tc_tests_dir = (Path(__file__).parent / "tests/typecheck/").resolve()
     for test in tc_tests_dir.glob('*.py'):
-        passed = run_python_emit_test(test)
-        total += 1
-        if not passed:
-            print("Failed: " + test.name)
-        else:
-            n_passed += 1
+        if not test.name.startswith("bad"):
+            passed = run_python_emit_test(test)
+            total += 1
+            if not passed:
+                print("Failed: " + test.name)
+            else:
+                n_passed += 1
     print("\nPassed {:d} out of {:d} Python backend emit test cases\n".format(n_passed, total))
     total = 0
     n_passed = 0
@@ -135,7 +156,7 @@ def run_parse_test(test, bad=True)->bool:
         return len(astparser.errors) > 0
     if len(astparser.errors) > 0:
         return False
-    ast_json = ast.toJSON(dump_location)
+    ast_json = ast.toJSON(True)
     try:
         with test.with_suffix(".py.ast").open("r") as f:
             correct_json = json.load(f)
@@ -145,7 +166,7 @@ def run_parse_test(test, bad=True)->bool:
             correct_json = json.load(f)
             return ast_equals(correct_json, ast_json)
 
-def run_typecheck_test(test)->bool:
+def run_typecheck_test(test, checkAst = True)->bool:
     try:
         compiler = Compiler()
         astparser = compiler.parser
@@ -153,11 +174,18 @@ def run_typecheck_test(test)->bool:
         if len(astparser.errors) > 0:
             return False
         compiler.typecheck(ast)
-        ast_json = ast.toJSON(dump_location)
-        with test.with_suffix(".py.ast.typed").open("r") as f:
-            correct_json = json.load(f)
-            match = ast_equals(ast_json, correct_json)
-            return match
+        if checkAst:
+            ast_json = ast.toJSON(True)
+            with test.with_suffix(".py.ast.typed").open("r") as f:
+                correct_json = json.load(f)
+                match = ast_equals(ast_json, correct_json)
+                return match
+        else:
+            if len(ast.errors.errors) > 0:
+                for e in ast.errors.errors:
+                    print(e.toJSON(dump_location))
+                return False
+            return True
     except Exception as e:
         print("Internal compiler error:", test)
         track = traceback.format_exc()
@@ -186,6 +214,44 @@ def run_closure_test(test)->bool:
                 print(e.toJSON(dump_location))
             return False
         return True
+    except Exception as e:
+        print("Internal compiler error:", test)
+        track = traceback.format_exc()
+        print(e)
+        print(track)
+        return False
+
+def run_closure_runtime_test(test)->bool:
+    infile_name = str(test)[:-3].split("/")[-1]
+    builder = Builder(infile_name)
+    try:
+        compiler = Compiler()
+        astparser = compiler.parser
+        chocopy_ast = compiler.parse(test)
+        if len(astparser.errors) > 0:
+            return False
+        compiler.typecheck(chocopy_ast)
+        compiler.closurepass(chocopy_ast)
+        if len(chocopy_ast.errors.errors) > 0:
+            for e in chocopy_ast.errors.errors:
+                print(e.toJSON(dump_location))
+            return False
+        chocopy_ast.getPythonStr(builder)
+        name = f"./{infile_name}.test.py"
+        with open(name, "w") as f:
+            f.write(builder.emit())
+        output = subprocess.check_output(
+            f"cd {str(Path(__file__).parent.resolve())} && python3 {name}",
+            shell=True)
+        lines = output.decode().split("\n")
+        passed = True
+        for l in lines:
+            for e in error_flags:
+                if e in l:
+                    passed = False
+                    print(l)
+                    break
+        return passed
     except Exception as e:
         print("Internal compiler error:", test)
         track = traceback.format_exc()
@@ -231,13 +297,14 @@ def run_python_runtime_test(test)->bool:
             f"cd {str(Path(__file__).parent.resolve())} && python3 {name}",
             shell=True)
         lines = output.decode().split("\n")
+        passed = True
         for l in lines:
             for e in error_flags:
                 if e in l:
                     passed = False
                     print(l)
                     break
-        return True
+        return passed
     except Exception as e:
         print("Internal compiler error:", test)
         track = traceback.format_exc()

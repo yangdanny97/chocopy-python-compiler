@@ -5,16 +5,22 @@ from .astnodes import *
 from .types import *
 from .visitor import Visitor
 
-class NestedFuncHoister(Visitor):
-    # rename nested functions to be unique
-    # hoist all nested funcs to top level
-    # remove all nonlocal decls
+class HoistedFunctionInfo:
+    def __init__(self, name, decl):
+        self.name = name
+        self.decl = decl
 
+class NestedFuncHoister(Visitor):
+    # hoist all nested funcs to be top level funcs
+    # rename hoisted functions to be unique
+    # remove all nonlocal decls
     # while functions nested inside methods will be renamed, the methods themselves will not
 
+    # TODO: properly hoist methods
+
     def __init__(self):
-        # map of function names to their LLVM function names
-        self.symbolTable = [defaultdict(lambda: None)]
+        # map of function names to their modified names
+        self.functionInfo = [defaultdict(lambda: None)]
         self.currentClass = None
         self.nestingNames = []
         self.nestingLevel = 0
@@ -28,37 +34,39 @@ class NestedFuncHoister(Visitor):
 
     def genFuncName(self, name:str):
         # example: 
-        # f2 declared inside f1 will be named f1.f2
-        # f4 declared inside C.f3 will be named C.f3.f4
+        # f2 declared inside f1 will be named f1__f2
+        # f4 declared inside C.f3 will be named C__f3__f4
         if len(self.nestingNames) == 0:
             return name
-        return ".".join(self.nestingNames) + "." + name
+        return "__".join(self.nestingNames) + "__" + name
 
     def Program(self, node: Program):
         for d in node.declarations:
             if isinstance(d, FuncDef):
                 name = d.getIdentifier().name
-                self.symbolTable[-1][name] = name
+                self.functionInfo[-1][name] = HoistedFunctionInfo(name, d)
         for d in node.declarations:
+            self.nestingLevel = 0
             self.visit(d)
         node.declarations = node.declarations + self.hoisted
         for s in node.statements:
             self.visit(s)
 
     def ClassDef(self, node: ClassDef):
-        self.symbolTable.append(defaultdict(lambda: None))
+        self.nestingLevel = 0
+        self.functionInfo.append(defaultdict(lambda: None))
         self.currentClass = node.getIdentifier().name
         self.nestingNames.append(self.currentClass)
 
         for d in node.declarations:
             self.visit(d)
 
-        self.symbolTable.pop()
+        self.functionInfo.pop()
         self.nestingNames.pop()
         self.currentClass = None
 
     def FuncDef(self, node: FuncDef):
-        self.symbolTable.append(defaultdict(lambda: None))
+        self.functionInfo.append(defaultdict(lambda: None))
         self.nestingNames.append(node.getIdentifier().name)
         self.nestingLevel += 1
 
@@ -66,17 +74,20 @@ class NestedFuncHoister(Visitor):
             if isinstance(d, FuncDef):
                 name = d.getIdentifier().name
                 newname = self.genFuncName(name)
-                self.symbolTable[-1][name] = newname
+                self.functionInfo[-1][name] = HoistedFunctionInfo(newname, d)
                 d.getIdentifier().name = newname
         
         for d in node.declarations:
             self.visit(d)
-        node.declarations = [d for d in node.declarations if not isinstance(d, FuncDef) and not isinstance(d, NonLocalDecl)]
+        node.declarations = [
+            d for d in node.declarations 
+            if not isinstance(d, FuncDef) and not isinstance(d, NonLocalDecl)
+        ]
 
         for s in node.statements:
             self.visit(s)
         
-        self.symbolTable.pop()
+        self.functionInfo.pop()
         self.nestingNames.pop()
         self.nestingLevel -= 1
 
@@ -85,9 +96,9 @@ class NestedFuncHoister(Visitor):
         return node
 
     def CallExpr(self, node: CallExpr):
-        for t in self.symbolTable[::-1]:
+        for t in self.functionInfo[::-1]:
             if node.function.name in t:
-                node.function.name = t[node.function.name]
+                node.function.name = t[node.function.name].name
                 return
 
 
