@@ -11,11 +11,11 @@ class ListValueType(ValueType):
             return self.elementType == other.elementType
         return False
 
-    def getJavaSignature(self):
-        return "["+self.elementType.getJavaSignature()
+    def getJavaSignature(self, _=False):
+        return "["+self.elementType.getJavaSignature(True)
 
-    def getJavaName(self):
-        return "["+self.elementType.getJavaSignature()
+    def getJavaName(self, _=False):
+        return "["+self.elementType.getJavaSignature(True)
 
     def isListType(self):
         return True

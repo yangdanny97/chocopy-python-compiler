@@ -72,27 +72,21 @@ class JvmBackend(Visitor):
         else:
             self.instr(f"iload {n}")
 
-    def arrayStore(self, t: ValueType):
+    def arrayStore(self, elementType:ValueType):
         # expect the stack to be array, idx, value
-        if t.isJavaRef():
-            self.instr("aastore")
-        elif t == BoolType():
-            self.instr("bastore")
-        elif t == IntType():
-            self.instr("iastore")
-        else:
-            raise Exception("Internal compiler error: unexpected type for array store")
+        if elementType == IntType():
+            self.instr("invokestatic Method java/lang/Integer valueOf (I)Ljava/lang/Integer;")
+        elif elementType == BoolType():
+            self.instr("invokestatic Method java/lang/Boolean valueOf (Z)Ljava/lang/Boolean;")
+        self.instr("aastore")
 
-    def arrayLoad(self, t: ValueType):
+    def arrayLoad(self, elementType:ValueType):
         # expect the stack to be array, idx
-        if t.isJavaRef():
-            self.instr("aaload")
-        elif t == BoolType():
-            self.instr("baload")
-        elif t == IntType():
-            self.instr("iaload")
-        else:
-            raise Exception("Internal compiler error: unexpected type for array load")
+        self.instr("aaload")
+        if elementType == IntType():
+            self.instr("invokevirtual Method java/lang/Integer intValue ()I")
+        elif elementType == BoolType():
+            self.instr("invokevirtual Method java/lang/Boolean booleanValue ()Z")
 
     def newLocalEntry(self, name: str) -> int:
         # add a new entry to locals table w/o storing anything
@@ -385,19 +379,16 @@ class JvmBackend(Visitor):
                 self.instr(f"iload {lenR}")
                 self.instr("iadd")
                 # stack is L, total_length
-                t = node.inferredType
-                if ((isinstance(t, ListValueType) and t.elementType.isJavaRef())
-                        or t == EmptyType()):
-                    # refs
-                    self.instr(
-                        "invokestatic Method java/util/Arrays copyOf ([Ljava/lang/Object;I)[Ljava/lang/Object;")
-                    self.instr(f"checkcast {t.getJavaName()}")
-                else:
-                    # primitives
-                    self.instr("invokestatic Method java/util/Arrays copyOf (" +
-                               f"{self.ts.join(leftType, rightType).getJavaSignature()}I){t.getJavaSignature()}")
-                # stack is new_array
+                self.instr(f"anewarray {self.ts.join(leftType, rightType).elementType.getJavaName(True)}")
                 newArr = self.newLocal(None, True)
+                self.instr("iconst_0")
+                self.instr(f"aload {newArr}")
+                self.instr("iconst_0")
+                self.instr(f"iload {lenL}")
+                # stack is L, 0, new_array, 0, len(L)
+                self.instr(
+                    "invokestatic Method java/lang/System arraycopy (Ljava/lang/Object;ILjava/lang/Object;II)V")
+                # stack is new_array
                 self.instr(f"aload {arrR}")
                 self.instr("iconst_0")
                 self.instr(f"aload {newArr}")
@@ -461,7 +452,7 @@ class JvmBackend(Visitor):
         self.visit(node.list)
         self.visit(node.index)
         if node.list.inferredType.isListType():
-            self.arrayLoad(node.inferredType)
+            self.arrayLoad(node.list.inferredType.elementType)
         else:
             self.instr("dup")
             self.instr("iconst_1")
@@ -529,7 +520,7 @@ class JvmBackend(Visitor):
         self.load(self.genLocalName(itr), node.iterable.inferredType)
         self.load(self.genLocalName(idx), IntType())
         if node.iterable.inferredType.isListType():
-            self.arrayLoad(node.identifier.inferredType)
+            self.arrayLoad(node.iterable.inferredType.elementType)
         else:
             self.instr("dup")
             self.instr("iconst_1")
@@ -564,10 +555,7 @@ class JvmBackend(Visitor):
                 elementType = ClassValueType("object")
         else:
             elementType = t.elementType
-        if elementType.isJavaRef():
-            self.instr(f"anewarray {elementType.getJavaName()}")
-        else:
-            self.instr(f"newarray {elementType.getJavaName()}")
+        self.instr(f"anewarray {elementType.getJavaName(True)}")
         for i in range(len(node.elements)):
             self.instr("dup")
             self.instr(f"ldc {i}")

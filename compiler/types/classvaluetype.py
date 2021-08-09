@@ -13,15 +13,21 @@ class ClassValueType(ValueType):
     def isListType(self)->bool:
         return self.className in {"<Empty>", "<None>"}
 
-    def getJavaSignature(self)->str:
+    def getJavaSignature(self, isList = False)->str:
         if self.className == "bool":
-            return "Z"
+            if isList:
+                return "Ljava/lang/Boolean;"
+            else:
+                return "Z"
         elif self.className == "str":
             return "Ljava/lang/String;"
         elif self.className == "object":
             return "Ljava/lang/Object;"
         elif self.className == "int":
-            return "I"
+            if isList:
+                return "Ljava/lang/Integer;"
+            else:
+                return "I"
         elif self.className == "<None>":
             return "Ljava/lang/Object;"
         elif self.className == "<Empty>":
@@ -38,9 +44,12 @@ class ClassValueType(ValueType):
     def isJavaRef(self):
         return self.className not in ["int", "bool"]
 
-    def getJavaName(self):
+    def getJavaName(self, isList = False):
         if self.className == "bool":
-            return "boolean"
+            if isList:
+                return "java/lang/Boolean"
+            else:
+                return "boolean"
         elif self.className == "str":
             return "java/lang/String"
         elif self.className == "object":
@@ -50,7 +59,10 @@ class ClassValueType(ValueType):
         elif self.className == "<Empty>":
             return "[Ljava/lang/Object;"
         elif self.className == "int":
-            return self.className
+            if isList:
+                return "java/lang/Integer"
+            else:
+                return self.className
         else:
             return self.className
     
