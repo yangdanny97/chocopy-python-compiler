@@ -6,13 +6,7 @@ class Identifier(Expr):
         super().__init__(location, "Identifier")
         self.name = name
         self.isGlobal = False # whether the identifier points to a global variable
-        self.isNonlocal = False # whether the identifier points to a nonlocal variable
-
-    def getPythonStr(self, builder):
-        if self.isNonlocal:
-            builder.addText(self.name + "[0]")
-        else:
-            builder.addText(self.name)
+        self.isRef = False # whether the identifier points to a nonlocal variable
 
     def visit(self, visitor):
         return visitor.Identifier(self)

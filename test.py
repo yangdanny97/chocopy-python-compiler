@@ -13,34 +13,41 @@ dump_location = True
 error_flags = {"error", "Error", "Exception", "exception", "Expected", "expected"}
 
 def run_all_tests():
-    # run_parse_tests()
-    # run_typecheck_tests()
+    run_parse_tests()
+    run_typecheck_tests()
     run_python_backend_tests()
-    # run_closure_tests()
-    # run_jvm_tests()
+    # # run_closure_tests()
+    run_jvm_tests()
 
 def run_parse_tests():
     print("Running parser tests...\n")
     total = 0
     n_passed = 0
     passed = True
-    print("Running tests in: tests/parse/")
     parser_tests_dir = (Path(__file__).parent / "tests/parse/").resolve()
     for test in parser_tests_dir.glob('*.py'):
         passed = run_parse_test(test)
         total += 1
         if not passed:
-            print("Failed: " + test.name)
+            print("Failed: "+ str(test))
         else:
             n_passed += 1
-    print("Running tests in: tests/typecheck/")
     # typechecker tests should all successfully parse
     tc_tests_dir = (Path(__file__).parent / "tests/typecheck/").resolve()
     for test in tc_tests_dir.glob('*.py'):
         passed = run_parse_test(test, False)
         total += 1
         if not passed:
-            print("Failed: " + test.name)
+            print("Failed: "+ str(test))
+        else:
+            n_passed += 1
+    # runtime tests should all successfully parse
+    tc_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
+    for test in tc_tests_dir.glob('*.py'):
+        passed = run_typecheck_test(test, False)
+        total += 1
+        if not passed:
+            print("Failed: "+ str(test))
         else:
             n_passed += 1
     print("\nPassed {:d} out of {:d} parser test cases\n".format(n_passed, total))
@@ -54,7 +61,7 @@ def run_typecheck_tests():
         passed = run_typecheck_test(test)
         total += 1
         if not passed:
-            print("Failed: " + test.name)
+            print("Failed: "+ str(test))
         else:
             n_passed += 1
     tc_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
@@ -62,7 +69,7 @@ def run_typecheck_tests():
         passed = run_typecheck_test(test, False)
         total += 1
         if not passed:
-            print("Failed: " + test.name)
+            print("Failed: "+ str(test))
         else:
             n_passed += 1
     print("\nPassed {:d} out of {:d} typechecker test cases\n".format(n_passed, total))
@@ -77,7 +84,7 @@ def run_closure_tests():
             passed = run_closure_test(test)
             total += 1
             if not passed:
-                print("Failed: " + test.name)
+                print("Failed: "+ str(test))
             else:
                 n_passed += 1
     print("\nPassed {:d} out of {:d} closure transformation test cases\n".format(n_passed, total))
@@ -89,7 +96,7 @@ def run_closure_tests():
         passed = run_closure_runtime_test(test)
         total += 1
         if not passed:
-            print("Failed: " + test.name)
+            print("Failed: "+ str(test))
         else:
             n_passed += 1
     print("\nPassed {:d} out of {:d} closure transformation runtime test cases\n".format(n_passed, total))
@@ -104,7 +111,7 @@ def run_python_backend_tests():
             passed = run_python_emit_test(test)
             total += 1
             if not passed:
-                print("Failed: " + test.name)
+                print("Failed: "+ str(test))
             else:
                 n_passed += 1
     print("\nPassed {:d} out of {:d} Python backend emit test cases\n".format(n_passed, total))
@@ -115,7 +122,7 @@ def run_python_backend_tests():
         passed = run_python_runtime_test(test)
         total += 1
         if not passed:
-            print("Failed: " + test.name)
+            print("Failed: "+ str(test))
         else:
             n_passed += 1
     if total == n_passed:
@@ -135,7 +142,7 @@ def run_jvm_tests():
         passed = run_jvm_test(test)
         total += 1
         if not passed:
-            print("Failed: " + test.name + "\n")
+            print("Failed: "+ str(test) + "\n")
         else:
             n_passed += 1
     if total == n_passed:
@@ -223,7 +230,6 @@ def run_closure_test(test)->bool:
 
 def run_closure_runtime_test(test)->bool:
     infile_name = str(test)[:-3].split("/")[-1]
-    builder = Builder(infile_name)
     try:
         compiler = Compiler()
         astparser = compiler.parser
@@ -232,11 +238,15 @@ def run_closure_runtime_test(test)->bool:
             return False
         compiler.typecheck(chocopy_ast)
         compiler.closurepass(chocopy_ast)
-        if len(chocopy_ast.errors.errors) > 0:
+        # clean types to get fresh typecheck
+        ast.visit(TypeEraser())
+        tc = TypeChecker(TypeSystem())
+        tc.visit(ast)
+        if len(ast.errors.errors) > 0:
             for e in chocopy_ast.errors.errors:
                 print(e.toJSON(dump_location))
             return False
-        chocopy_ast.getPythonStr(builder)
+        builder = compiler.emitPython(chocopy_ast)
         name = f"./{infile_name}.test.py"
         with open(name, "w") as f:
             f.write(builder.emit())
@@ -261,7 +271,6 @@ def run_closure_runtime_test(test)->bool:
 
 def run_python_emit_test(test)->bool:
     infile_name = str(test)[:-3].split("/")[-1]
-    builder = Builder(infile_name)
     try:
         compiler = Compiler()
         astparser = compiler.parser
@@ -269,7 +278,7 @@ def run_python_emit_test(test)->bool:
         if len(astparser.errors) > 0:
             return False
         compiler.typecheck(chocopy_ast)
-        chocopy_ast.getPythonStr(builder)
+        builder = compiler.emitPython(chocopy_ast)
         ast.parse(builder.emit())
         return True
     except Exception as e:
@@ -281,7 +290,6 @@ def run_python_emit_test(test)->bool:
 
 def run_python_runtime_test(test)->bool:
     infile_name = str(test)[:-3].split("/")[-1]
-    builder = Builder(infile_name)
     try:
         compiler = Compiler()
         astparser = compiler.parser
@@ -289,7 +297,7 @@ def run_python_runtime_test(test)->bool:
         if len(astparser.errors) > 0:
             return False
         compiler.typecheck(chocopy_ast)
-        chocopy_ast.getPythonStr(builder)
+        builder = compiler.emitPython(chocopy_ast)
         name = f"./{infile_name}.test.py"
         with open(name, "w") as f:
             f.write(builder.emit())

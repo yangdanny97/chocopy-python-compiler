@@ -22,7 +22,10 @@ class ClosureTransformer(TypeChecker):
         for fv in node.freevars:
             ident = Identifier(node.location, fv.name)
             annot = self.typeToAnnotation(fv.inferredType)
-            node.params.append(TypedVar(node.location, ident, annot))
+            tv = TypedVar(node.location, ident, annot)
+            tv.t = fv.inferredType
+            tv.t.isRef = True
+            node.params.append(tv)
         return super().FuncDef(node)
 
     def getSignature(self, node: FuncDef):

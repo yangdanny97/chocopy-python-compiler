@@ -10,17 +10,6 @@ class VarDef(Declaration):
         self.value = value
         self.isAttr = isAttr
 
-    def getPythonStr(self, builder):
-        builder.newLine()
-        self.var.getPythonStr(builder)
-        builder.addText(" = ")
-        if self.var.capturedNonlocal:
-            builder.addText("[")
-            self.value.getPythonStr(builder)
-            builder.addText("]")
-        else:
-            self.value.getPythonStr(builder)
-
     def preorder(self, visitor):
         visitor.VarDef(self)
         visitor.visit(self.value)

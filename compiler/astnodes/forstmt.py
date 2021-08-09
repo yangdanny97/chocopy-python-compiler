@@ -10,19 +10,6 @@ class ForStmt(Stmt):
         self.iterable = iterable
         self.body = [s for s in body if s is not None]
 
-    def getPythonStr(self, builder):
-        builder.newLine("for ")
-        self.identifier.getPythonStr(builder)
-        builder.addText(" in ")
-        self.iterable.getPythonStr(builder)
-        builder.addText(":")
-        builder.indent()
-        for b in self.body:
-            b.getPythonStr(builder)
-        if len(self.body) == 0:
-            builder.addText("pass")
-        builder.unindent()
-
     def postorder(self, visitor):
         visitor.visit(self.identifier)
         visitor.visit(self.iterable)

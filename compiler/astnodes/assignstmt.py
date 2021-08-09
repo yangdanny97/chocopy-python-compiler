@@ -9,14 +9,6 @@ class AssignStmt(Stmt):
         self.targets = targets
         self.value = value
 
-    def getPythonStr(self, builder):
-        builder.newLine("__x = ")
-        self.value.getPythonStr(builder)
-        for t in self.targets:
-            builder.newLine()
-            t.getPythonStr(builder)
-            builder.addText(" = __x")
-
     def preorder(self, visitor):
         visitor.AssignStmt(self)
         for t in self.targets:

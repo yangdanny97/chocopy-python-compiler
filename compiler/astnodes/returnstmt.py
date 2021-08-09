@@ -9,11 +9,6 @@ class ReturnStmt(Stmt):
         self.isReturn = True
         self.expType = None
 
-    def getPythonStr(self, builder):
-        builder.newLine("return ")
-        if self.value is not None:
-            self.value.getPythonStr(builder)
-
     def postorder(self, visitor):
         if self.value is not None:
             visitor.visit(self.value)

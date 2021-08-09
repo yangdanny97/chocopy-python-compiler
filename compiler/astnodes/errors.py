@@ -7,9 +7,6 @@ class Errors(Node):
         super().__init__(location, "Errors")
         self.errors = errors
 
-    def getPythonStr(self, builder):
-        pass
-
     def visit(self, visitor):
         pass
 

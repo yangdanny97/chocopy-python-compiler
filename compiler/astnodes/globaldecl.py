@@ -7,10 +7,6 @@ class GlobalDecl(Declaration):
         super().__init__(location, "GlobalDecl")
         self.variable = variable
 
-    def getPythonStr(self, builder):
-        builder.newLine("global ")
-        self.variable.getPythonStr(builder)
-
     def visit(self, visitor):
         return visitor.GlobalDecl(self)
 

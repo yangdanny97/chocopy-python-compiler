@@ -7,14 +7,6 @@ class ListExpr(Expr):
         self.elements = elements
         self.emptyListType = None
 
-    def getPythonStr(self, builder):
-        builder.addText("[")
-        for i in range(len(self.elements)):
-            self.elements[i].getPythonStr(builder)
-            if i != len(self.elements) - 1:
-                builder.addText(", ")
-        builder.addText("]")
-
     def preorder(self, visitor):
         visitor.ListExpr(self)
         for e in self.elements:

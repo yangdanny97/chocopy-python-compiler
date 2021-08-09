@@ -6,9 +6,6 @@ class Literal(Expr):
         super().__init__(location, kind)
         self.value = None
 
-    def getPythonStr(self, builder):
-        builder.addText(str(self.value))
-
     def toJSON(self, dump_location=True):
         d = super().toJSON(dump_location)
         if self.value is not None:

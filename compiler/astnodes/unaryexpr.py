@@ -7,12 +7,6 @@ class UnaryExpr(Expr):
         self.operand = operand
         self.operator = operator
 
-    def getPythonStr(self, builder):
-        builder.addText("(")
-        builder.addText(self.operator + " ")
-        self.operand.getPythonStr(builder)
-        builder.addText(")")
-
     def preorder(self, visitor):
         visitor.UnaryExpr(self)
         visitor.visit(self.operand)

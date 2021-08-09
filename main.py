@@ -1,6 +1,6 @@
 import argparse
 import json
-from test import run_all_tests, run_parse_tests, run_typecheck_tests
+from test import run_all_tests
 from compiler.compiler import Compiler
 from compiler.builder import Builder
 from compiler.astnodes import Node
@@ -9,8 +9,8 @@ mode_help = (
     'Modes:\n' +
     'parse - output AST as JSON\n' +
     'tc - output typechecked AST as JSON\n' +
-    'python - output untyped Python 3 source code' + 
-    'jvm - output JVM bytecode as text formatted for the Krakatau assembler'
+    'python - output untyped Python 3 source code\n' + 
+    'jvm - output JVM bytecode as text formatted for the Krakatau assembler\n'
 )
 
 def out_msg(path, verbose):
@@ -19,7 +19,7 @@ def out_msg(path, verbose):
 
 def main():
     parser = argparse.ArgumentParser(description='Chocopy frontend')
-    parser.add_argument('--mode', dest='mode', choices=["parse", "tc", "python", "jvm"], default="python",
+    parser.add_argument('--mode', dest='mode', choices=["parse", "tc", "python", "jvm", "hoist"], default="python",
                         help=mode_help)
     parser.add_argument('--print', dest='should_print', action='store_true',
                         help="output to stdout instead of file")
@@ -57,7 +57,7 @@ def main():
         outfile = outdir + infile_name + ".ast.typed"
     elif args.mode == "parse":
         outfile = outdir + infile_name + ".ast"
-    elif args.mode == "python":
+    elif args.mode in {"python", "hoist"}:
         outfile = outdir + infile_name + ".out.py"
     elif args.mode == "jvm":
         outfile = outdir + infile_name + ".j"
@@ -87,8 +87,16 @@ def main():
                 out_msg(outfile, args.verbose)
                 json.dump(ast_json, f, indent=2)
     elif args.mode == "python":
-        builder = Builder(infile_name)
-        tree.getPythonStr(builder)
+        builder = compiler.emitPython(tree)
+        if args.should_print:
+            print(builder.emit())
+        else: 
+            with open(outfile, "w") as f:
+                out_msg(outfile, args.verbose)
+                f.write(builder.emit())
+    elif args.mode == "hoist":
+        compiler.closurepass(tree)
+        builder = compiler.emitPython(tree)
         if args.should_print:
             print(builder.emit())
         else: 

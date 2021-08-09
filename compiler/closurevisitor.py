@@ -49,12 +49,12 @@ class ClosureVisitor(Visitor):
 
     # given a list of potential free variables
     # return the list of variables that are not global or declared in the local context
-    def process_vars(self, decls:[str], variables:[Identifier])->[Identifier]:
+    def process_vars(self, decls:[str],variables:[Identifier])->[Identifier]:
         # mark free variables as global
         freevars = []
         for v in variables:
             if v.name not in decls and v.name not in self.globals:
-                v.isNonlocal = True
+                v.isRef = True
                 freevars.append(v)
             elif v.name in self.globals and not any([v.name in d for d in self.decls]):
                 v.isGlobal = True

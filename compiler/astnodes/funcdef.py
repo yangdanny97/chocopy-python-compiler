@@ -26,25 +26,6 @@ class FuncDef(Declaration):
     def getFreevarNames(self):
         return set([v.name for v in self.freevars])
 
-    def getPythonStr(self, builder):
-        builder.newLine("def ")
-        self.name.getPythonStr(builder)
-        builder.addText("(")
-        for i in range(len(self.params)):
-            self.params[i].getPythonStr(builder)
-            if i != len(self.params) - 1:
-                builder.addText(", ")
-        builder.addText("):")
-        builder.indent()
-        for d in self.declarations:
-            d.getPythonStr(builder)
-        for s in self.statements:
-            s.getPythonStr(builder)
-        if len(self.declarations) == 0 and len(self.statements) == 0:
-            builder.addText("pass")
-        builder.unindent()
-        builder.newLine()
-
     def preorder(self, visitor):
         visitor.FuncDef(self)
         for d in self.declarations:

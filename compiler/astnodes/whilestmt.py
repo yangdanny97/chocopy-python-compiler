@@ -8,17 +8,6 @@ class WhileStmt(Stmt):
         self.condition = condition
         self.body = [s for s in body if s is not None]
 
-    def getPythonStr(self, builder):
-        builder.newLine("while ")
-        self.condition.getPythonStr(builder)
-        builder.addText(":")
-        builder.indent()
-        for b in self.body:
-            b.getPythonStr(builder)
-        if len(self.body) == 0:
-            builder.addText("pass")
-        builder.unindent()
-
     def postorder(self, visitor):
         visitor.visit(self.condition)
         for s in self.body:

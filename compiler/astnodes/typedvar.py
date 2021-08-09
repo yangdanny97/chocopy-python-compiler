@@ -11,9 +11,6 @@ class TypedVar(Node):
         self.t = None # the typechecked type goes here
         self.capturedNonlocal = False
 
-    def getPythonStr(self, builder):
-        self.identifier.getPythonStr(builder)
-
     def visit(self, visitor):
         return visitor.TypedVar(self)
 

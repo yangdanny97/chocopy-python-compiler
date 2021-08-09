@@ -7,10 +7,6 @@ class ExprStmt(Stmt):
         super().__init__(location, "ExprStmt")
         self.expr = expr
 
-    def getPythonStr(self, builder):
-        builder.newLine()
-        self.expr.getPythonStr(builder)
-
     def preorder(self, visitor):
         visitor.ExprStmt(self)
         visitor.visit(self.expr)

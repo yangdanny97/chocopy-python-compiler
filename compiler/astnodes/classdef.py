@@ -16,18 +16,6 @@ class ClassDef(Declaration):
                 d.isMethod = True
         self.declarations = declarations
 
-    def getPythonStr(self, builder):
-        builder.newLine("class ")
-        self.name.getPythonStr(builder)
-        builder.addText("(")
-        self.superclass.getPythonStr(builder)
-        builder.addText("):")
-        builder.indent()
-        for d in self.declarations:
-            d.getPythonStr(builder)
-        builder.unindent()
-        builder.newLine()
-
     def preorder(self, visitor):
         visitor.ClassDef(self)
         for d in self.declarations:

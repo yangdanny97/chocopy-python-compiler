@@ -8,7 +8,6 @@ import json
 
 
 class JvmBackend(Visitor):
-    # record all free vars from nested functions
 
     def __init__(self, main: str, ts: TypeSystem):
         self.classes = dict()
@@ -169,9 +168,6 @@ class JvmBackend(Visitor):
         # other classes
         for d in cls_decls:
             self.visit(d)
-
-        # special __Ref class for nonlocals
-        self.refClass()
 
     def ClassDef(self, node: ClassDef):
         self.currentClass = node.name.name

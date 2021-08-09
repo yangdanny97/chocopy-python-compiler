@@ -53,21 +53,21 @@ def test10():
     __assert__(test12() == 4)
     __assert__(y == 2)
 
-# class Nonlocals:
-#     def testMethod(self:"Nonlocals", x:int):
-#         y:int = 2
-#         def testMethod2():
-#             nonlocal x
-#             nonlocal self
-#             nonlocal y
-#             x = 3
-#             self = None
-#             y = 3
-#         testMethod2()
-#         __assert__(self is None)
-#         __assert__(y == 3)
+class Nonlocals:
+    def testMethod(self:"Nonlocals", x:int):
+        y:int = 2
+        def testMethod2():
+            nonlocal x
+            nonlocal self
+            nonlocal y
+            x = 3
+            self = None
+            y = 3
+        testMethod2()
+        __assert__(self is None)
+        __assert__(y == 3)
 
-# b:Nonlocals = None
+b:Nonlocals = None
 
 # nonlocals can be mutated 
 __assert__(test(1) == 2)
@@ -85,7 +85,8 @@ test7()
 
 test10()
 
-# a = 0
-# b = Nonlocals()
-# b.testMethod(a)
-# __assert__(a == 0)
+a = 0
+b = Nonlocals()
+b.testMethod(a)
+__assert__(a == 0)
+b.testMethod(1)

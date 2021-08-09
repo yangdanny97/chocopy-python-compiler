@@ -9,6 +9,7 @@ from .nestedfunchoister import NestedFuncHoister
 from .typeeraser import TypeEraser
 from .typesystem import TypeSystem
 from .jvm_backend import JvmBackend
+from .python_backend import PythonBackend
 import ast
 from pathlib import Path
 
@@ -43,11 +44,18 @@ class Compiler:
         ClosureVisitor().visit(ast)
         NestedFuncHoister().visit(ast)
         ClosureTransformer().visit(ast)
+        return ast
 
     def typecheck(self, ast: Node):
         # given an AST object, typecheck it
         # typechecking mutates the AST, adding types and errors
         self.typechecker.visit(ast)
+        return ast
+
+    def emitPython(self, ast: Node):
+        backend = PythonBackend()
+        backend.visit(ast)
+        return backend.builder
 
     def emitJVM(self, main:str, ast: Node):
         self.closurepass(ast)

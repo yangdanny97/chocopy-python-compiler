@@ -8,9 +8,6 @@ class Node:
         self.location = location
         self.errorMsg = None
 
-    def getPythonStr(self, builder):
-        raise Exception('operation not supported')
-
     def visit(self, visitor):
         return Exception('operation not supported')
 
