@@ -1,102 +1,114 @@
 from .astnodes import *
 from .types import *
 from .visitor import Visitor
+from .varcollector import VarCollector
+
+class VarInstance:
+    def __init__(self):
+        self.isNonlocal = False
+        self.isGlobal = False
+
+def newInstance(tv: TypedVar)->VarInstance:
+    tv.varInstance = VarInstance()
+    return tv.varInstance
+
+def merge(d1, d2):
+    combined = {}
+    for k in d1:
+        combined[k] = d1[k]
+    for k in d2:
+        combined[k] = d2[k]
+    return combined
+
+def deduplicate(ids:[Identifier])->[Identifier]:
+    seen = set()
+    res = []
+    for i in ids:
+        if i.name in seen:
+            continue
+        seen.add(i.name)
+        res.append(i)
+    return res
+
 
 class ClosureVisitor(Visitor):
-    # mark identifiers that correspond to globals or nonlocals
-    # mark declarations & parameters that capture a nested nonlocal
+    # each variable/parameter declaration has an "instance"
+    # each variable is matched to the instance of their declaration
 
-    # at the end of this pass, each function decl will have a freevars
-    # attribute, which represents the bindings it needs from the surrounding
-    # environment
+    # instances that are captured by nested functions are marked as refs
+    # instances that correspond to global variables are marked as such
 
     def __init__(self):
-        self.globals = set()
-        self.vars = []
+        self.globals = {}
+        self.nonlocals = [] # uncaptured nonlocals
         self.decls = []
-    
+
+    def getInstance(self, name:str)->VarInstance:
+        for i in self.decls[::-1]:
+            if name in i:
+                return i[name]
+        return self.globals[name]
+
     def visit(self, node: Node):
         if isinstance(node, Expr) or isinstance(node, Stmt):
             return node.postorder(self)
         return node.visit(self)
 
-    def deduplicate(self, ids:[Identifier])->[Identifier]:
-        seen = set()
-        res = []
-        for i in ids:
-            if i.name in seen:
-                continue
-            seen.add(i.name)
-            res.append(i)
-        return res
-
     def Program(self, node: Program):
         for d in node.declarations:
             if isinstance(d, VarDef):
-                self.globals.add(d.getIdentifier().name)
-        for d in node.declarations:
-            self.visit(d)
+                self.globals[d.getIdentifier().name] = newInstance(d.var)
+                d.var.varInstance.isGlobal = True
         # mark all top-level vars to be global
-        self.vars = []
-        for s in node.statements:
-            self.visit(s)
-        for v in self.vars:
-            v.isGlobal = True
+        vars = VarCollector().getVarsFromList(node.statements)
+        for v in vars:
+            v.varInstance = self.globals[v.name]
+            v.varInstance.isGlobal = True
+        # traverse other decls
+        for d in node.declarations:
+            if not isinstance(d, VarDef):
+                self.visit(d)
 
     def ClassDef(self, node: ClassDef):
         for d in node.declarations:
             self.visit(d)
 
-    # given a list of potential free variables
-    # return the list of variables that are not global or declared in the local context
-    def process_vars(self, decls:[str],variables:[Identifier])->[Identifier]:
-        # mark free variables as global
-        freevars = []
-        for v in variables:
-            if v.name not in decls and v.name not in self.globals:
-                v.isRef = True
-                freevars.append(v)
-            elif v.name in self.globals and not any([v.name in d for d in self.decls]):
-                v.isGlobal = True
-        return freevars
-
     def FuncDef(self, node: FuncDef):
-        self.vars = []
-        decls = set()
-        # decls is the list of all local variable decls and function parameters
+        decls = {}
+
         for p in node.params:
-            decls.add(p.identifier.name)
+            decls[p.identifier.name] = newInstance(p)
         for d in node.declarations:
-            if not (isinstance(d, GlobalDecl) or isinstance(d, NonLocalDecl)):
-                decls.add(d.getIdentifier().name)
+            if isinstance(d, GlobalDecl):
+                decls[d.variable.name] = self.globals[d.variable.name]
+            elif isinstance(d, NonLocalDecl):
+                self.getInstance(d.variable.name).isNonlocal = True
+            elif isinstance(d, VarDef):
+                decls[d.getIdentifier().name] = newInstance(d.var)
+        
         self.decls.append(decls)
-        # collect all variables from function body
-        for s in node.statements:
-            self.visit(s)
-        # get the free variables from the function body
-        freevars = self.process_vars(decls, self.vars)
-        # get the free variables from nested function definitions
-        nested_freevars = []
+        vars = VarCollector().getVarsFromList(node.statements)
+        freevars = []
+        for v in vars:
+            v.varInstance = self.getInstance(v.name)
+            if v.name not in decls and not v.varInstance.isGlobal:
+                freevars.append(v)
+
         for d in node.declarations:
-            self.visit(d)
             if isinstance(d, FuncDef):
-                nested_freevars += d.freevars
-        freevars = freevars + self.process_vars(decls, nested_freevars)
-        # dedupe the list of free variables
-        node.freevars = self.deduplicate(freevars)
-        # mark any params and declarations that capture free vars
-        freevar_names = node.getFreevarNames()
-        for p in node.params:
-            if p.identifier.name in freevar_names:
-                p.capturedNonlocal = True
-        for d in node.declarations:
-            if isinstance(d, VarDef) and d.var.identifier.name in freevar_names:
-                d.var.captureNonlocal = True
-        self.decls.pop()
-        return node
-    
-    def Identifier(self, node: Identifier):
-        self.vars.append(node)
+                self.visit(d)
+                for v in d.freevars:
+                    v.varInstance = self.getInstance(v.name)
+                    if v.name not in decls and not v.varInstance.isGlobal:
+                        freevars.append(v)
+        node.freevars = deduplicate(freevars)
+        # remove global and nonlocal decls
+        node.declarations = [
+            d for d in node.declarations 
+            if not (isinstance(d, GlobalDecl) or isinstance(d, NonLocalDecl))
+        ]
+
+
 
 
 

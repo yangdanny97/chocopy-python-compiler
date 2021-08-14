@@ -4,6 +4,12 @@ from collections import defaultdict
 from .astnodes import *
 from .types import *
 
+def typeToAnnotation(t: ValueType)->SymbolType:
+    if isinstance(t, ListValueType):
+        return ListType([0,0], typeToAnnotation(t.elementType))
+    elif isinstance(t, ClassValueType):
+        return ClassType([0,0], t.className)
+
 class ClosureTransformer(TypeChecker):
     # rewriting function signatures to include free vars as explicit arguments
     # rewrite function calls to include new args
@@ -12,19 +18,14 @@ class ClosureTransformer(TypeChecker):
         super().__init__(TypeSystem())
         self.addErrors = False
 
-    def typeToAnnotation(self, t: ValueType)->SymbolType:
-        if isinstance(t, ListValueType):
-            return ListType([0,0], self.typeToAnnotation(t.elementType))
-        elif isinstance(t, ClassValueType):
-            return ClassType([0,0], t.className)
 
     def FuncDef(self, node: FuncDef):
         for fv in node.freevars:
-            ident = Identifier(node.location, fv.name)
-            annot = self.typeToAnnotation(fv.inferredType)
+            ident = fv.copy()
+            annot = typeToAnnotation(ident.inferredType)
             tv = TypedVar(node.location, ident, annot)
-            tv.t = fv.inferredType
-            tv.t.isRef = True
+            tv.varInstance = ident.varInstance
+            tv.t = ident.inferredType
             node.params.append(tv)
         return super().FuncDef(node)
 
@@ -32,6 +33,14 @@ class ClosureTransformer(TypeChecker):
         rType = self.visit(node.returnType)
         t = FuncType([self.visit(t) for t in node.params], rType)
         t.freevars = node.freevars
+        t.refParams = {}
+
+        for i in range(len(node.params)):
+            if node.params[i].varInstance.isNonlocal:
+                t.refParams[i] = node.params[i].varInstance
+        for i in range(len(node.freevars)):
+            if node.freevars[i].varInstance.isNonlocal:
+                t.refParams[len(node.params) + i] = node.freevars[i].varInstance
         return t
 
     def callHelper(self, node):
@@ -48,9 +57,7 @@ class ClosureTransformer(TypeChecker):
         if t is None or len(t.freevars) == 0 or not isinstance(t, FuncType):
             return
         for fv in t.freevars:
-            ident = Identifier(node.location, fv.name)
-            ident.inferredType = fv.inferredType
-            node.args.append(ident)
+            node.args.append(fv.copy())
 
     def CallExpr(self, node: CallExpr):
         self.callHelper(node)
@@ -60,12 +67,4 @@ class ClosureTransformer(TypeChecker):
         self.callHelper(node)
         return super().MethodCallExpr(node)
 
-    # add ref type annotations
-    def TypedVar(self, node: TypedVar):
-        # return the type of the annotaton
-        node.t = self.visit(node.type)
-        if node.capturedNonlocal:
-            node.t.isRef = True
-        return node.t
-        
 

@@ -4,7 +4,6 @@ class ListValueType(ValueType):
     
     def __init__(self, elementType:ValueType):
         self.elementType = elementType
-        self.isRef = False
 
     def __eq__(self, other):
         if isinstance(other, ListValueType):

@@ -9,7 +9,7 @@ class TypedVar(Node):
         self.identifier = identifier
         self.type = typ
         self.t = None # the typechecked type goes here
-        self.capturedNonlocal = False
+        self.varInstance = None
 
     def visit(self, visitor):
         return visitor.TypedVar(self)

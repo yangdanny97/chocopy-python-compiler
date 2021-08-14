@@ -8,6 +8,7 @@ class CallExpr(Expr):
         self.function = function
         self.args = args
         self.isConstructor = False
+        self.freevars = [] # captured free vars
 
     def postorder(self, visitor):
         for a in self.args:

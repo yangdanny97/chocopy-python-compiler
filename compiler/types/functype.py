@@ -5,6 +5,7 @@ class FuncType(SymbolType):
     def __init__(self, parameters:[ValueType], returnType:ValueType):
         self.parameters = parameters
         self.returnType = returnType
+        self.refParams = {}
         self.freevars = [] # used in AST transformations, not printed out
 
     def __eq__(self, other):

@@ -16,8 +16,8 @@ def run_all_tests():
     run_parse_tests()
     run_typecheck_tests()
     run_python_backend_tests()
-    # # run_closure_tests()
-    run_jvm_tests()
+    # run_jvm_tests()
+    run_closure_tests()
 
 def run_parse_tests():
     print("Running parser tests...\n")
@@ -238,11 +238,9 @@ def run_closure_runtime_test(test)->bool:
             return False
         compiler.typecheck(chocopy_ast)
         compiler.closurepass(chocopy_ast)
-        # clean types to get fresh typecheck
-        ast.visit(TypeEraser())
         tc = TypeChecker(TypeSystem())
-        tc.visit(ast)
-        if len(ast.errors.errors) > 0:
+        tc.visit(chocopy_ast)
+        if len(chocopy_ast.errors.errors) > 0:
             for e in chocopy_ast.errors.errors:
                 print(e.toJSON(dump_location))
             return False
@@ -334,6 +332,7 @@ def run_jvm_test(test)->bool:
         if len(ast.errors.errors) > 0:
             print(ast.errors.toJSON(False))
             return False
+        # TODO add closure pass
         jvm_emitters = compiler.emitJVM(infile_name, ast)
         for cls in jvm_emitters:
             jvm_emitter = jvm_emitters[cls]

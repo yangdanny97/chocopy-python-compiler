@@ -10,6 +10,9 @@ class PythonBackend(Visitor):
 
     def visit(self, node: Node):
         return node.visit(self)
+    
+    def addText(self, text:str):
+        self.builder.addText(text)
 
     # TOP LEVEL & DECLARATIONS
 
@@ -22,20 +25,22 @@ class PythonBackend(Visitor):
     def VarDef(self, node: VarDef):
         self.builder.newLine()
         self.visit(node.var)
-        self.builder.addText(" = ")
-        if node.var.capturedNonlocal:
-            self.builder.addText("[")
+        self.addText(" = ")
+        if node.var.varInstance is None:
             self.visit(node.value)
-            self.builder.addText("]")
+        elif not node.isAttr and node.var.varInstance.isNonlocal:
+            self.addText("[")
+            self.visit(node.value)
+            self.addText("]")
         else:
             self.visit(node.value)
 
     def ClassDef(self, node: ClassDef):
         self.builder.newLine("class ")
         self.visit(node.name)
-        self.builder.addText("(")
+        self.addText("(")
         self.visit(node.superclass)
-        self.builder.addText("):")
+        self.addText("):")
         self.builder.indent()
         for d in node.declarations:
             self.visit(d)
@@ -45,19 +50,23 @@ class PythonBackend(Visitor):
     def FuncDef(self, node: FuncDef):
         self.builder.newLine("def ")
         self.visit(node.name)
-        self.builder.addText("(")
+        self.addText("(")
         for i in range(len(node.params)):
             self.visit(node.params[i])
             if i != len(node.params) - 1:
-                self.builder.addText(", ")
-        self.builder.addText("):")
+                self.addText(", ")
+        self.addText("):")
         self.builder.indent()
+        # hack to wrap self if it's needed for nonlocal
+        selfVarInstance = node.params[0].varInstance if node.isMethod else None
+        if selfVarInstance is not None and selfVarInstance.isNonlocal:
+            self.builder.newLine("self = [self]")
         for d in node.declarations:
             self.visit(d)
         for s in node.statements:
             self.visit(s)
         if len(node.declarations) == 0 and len(node.statements) == 0:
-            self.builder.addText("pass")
+            self.addText("pass")
         self.builder.unindent()
         self.builder.newLine()
 
@@ -72,29 +81,35 @@ class PythonBackend(Visitor):
         self.visit(node.variable)
 
     def AssignStmt(self, node: AssignStmt):
-        self.builder.newLine("__x = ")
-        self.visit(node.value)
-        for t in node.targets:
+        if len(node.targets) == 1:
             self.builder.newLine()
-            self.visit(t)
-            self.builder.addText(" = __x")
+            self.visit(node.targets[0])
+            self.addText(" = ")
+            self.visit(node.value)
+        else:
+            self.builder.newLine("__x = ")
+            self.visit(node.value)
+            for t in node.targets:
+                self.builder.newLine()
+                self.visit(t)
+                self.addText(" = __x")
 
     def IfStmt(self, node: IfStmt):
         self.builder.newLine("if ")
         self.visit(node.condition)
-        self.builder.addText(":")
+        self.addText(":")
         self.builder.indent()
         for s in node.thenBody:
             self.visit(s)
         if len(node.thenBody) == 0:
-            self.builder.addText("pass")
+            self.addText("pass")
         self.builder.unindent()
         self.builder.newLine("else:")
         self.builder.indent()
         for s in node.elseBody:
             self.visit(s)
         if len(node.elseBody) == 0:
-            self.builder.addText("pass")
+            self.addText("pass")
         self.builder.unindent()
 
     def ExprStmt(self, node: ExprStmt):
@@ -102,80 +117,95 @@ class PythonBackend(Visitor):
         self.visit(node.expr)
 
     def BinaryExpr(self, node: BinaryExpr):
-        self.builder.addText("(")
+        self.addText("(")
         self.visit(node.left)
-        self.builder.addText(" " + node.operator + " ")
+        self.addText(" " + node.operator + " ")
         self.visit(node.right)
-        self.builder.addText(")")
+        self.addText(")")
 
     def IndexExpr(self, node: IndexExpr):
         self.visit(node.list)
-        self.builder.addText("[")
+        self.addText("[")
         self.visit(node.index)
-        self.builder.addText("]")
+        self.addText("]")
 
     def UnaryExpr(self, node: UnaryExpr):
-        self.builder.addText("(")
-        self.builder.addText(node.operator + " ")
+        self.addText("(")
+        self.addText(node.operator + " ")
         self.visit(node.operand)
-        self.builder.addText(")")
+        self.addText(")")
 
-    def argIsRef(self, node:Expr, idx:int)->bool:
-        if node.isConstructor:
-            return node.function.inferredType.parameters[idx+1].isRef
-        else:
-            return node.function.inferredType.parameters[idx].isRef
+    def visitArg(self, node, funcType, paramIdx: int, argIdx: int):
+        arg = node.args[argIdx]
+        if isinstance(arg, Identifier) and arg.varInstance is None:
+            self.visit(arg)
+            return
+        argIsRef = isinstance(arg, Identifier) and arg.varInstance.isNonlocal
+        paramIsRef = paramIdx in funcType.refParams
+        if argIsRef and paramIsRef and arg.varInstance == funcType.refParams[paramIdx]: 
+            # ref arg and ref param, pass ref arg
+            self.addText(arg.name)
+        elif paramIsRef: 
+            # non-ref arg and ref param, or do not pass ref arg
+            self.addText("[")
+            self.visit(arg)
+            self.addText("]")
+        else: # non-ref param, maybe unwrap
+            self.visit(arg)
 
     def CallExpr(self, node: CallExpr):
-        # TODO: wrap arg refs
-        # special case for assertions
+        # special case for builtins - always unwrap
         if node.function.name == "__assert__":
-            self.builder.addText("assert ")
+            self.addText("assert ")
             self.visit(node.args[0])
             return
+        elif node.function.name in {"print", "len"}:
+            self.visit(node.function)
+            self.addText("(")
+            self.visit(node.args[0])
+            self.addText(")")
+            return
         self.visit(node.function)
-        self.builder.addText("(")
+        self.addText("(")
         for i in range(len(node.args)):
-            isRef = False # self.argIsRef(node, i)
-            if isRef:
-                node.builder.addText("[")
-            self.visit(node.args[i])
-            if isRef:
-                self.builder.addText("]")
+            if node.isConstructor:
+                self.visitArg(node, node.function.inferredType, i + 1, i)
+            else:
+                self.visitArg(node, node.function.inferredType, i, i)
             if i != len(node.args) - 1:
-                self.builder.addText(", ")
-        self.builder.addText(")")
+                self.addText(", ")
+        self.addText(")")
 
     def ForStmt(self, node: ForStmt):
         self.builder.newLine("for ")
         self.visit(node.identifier)
-        self.builder.addText(" in ")
+        self.addText(" in ")
         self.visit(node.iterable)
-        self.builder.addText(":")
+        self.addText(":")
         self.builder.indent()
         for b in node.body:
             self.visit(b)
         if len(node.body) == 0:
-            self.builder.addText("pass")
+            self.addText("pass")
         self.builder.unindent()
 
     def ListExpr(self, node: ListExpr):
-        self.builder.addText("[")
+        self.addText("[")
         for i in range(len(node.elements)):
             self.visit(node.elements[i])
             if i != len(node.elements) - 1:
-                self.builder.addText(", ")
-        self.builder.addText("]")
+                self.addText(", ")
+        self.addText("]")
 
     def WhileStmt(self, node: WhileStmt):
         self.builder.newLine("while ")
         self.visit(node.condition)
-        self.builder.addText(":")
+        self.addText(":")
         self.builder.indent()
         for b in node.body:
             self.visit(b)
         if len(node.body) == 0:
-            self.builder.addText("pass")
+            self.addText("pass")
         self.builder.unindent()
 
     def ReturnStmt(self, node: ReturnStmt):
@@ -184,56 +214,58 @@ class PythonBackend(Visitor):
             self.visit(node.value)
 
     def Identifier(self, node: Identifier):
-        if node.isRef:
-            self.builder.addText(node.name + "[0]")
+        if node.varInstance is None:
+            self.addText(node.name)
+        elif node.varInstance.isNonlocal:
+            self.addText(node.name + "[0]")
         else:
-            self.builder.addText(node.name)
+            self.addText(node.name)
+            
 
     def MemberExpr(self, node: MemberExpr):
         self.visit(node.object)
-        self.builder.addText(".")
+        self.addText(".")
         self.visit(node.member)
 
     def IfExpr(self, node: IfExpr):
-        self.builder.addText("(")
+        self.addText("(")
         self.visit(node.thenExpr)
-        self.builder.addText(" if ")
+        self.addText(" if ")
         self.visit(node.condition)
-        self.builder.addText(" else ")
+        self.addText(" else ")
         self.visit(node.elseExpr)
-        self.builder.addText(")")
+        self.addText(")")
 
     def MethodCallExpr(self, node: MethodCallExpr):
-        # TODO wrap arg refs
         self.visit(node.method)
-        self.builder.addText("(")
+        self.addText("(")
         for i in range(len(node.args)):
-            self.visit(node.args[i])
+            self.visitArg(node, node.method.inferredType, i + 1, i)
             if i != len(node.args) - 1:
-                self.builder.addText(", ")
-        self.builder.addText(")")
+                self.addText(", ")
+        self.addText(")")
 
     # LITERALS
 
     def BooleanLiteral(self, node: BooleanLiteral):
-        self.builder.addText(str(node.value))
+        self.addText(str(node.value))
 
     def IntegerLiteral(self, node: IntegerLiteral):
-        self.builder.addText(str(node.value))
+        self.addText(str(node.value))
 
     def NoneLiteral(self, node: NoneLiteral):
-        self.builder.addText(str(node.value))
+        self.addText(str(node.value))
 
     def StringLiteral(self, node: StringLiteral):
-        self.builder.addText(json.dumps(node.value))
+        self.addText(json.dumps(node.value))
 
     # TYPES
 
     def TypedVar(self, node: TypedVar):
-        self.visit(node.identifier)
+        self.addText(node.identifier.name)
 
     def ListType(self, node: ListType):
         pass
 
     def ClassType(self, node: ClassType):
-        self.builder.addText(node.className)
+        self.addText(node.className)

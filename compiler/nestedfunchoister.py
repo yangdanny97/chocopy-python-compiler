@@ -1,5 +1,3 @@
-from .typechecker import TypeChecker
-from .typesystem import TypeSystem
 from collections import defaultdict
 from .astnodes import *
 from .types import *
@@ -12,15 +10,12 @@ class HoistedFunctionInfo:
 
 class NestedFuncHoister(Visitor):
     # hoist all nested funcs to be top level funcs
-    # rename hoisted functions to be unique
-    # remove all nonlocal decls
-    # while functions nested inside methods will be renamed, the methods themselves will not
-
-    # TODO: properly hoist methods
+    # rename hoisted functions to be unique & rename call sites
 
     def __init__(self):
         # map of function names to their modified names
-        self.functionInfo = [defaultdict(lambda: None)]
+        self.classes = set()
+        self.functionInfo = [{}]
         self.currentClass = None
         self.nestingNames = []
         self.nestingLevel = 0
@@ -42,10 +37,6 @@ class NestedFuncHoister(Visitor):
 
     def Program(self, node: Program):
         for d in node.declarations:
-            if isinstance(d, FuncDef):
-                name = d.getIdentifier().name
-                self.functionInfo[-1][name] = HoistedFunctionInfo(name, d)
-        for d in node.declarations:
             self.nestingLevel = 0
             self.visit(d)
         node.declarations = node.declarations + self.hoisted
@@ -54,9 +45,10 @@ class NestedFuncHoister(Visitor):
 
     def ClassDef(self, node: ClassDef):
         self.nestingLevel = 0
-        self.functionInfo.append(defaultdict(lambda: None))
+        self.functionInfo.append({})
         self.currentClass = node.getIdentifier().name
         self.nestingNames.append(self.currentClass)
+        self.classes.add(self.currentClass)
 
         for d in node.declarations:
             self.visit(d)
@@ -66,23 +58,19 @@ class NestedFuncHoister(Visitor):
         self.currentClass = None
 
     def FuncDef(self, node: FuncDef):
-        self.functionInfo.append(defaultdict(lambda: None))
-        self.nestingNames.append(node.getIdentifier().name)
-        self.nestingLevel += 1
+        identifier = node.getIdentifier()
+        # rename function
+        oldname = identifier.name
+        if self.nestingLevel != 0:
+            identifier.name = self.genFuncName(identifier.name)
+        self.functionInfo[-1][oldname] = HoistedFunctionInfo(identifier.name, node)
 
-        for d in node.declarations:
-            if isinstance(d, FuncDef):
-                name = d.getIdentifier().name
-                newname = self.genFuncName(name)
-                self.functionInfo[-1][name] = HoistedFunctionInfo(newname, d)
-                d.getIdentifier().name = newname
+        self.functionInfo.append({})
+        self.nestingNames.append(oldname)
+        self.nestingLevel += 1
         
         for d in node.declarations:
             self.visit(d)
-        node.declarations = [
-            d for d in node.declarations 
-            if not isinstance(d, FuncDef) and not isinstance(d, NonLocalDecl)
-        ]
 
         for s in node.statements:
             self.visit(s)
@@ -93,12 +81,23 @@ class NestedFuncHoister(Visitor):
 
         if self.nestingLevel > 0:
             self.hoisted.append(node)
-        return node
+        
+        node.declarations = [
+            d for d in node.declarations
+            if not isinstance(d, FuncDef)
+        ]
 
     def CallExpr(self, node: CallExpr):
         for t in self.functionInfo[::-1]:
             if node.function.name in t:
+                decl = t[node.function.name].decl
                 node.function.name = t[node.function.name].name
+                node.freevars = decl.freevars
                 return
+        if node.function.name in {"__assert__", "print", "input", "len"}:
+            return
+        if node.function.name in self.classes:
+            return
+        raise Exception("Unable to find function declaration for " + node.function.name)
 
 
