@@ -96,6 +96,10 @@ def run_closure_tests():
         else:
             n_passed += 1
     print("\nPassed {:d} out of {:d} closure transformation test cases\n".format(n_passed, total))
+    if total == n_passed:
+        subprocess.run("cd {} && rm *.test.py".format(
+            str(Path(__file__).parent.resolve())
+        ), shell=True)
     print("Running closure transformation runtime tests...\n")
     total = 0
     n_passed = 0
@@ -108,6 +112,10 @@ def run_closure_tests():
         else:
             n_passed += 1
     print("\nPassed {:d} out of {:d} closure transformation runtime test cases\n".format(n_passed, total))
+    if total == n_passed:
+        subprocess.run("cd {} && rm *.test.py".format(
+            str(Path(__file__).parent.resolve())
+        ), shell=True)
 
 def run_python_backend_tests():
     print("Running Python backend tests...\n")

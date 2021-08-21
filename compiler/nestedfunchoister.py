@@ -54,6 +54,9 @@ class NestedFuncHoister(Visitor):
         self.classes.add(self.currentClass)
 
         for d in node.declarations:
+            if isinstance(d, FuncDef):
+                self.rename(d)
+        for d in node.declarations:
             self.visit(d)
 
         self.functionInfo.pop()
