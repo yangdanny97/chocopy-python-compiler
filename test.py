@@ -87,6 +87,14 @@ def run_closure_tests():
                 print("Failed: "+ str(test))
             else:
                 n_passed += 1
+    tc_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
+    for test in tc_tests_dir.glob('*.py'):
+        passed = run_closure_test(test)
+        total += 1
+        if not passed:
+            print("Failed: "+ str(test))
+        else:
+            n_passed += 1
     print("\nPassed {:d} out of {:d} closure transformation test cases\n".format(n_passed, total))
     print("Running closure transformation runtime tests...\n")
     total = 0
@@ -238,12 +246,6 @@ def run_closure_runtime_test(test)->bool:
             return False
         compiler.typecheck(chocopy_ast)
         compiler.closurepass(chocopy_ast)
-        tc = TypeChecker(TypeSystem())
-        tc.visit(chocopy_ast)
-        if len(chocopy_ast.errors.errors) > 0:
-            for e in chocopy_ast.errors.errors:
-                print(e.toJSON(dump_location))
-            return False
         builder = compiler.emitPython(chocopy_ast)
         name = f"./{infile_name}.test.py"
         with open(name, "w") as f:

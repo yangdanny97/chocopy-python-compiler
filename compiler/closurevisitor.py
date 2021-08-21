@@ -102,10 +102,10 @@ class ClosureVisitor(Visitor):
                     if v.name not in decls and not v.varInstance.isGlobal:
                         freevars.append(v)
         node.freevars = deduplicate(freevars)
-        # remove global and nonlocal decls
+        # remove nonlocal decls
         node.declarations = [
             d for d in node.declarations 
-            if not (isinstance(d, GlobalDecl) or isinstance(d, NonLocalDecl))
+            if not isinstance(d, NonLocalDecl)
         ]
 
 

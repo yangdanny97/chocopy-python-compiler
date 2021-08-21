@@ -14,7 +14,7 @@ class NestedFuncHoister(Visitor):
 
     def __init__(self):
         # map of function names to their modified names
-        self.classes = set()
+        self.classes = set(["object", "int", "str", "bool"])
         self.functionInfo = [{}]
         self.currentClass = None
         self.nestingNames = []
@@ -37,6 +37,9 @@ class NestedFuncHoister(Visitor):
 
     def Program(self, node: Program):
         for d in node.declarations:
+            if isinstance(d, FuncDef):
+                self.rename(d)
+        for d in node.declarations:
             self.nestingLevel = 0
             self.visit(d)
         node.declarations = node.declarations + self.hoisted
@@ -57,18 +60,21 @@ class NestedFuncHoister(Visitor):
         self.nestingNames.pop()
         self.currentClass = None
 
-    def FuncDef(self, node: FuncDef):
+    def rename(self, node:FuncDef):
         identifier = node.getIdentifier()
-        # rename function
         oldname = identifier.name
         if self.nestingLevel != 0:
             identifier.name = self.genFuncName(identifier.name)
         self.functionInfo[-1][oldname] = HoistedFunctionInfo(identifier.name, node)
 
+    def FuncDef(self, node: FuncDef):
+        identifier = node.getIdentifier()
         self.functionInfo.append({})
-        self.nestingNames.append(oldname)
+        self.nestingNames.append(identifier.name)
         self.nestingLevel += 1
-        
+        for d in node.declarations:
+            if isinstance(d, FuncDef):
+                self.rename(d)
         for d in node.declarations:
             self.visit(d)
 
