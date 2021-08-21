@@ -37,6 +37,9 @@ class TypeChecker(Visitor):
         else:
             return node.postorder(self)
 
+    def funcParams(self, node:FuncDef):
+        pass
+
     def enterScope(self):
         self.symbolTable.append(defaultdict(lambda: None))
 
@@ -120,6 +123,7 @@ class TypeChecker(Visitor):
                     superclass = "object"
                 self.ts.classes[className] = ClassInfo(className, superclass)
             if isinstance(d, FuncDef):
+                self.funcParams(d)
                 self.addType(d.getIdentifier().name, self.getSignature(d))
             if isinstance(d, VarDef):
                 self.addType(identifier.name, self.visit(d.var))
@@ -146,6 +150,7 @@ class TypeChecker(Visitor):
         for d in node.declarations:
             if isinstance(d, FuncDef):  # methods
                 funcName = d.getIdentifier().name
+                self.funcParams(d)
                 funcType = self.getSignature(d)
                 if funcName in self.ts.classes[className].methods or funcName in self.ts.classes[className].attrs:
                     self.addError(d.getIdentifier(),
@@ -217,6 +222,7 @@ class TypeChecker(Visitor):
                     identifier, F"Duplicate declaration of identifier: {name}")
                 continue
             if isinstance(d, FuncDef):
+                self.funcParams(d)
                 self.addType(name, self.getSignature(d))
             if isinstance(d, VarDef):
                 self.addType(name, self.visit(d.var))

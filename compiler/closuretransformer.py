@@ -1,6 +1,5 @@
 from .typechecker import TypeChecker
 from .typesystem import TypeSystem
-from collections import defaultdict
 from .astnodes import *
 from .types import *
 
@@ -18,17 +17,6 @@ class ClosureTransformer(TypeChecker):
         super().__init__(TypeSystem())
         self.addErrors = False
 
-
-    def FuncDef(self, node: FuncDef):
-        for fv in node.freevars:
-            ident = fv.copy()
-            annot = typeToAnnotation(ident.inferredType)
-            tv = TypedVar(node.location, ident, annot)
-            tv.varInstance = ident.varInstance
-            tv.t = ident.inferredType
-            node.params.append(tv)
-        return super().FuncDef(node)
-
     def getSignature(self, node: FuncDef):
         rType = self.visit(node.returnType)
         t = FuncType([self.visit(t) for t in node.params], rType)
@@ -42,6 +30,15 @@ class ClosureTransformer(TypeChecker):
             if node.freevars[i].varInstance.isNonlocal:
                 t.refParams[len(node.params) + i] = node.freevars[i].varInstance
         return t
+
+    def funcParams(self, node:FuncDef):
+        for fv in node.freevars:
+            ident = fv.copy()
+            annot = typeToAnnotation(ident.inferredType)
+            tv = TypedVar(node.location, ident, annot)
+            tv.varInstance = ident.varInstance
+            tv.t = ident.inferredType
+            node.params.append(tv)
 
     def callHelper(self, node):
         t = None

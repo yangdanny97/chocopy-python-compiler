@@ -1,3 +1,4 @@
+from compiler.types.classvaluetype import ClassValueType
 from .valuetype import ValueType
 from .symboltype import SymbolType
 
@@ -19,7 +20,16 @@ class FuncType(SymbolType):
             r = "V"
         else:
             r = self.returnType.getJavaSignature()
-        params = [p.getJavaSignature() for p in self.parameters]
+        params = []
+        for i in range(len(self.parameters)):
+            p = self.parameters[i]
+            
+            if i in self.refParams and isinstance(p, ClassValueType):
+                sig = '[' + p.getJavaSignature(True)
+            else:
+                sig = p.getJavaSignature()
+            params.append(sig)
+            
         return "({}){}".format("".join(params), r)
 
     def methodEquals(self, other):

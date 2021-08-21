@@ -17,6 +17,7 @@ class Compiler:
         self.ts = TypeSystem()
         self.parser = Parser()
         self.typechecker = TypeChecker(self.ts)
+        self.transformer = None
 
     def parse(self, infile) -> Node:
         astparser = self.parser
@@ -42,7 +43,8 @@ class Compiler:
     def closurepass(self, ast: Node):
         ClosureVisitor().visit(ast)
         NestedFuncHoister().visit(ast)
-        ClosureTransformer().visit(ast)
+        self.transformer = ClosureTransformer()
+        self.transformer.visit(ast)
         return ast
 
     def typecheck(self, ast: Node):
@@ -57,9 +59,9 @@ class Compiler:
         return backend.builder
 
     def emitJVM(self, main:str, ast: Node):
-        ClosureVisitor().visit(ast)
+        self.closurepass(ast)
         EmptyListTyper().visit(ast)
-        jvm_backend = JvmBackend(main, self.typechecker.ts)
+        jvm_backend = JvmBackend(main, self.transformer.ts)
         jvm_backend.visit(ast)
         return jvm_backend.classes
         
