@@ -1,6 +1,5 @@
 from .stmt import Stmt
 from .expr import Expr
-from .identifier import Identifier
 
 class AssignStmt(Stmt):
 

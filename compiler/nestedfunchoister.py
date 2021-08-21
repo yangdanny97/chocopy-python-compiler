@@ -1,4 +1,3 @@
-from collections import defaultdict
 from .astnodes import *
 from .types import *
 from .visitor import Visitor

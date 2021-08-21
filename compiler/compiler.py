@@ -6,7 +6,6 @@ from .parser import Parser, ParseError
 from .closurevisitor import ClosureVisitor
 from .closuretransformer import ClosureTransformer 
 from .nestedfunchoister import NestedFuncHoister
-from .typeeraser import TypeEraser
 from .typesystem import TypeSystem
 from .jvm_backend import JvmBackend
 from .python_backend import PythonBackend

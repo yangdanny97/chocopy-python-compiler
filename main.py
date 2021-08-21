@@ -2,15 +2,15 @@ import argparse
 import json
 from test import run_all_tests
 from compiler.compiler import Compiler
-from compiler.builder import Builder
 from compiler.astnodes import Node
 
 mode_help = (
     'Modes:\n' +
-    'parse - output AST as JSON\n' +
-    'tc - output typechecked AST as JSON\n' +
+    'parse - output AST in JSON format\n' +
+    'tc - output typechecked AST in JSON format\n' +
     'python - output untyped Python 3 source code\n' + 
-    'jvm - output JVM bytecode as text formatted for the Krakatau assembler\n'
+    'hoist - output untyped Python 3 source code w/o nonlocals or nested function definitions\n' + 
+    'jvm - output JVM bytecode formatted for the Krakatau assembler\n'
 )
 
 def out_msg(path, verbose):

@@ -7,7 +7,6 @@ from compiler.typechecker import TypeChecker
 from compiler.typeeraser import TypeEraser
 from compiler.typesystem import TypeSystem
 from compiler.compiler import Compiler
-from compiler.builder import Builder
 
 dump_location = True
 error_flags = {"error", "Error", "Exception", "exception", "Expected", "expected"}

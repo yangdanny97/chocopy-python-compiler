@@ -1,5 +1,4 @@
 from .literal import Literal
-import json
 
 class StringLiteral(Literal):
 
