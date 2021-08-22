@@ -56,19 +56,27 @@ def test10():
 class Nonlocals:
     def testMethod3(self:"Nonlocals"):
         pass
+
     def testMethod(self:"Nonlocals", x:int):
         y:int = 2
         def testMethod2():
             nonlocal x
-            nonlocal self
             nonlocal y
             self.testMethod3()
             x = 3
-            self = None
             y = 3
         testMethod2()
-        __assert__(self is None)
         __assert__(y == 3)
+
+    def testMethod4(self:"Nonlocals"):
+        test13(self)
+        __assert__(not (self is None))
+
+def test13(x:"Nonlocals"):
+    def test14():
+        nonlocal x
+        x = None
+    test14()
 
 b:Nonlocals = None
 
@@ -91,5 +99,7 @@ test10()
 a = 0
 b = Nonlocals()
 b.testMethod(a)
+b.testMethod(0)
 __assert__(a == 0)
 b.testMethod(1)
+b.testMethod4()

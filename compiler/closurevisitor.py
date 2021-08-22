@@ -7,6 +7,7 @@ class VarInstance:
     def __init__(self):
         self.isNonlocal = False
         self.isGlobal = False
+        self.isSelf = False
 
 def newInstance(tv: TypedVar)->VarInstance:
     tv.varInstance = VarInstance()
@@ -76,13 +77,20 @@ class ClosureVisitor(Visitor):
     def FuncDef(self, node: FuncDef):
         decls = {}
 
+        handleSelf = True
         for p in node.params:
             decls[p.identifier.name] = newInstance(p)
+            if node.isMethod and handleSelf:
+                decls[p.identifier.name].isSelf = True
+                handleSelf = False
         for d in node.declarations:
             if isinstance(d, GlobalDecl):
                 decls[d.variable.name] = self.globals[d.variable.name]
             elif isinstance(d, NonLocalDecl):
-                self.getInstance(d.variable.name).isNonlocal = True
+                varInstance = self.getInstance(d.variable.name)
+                if varInstance.isSelf:
+                    raise Exception("Special parameter 'self' may not be used in a nonlocal declaration")
+                varInstance.isNonlocal = True
             elif isinstance(d, VarDef):
                 decls[d.getIdentifier().name] = newInstance(d.var)
         

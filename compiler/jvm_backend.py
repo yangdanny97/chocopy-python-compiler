@@ -52,6 +52,14 @@ class JvmBackend(Visitor):
         else:
             self.instr("ireturn")
 
+    def wrap(self, val:Expr, elementType:ValueType):
+        self.loadInt(1)
+        self.instr(f"anewarray {elementType.getJavaName(True)}")
+        self.instr("dup")
+        self.loadInt(0)
+        self.visit(val)
+        self.arrayStore(elementType)
+
     def store(self, name: str, t: ValueType):
         n = self.locals[-1][name]
         if n is None:
@@ -203,7 +211,7 @@ class JvmBackend(Visitor):
             self.constructor(superclass, funcDef)
         self.instr(".end class")
 
-    def funcDefHelper(self, node: FuncDef):
+    def funcDefHelper(self, node: FuncDef, isConstructor = False):
         for i in range(len(node.params)):
             self.newLocalEntry(node.params[i].identifier.name)
         for d in node.declarations:
@@ -221,8 +229,7 @@ class JvmBackend(Visitor):
 
     def constructor(self, superclass:str, node: FuncDef):
         self.enterScope()
-        constructorSig = FuncType(
-            node.type.parameters[1:], node.type.returnType)
+        constructorSig = node.type.dropFirstParam()
         self.instr(
             f".method public <init> : {constructorSig.getJavaSignature()}")
         self.currentBuilder().indent()
@@ -230,15 +237,14 @@ class JvmBackend(Visitor):
         # call superclass constructor
         self.instr("aload 0")
         self.instr(f"invokespecial Method {superclass} <init> ()V ")
-        self.funcDefHelper(node)
+        self.funcDefHelper(node, True)
         self.instr(".end code")
         self.currentBuilder().unindent()
         self.instr(".end method")
 
     def method(self, node: FuncDef):
         self.enterScope()
-        methodSig = FuncType(
-            node.type.parameters[1:], node.type.returnType)
+        methodSig = node.type.dropFirstParam()
         self.instr(
             f".method public {node.name.name} : {methodSig.getJavaSignature()}")
         self.currentBuilder().indent()
@@ -268,13 +274,8 @@ class JvmBackend(Visitor):
             self.instr(
                 f"putfield Field {className.getJavaName()} {varName} {node.var.t.getJavaSignature()}")
         elif node.var.varInstance.isNonlocal:
-            self.loadInt(1) # length
             elementType = node.var.t
-            self.instr(f"anewarray {elementType.getJavaName(True)}")
-            self.instr("dup")
-            self.loadInt(0)
-            self.visit(node.value)
-            self.arrayStore(elementType)
+            self.wrap(node.value, elementType)
             self.newLocal(varName, True)
         else:
             self.visit(node.value)
@@ -506,7 +507,7 @@ class JvmBackend(Visitor):
             self.emit_assert(node.args[0])
         else:
             for i in range(len(node.args)):
-                self.visitArg(node, node.function.inferredType, i, i)
+                self.visitArg(node.function.inferredType, i, node.args[i])
             self.instr(f"invokestatic Method {self.main} {name} {signature}")
             if node.function.inferredType.returnType.isNone():
                 self.NoneLiteral(None)  # push null for void return
@@ -635,10 +636,9 @@ class JvmBackend(Visitor):
             return
         self.visit(node.method.object)
         for i in range(len(node.args)):
-            self.visitArg(node, node.method.inferredType, i + 1, i)
+            self.visitArg(node.method.inferredType, i + 1, node.args[i])
         methodType = node.method.inferredType
-        javaMethodType = FuncType(
-            methodType.parameters[1:], methodType.returnType)
+        javaMethodType = methodType.dropFirstParam()
         self.instr(
             f"invokevirtual Method {className} {methodName} {javaMethodType.getJavaSignature()}")
         if node.method.inferredType.returnType.isNone():
@@ -751,8 +751,7 @@ class JvmBackend(Visitor):
             f"invokevirtual Method java/io/PrintStream println ({t})V")
         self.NoneLiteral(None)  # push None for void return
 
-    def visitArg(self, node, funcType, paramIdx: int, argIdx: int):
-        arg = node.args[argIdx]
+    def visitArg(self, funcType, paramIdx: int, arg: Expr):
         argIsRef = isinstance(arg, Identifier) and arg.varInstance.isNonlocal
         paramIsRef = paramIdx in funcType.refParams
         if argIsRef and paramIsRef and arg.varInstance == funcType.refParams[paramIdx]: 
@@ -761,12 +760,6 @@ class JvmBackend(Visitor):
         elif paramIsRef:
             # non-ref arg and ref param, or do not pass ref arg
             # unwrap if necessary, re-wrap
-            self.loadInt(1) # length
-            elementType = arg.inferredType
-            self.instr(f"anewarray {elementType.getJavaName(True)}")
-            self.instr("dup")
-            self.loadInt(0)
-            self.visit(arg)
-            self.arrayStore(elementType)
+            self.wrap(arg, arg.inferredType)
         else: # non-ref param, maybe unwrap
             self.visit(arg)

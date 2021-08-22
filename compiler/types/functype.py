@@ -14,6 +14,12 @@ class FuncType(SymbolType):
             return self.parameters == other.parameters and self.returnType == other.returnType
         return False
 
+    def dropFirstParam(self):
+        f = FuncType(self.parameters[1:], self.returnType)
+        f.refParams = [i - 1 for i in self.refParams]
+        f.freevars = self.freevars
+        return f
+
     def getJavaSignature(self)->str:
         r = None
         if self.returnType.isNone():
@@ -23,7 +29,6 @@ class FuncType(SymbolType):
         params = []
         for i in range(len(self.parameters)):
             p = self.parameters[i]
-            
             if i in self.refParams and isinstance(p, ClassValueType):
                 sig = '[' + p.getJavaSignature(True)
             else:
