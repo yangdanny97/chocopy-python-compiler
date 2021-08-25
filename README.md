@@ -2,7 +2,7 @@
 
 AOT compiler for Chocopy, written entirely in Python. [Chocopy](https://chocopy.org/) is a subset of Python 3.6 that is used for Berkeley's compilers course, and has a reference compiler written in Java.
 
-This compiler matches the functionality of the first 2 passes (parsing & typechecking) Chocopy's reference compiler implementation, and outputs the AST in a JSON format that is compatible with the reference implementation. Additionally, this compiler contains 2 backends not found in the reference implementation: 
+This compiler includes a frontend and a backend. The frontend matches the functionality of the first 2 passes (parsing & typechecking) Chocopy's reference compiler implementation, and outputs the AST in a JSON format that is compatible with the reference implementation. The compiler currently supports 2 backends, which are not found in the reference implementation: 
 - Untyped Python 3 source code
 - JVM bytecode, formatted for the Krakatau assembler
 
@@ -12,7 +12,7 @@ Most of the test cases are taken from test suites included in the release code f
 
 ## Requires:
 - Python 3.6 - 3.8
-- [Krakatau JVM Assembler](https://github.com/Storyyeller/Krakatau) (only if you want to use the JVM backend)
+- [Krakatau assembler](https://github.com/Storyyeller/Krakatau) (only if you want to use the JVM backend)
 
 ## Usage
 
