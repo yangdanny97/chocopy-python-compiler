@@ -7,16 +7,27 @@ class CallExpr(Expr):
         super().__init__(location, "CallExpr")
         self.function = function
         self.args = args
+        self.isConstructor = False
+        self.freevars = [] # captured free vars
 
-    def visit(self, typechecker):
+    def postorder(self, visitor):
         for a in self.args:
-            typechecker.visit(a)
-        return typechecker.CallExpr(self)
+            visitor.visit(a)
+        return visitor.CallExpr(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["function"] = self.function.toJSON()
-        d["args"] = [a.toJSON() for a in self.args]
+    def preorder(self, visitor):
+        visitor.CallExpr(self)
+        for a in self.args:
+            visitor.visit(a)
+        return self
+
+    def visit(self, visitor):
+        return visitor.CallExpr(self)
+
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["function"] = self.function.toJSON(dump_location)
+        d["args"] = [a.toJSON(dump_location) for a in self.args]
         return d
 
 

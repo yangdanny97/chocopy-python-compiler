@@ -8,13 +8,15 @@ class TypedVar(Node):
         super().__init__(location, "TypedVar")
         self.identifier = identifier
         self.type = typ
+        self.t = None # the typechecked type goes here
+        self.varInstance = None
 
-    def visit(self, typechecker):
-        return typechecker.TypedVar(self)
+    def visit(self, visitor):
+        return visitor.TypedVar(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["identifier"] = self.identifier.toJSON()
-        d["type"] = self.type.toJSON()
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["identifier"] = self.identifier.toJSON(dump_location)
+        d["type"] = self.type.toJSON(dump_location)
         return d
 

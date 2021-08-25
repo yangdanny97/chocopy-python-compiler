@@ -9,18 +9,31 @@ class IfStmt(Stmt):
         self.thenBody = [s for s in thenBody if s is not None]
         self.elseBody = [s for s in elseBody if s is not None]
 
-    def visit(self, typechecker):
-        typechecker.visit(self.condition)
-        for s in self.thenBody:
-            typechecker.visit(s)
-        for s in self.elseBody:
-            typechecker.visit(s)
-        return typechecker.IfStmt(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["condition"] = self.condition.toJSON()
-        d["thenBody"] = [s.toJSON() for s in self.thenBody]
-        d["elseBody"] = [s.toJSON() for s in self.elseBody]
+    def postorder(self, visitor):
+        visitor.visit(self.condition)
+        for s in self.thenBody:
+            visitor.visit(s)
+        for s in self.elseBody:
+            visitor.visit(s)
+        return visitor.IfStmt(self)
+
+    def preorder(self, visitor):
+        visitor.IfStmt(self)
+        visitor.visit(self.condition)
+        for s in self.thenBody:
+            visitor.visit(s)
+        for s in self.elseBody:
+            visitor.visit(s)
+        return self
+
+    def visit(self, visitor):
+        return visitor.IfStmt(self)
+
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["condition"] = self.condition.toJSON(dump_location)
+        d["thenBody"] = [s.toJSON(dump_location) for s in self.thenBody]
+        d["elseBody"] = [s.toJSON(dump_location) for s in self.elseBody]
         return d
 

@@ -20,17 +20,37 @@ class FuncDef(Declaration):
         self.declarations = declarations
         self.statements = [s for s in statements if s is not None]
         self.isMethod = isMethod
+        self.freevars = [] # used in AST transformations, not printed out
+        self.type = None # type signature of function
 
-    def visit(self, typechecker):
-        return typechecker.FuncDef(self)
+    def getFreevarNames(self):
+        return set([v.name for v in self.freevars])
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["name"] = self.name.toJSON()
-        d["params"] = [t.toJSON() for t in self.params]
-        d["returnType"] = self.returnType.toJSON()
-        d["declarations"] = [decl.toJSON() for decl in self.declarations]
-        d["statements"] = [s.toJSON() for s in self.statements]
+    def preorder(self, visitor):
+        visitor.FuncDef(self)
+        for d in self.declarations:
+            visitor.visit(d)
+        for s in self.statements:
+            visitor.visit(s)
+        return self
+
+    def postorder(self, visitor):
+        for d in self.declarations:
+            visitor.visit(d)
+        for s in self.statements:
+            visitor.visit(s)
+        return visitor.FuncDef(self)
+
+    def visit(self, visitor):
+        return visitor.FuncDef(self)
+
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["name"] = self.name.toJSON(dump_location)
+        d["params"] = [t.toJSON(dump_location) for t in self.params]
+        d["returnType"] = self.returnType.toJSON(dump_location)
+        d["declarations"] = [decl.toJSON(dump_location) for decl in self.declarations]
+        d["statements"] = [s.toJSON(dump_location) for s in self.statements]
         return d
 
     def getIdentifier(self):

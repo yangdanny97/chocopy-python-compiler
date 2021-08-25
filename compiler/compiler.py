@@ -1,12 +1,26 @@
+from compiler.empty_list_typer import EmptyListTyper
 from .astnodes import *
 from .types import *
 from .typechecker import TypeChecker
 from .parser import Parser, ParseError
+from .closurevisitor import ClosureVisitor
+from .closuretransformer import ClosureTransformer 
+from .nestedfunchoister import NestedFuncHoister
+from .typesystem import TypeSystem
+from .jvm_backend import JvmBackend
+from .python_backend import PythonBackend
 import ast
 from pathlib import Path
 
 class Compiler:
-    def parse(self, infile, astparser: Parser) -> Node:
+    def __init__(self):
+        self.ts = TypeSystem()
+        self.parser = Parser()
+        self.typechecker = TypeChecker(self.ts)
+        self.transformer = None
+
+    def parse(self, infile) -> Node:
+        astparser = self.parser
         # given an input file, parse it into an AST object
         lines = None
         fname = infile
@@ -26,8 +40,29 @@ class Compiler:
             astparser.errors.append(ParseError(message))
             return None
 
+    def closurepass(self, ast: Node):
+        ClosureVisitor().visit(ast)
+        NestedFuncHoister().visit(ast)
+        self.transformer = ClosureTransformer()
+        self.transformer.visit(ast)
+        return ast
 
-    def visit(self, ast: Node, tc: TypeChecker):
+    def typecheck(self, ast: Node):
         # given an AST object, typecheck it
         # typechecking mutates the AST, adding types and errors
-        ast.visit(tc)
+        self.typechecker.visit(ast)
+        return ast
+
+    def emitPython(self, ast: Node):
+        backend = PythonBackend()
+        backend.visit(ast)
+        return backend.builder
+
+    def emitJVM(self, main:str, ast: Node):
+        self.closurepass(ast)
+        EmptyListTyper().visit(ast)
+        jvm_backend = JvmBackend(main, self.transformer.ts)
+        jvm_backend.visit(ast)
+        return jvm_backend.classes
+        
+    

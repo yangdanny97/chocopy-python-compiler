@@ -16,14 +16,25 @@ class ClassDef(Declaration):
                 d.isMethod = True
         self.declarations = declarations
 
-    def visit(self, typechecker):
-        typechecker.ClassDef(self)
+    def preorder(self, visitor):
+        visitor.ClassDef(self)
+        for d in self.declarations:
+            visitor.visit(d)
+        return self
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["name"] = self.name.toJSON()
-        d["superClass"] = self.superclass.toJSON()
-        d["declarations"] = [decl.toJSON() for decl in self.declarations]
+    def postorder(self, visitor):
+        for d in self.declarations:
+            visitor.visit(d)
+        return visitor.ClassDef(self)
+
+    def visit(self, visitor):
+        return visitor.ClassDef(self)
+
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["name"] = self.name.toJSON(dump_location)
+        d["superClass"] = self.superclass.toJSON(dump_location)
+        d["declarations"] = [decl.toJSON(dump_location) for decl in self.declarations]
         return d
 
     def getIdentifier(self):

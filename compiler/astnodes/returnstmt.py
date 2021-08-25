@@ -7,16 +7,26 @@ class ReturnStmt(Stmt):
         super().__init__(location, "ReturnStmt")
         self.value = value
         self.isReturn = True
+        self.expType = None
 
-    def visit(self, typechecker):
+    def postorder(self, visitor):
         if self.value is not None:
-            typechecker.visit(self.value)
-        return typechecker.ReturnStmt(self)
+            visitor.visit(self.value)
+        return visitor.ReturnStmt(self)
 
-    def toJSON(self):
-        d = super().toJSON()
+    def preorder(self, visitor):
+        visitor.ReturnStmt(self)
         if self.value is not None:
-            d["value"] = self.value.toJSON()
+            visitor.visit(self.value)
+        return self
+
+    def visit(self, visitor):
+        return visitor.ReturnStmt(self)
+
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        if self.value is not None:
+            d["value"] = self.value.toJSON(dump_location)
         else:
             d["value"] = None
         return d

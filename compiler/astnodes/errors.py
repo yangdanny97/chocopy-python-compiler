@@ -7,11 +7,11 @@ class Errors(Node):
         super().__init__(location, "Errors")
         self.errors = errors
 
-    def visit(self, typechecker):
+    def visit(self, visitor):
         pass
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["errors"] = [e.toJSON() for e in self.errors]
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["errors"] = [e.toJSON(dump_location) for e in self.errors]
         return d
 

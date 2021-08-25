@@ -7,12 +7,12 @@ class NonLocalDecl(Declaration):
         super().__init__(location, "NonLocalDecl")
         self.variable = variable
 
-    def visit(self, typechecker):
-        return typechecker.NonLocalDecl(self)
+    def visit(self, visitor):
+        return visitor.NonLocalDecl(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["variable"] = self.variable.toJSON()
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["variable"] = self.variable.toJSON(dump_location)
         return d
 
     def getIdentifier(self):

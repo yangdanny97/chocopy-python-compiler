@@ -8,15 +8,26 @@ class MethodCallExpr(Expr):
         self.method = method
         self.args = args
 
-    def visit(self, typechecker):
+    def preorder(self, visitor):
+        visitor.MethodCallExpr(self)
+        visitor.visit(self.method.object)
         for a in self.args:
-            typechecker.visit(a)
-        return typechecker.MethodCallExpr(self)
+            visitor.visit(a)
+        return self
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["method"] = self.method.toJSON()
-        d["args"] = [a.toJSON() for a in self.args]
+    def postorder(self, visitor):
+        visitor.visit(self.method.object)
+        for a in self.args:
+            visitor.visit(a)
+        return visitor.MethodCallExpr(self)
+
+    def visit(self, visitor):
+        return visitor.MethodCallExpr(self)
+
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["method"] = self.method.toJSON(dump_location)
+        d["args"] = [a.toJSON(dump_location) for a in self.args]
         return d
 
 

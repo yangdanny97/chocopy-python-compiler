@@ -128,4 +128,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+unused/
+./Roadmap.md
+*.class
+*.j
 **/.DS_Store

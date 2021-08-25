@@ -8,15 +8,25 @@ class IfExpr(Expr):
         self.thenExpr = thenExpr
         self.elseExpr = elseExpr
 
-    def visit(self, typechecker):
-        typechecker.visit(self.condition)
-        typechecker.visit(self.thenExpr)
-        typechecker.visit(self.elseExpr)
-        return typechecker.IfExpr(self)
+    def postorder(self, visitor):
+        visitor.visit(self.condition)
+        visitor.visit(self.thenExpr)
+        visitor.visit(self.elseExpr)
+        return visitor.IfExpr(self)
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["condition"] = self.condition.toJSON()
-        d["thenExpr"] = self.thenExpr.toJSON()
-        d["elseExpr"] = self.elseExpr.toJSON()
+    def preorder(self, visitor):
+        visitor.IfExpr(self)
+        visitor.visit(self.condition)
+        visitor.visit(self.thenExpr)
+        visitor.visit(self.elseExpr)
+        return self
+
+    def visit(self, visitor):
+        return visitor.IfExpr(self)
+
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["condition"] = self.condition.toJSON(dump_location)
+        d["thenExpr"] = self.thenExpr.toJSON(dump_location)
+        d["elseExpr"] = self.elseExpr.toJSON(dump_location)
         return d

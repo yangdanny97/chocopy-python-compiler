@@ -10,7 +10,16 @@ class ListValueType(ValueType):
             return self.elementType == other.elementType
         return False
 
-    def isListType():
+    def getJavaSignature(self, _=False):
+        return "["+self.elementType.getJavaSignature(True)
+
+    def getJavaName(self, _=False):
+        return "["+self.elementType.getJavaSignature(True)
+
+    def isListType(self):
+        return True
+
+    def isJavaRef(self):
         return True
 
     def __str__(self):
@@ -19,8 +28,8 @@ class ListValueType(ValueType):
     def __hash__(self):
         return str(self).__hash__()
 
-    def toJSON(self):
+    def toJSON(self, dump_location=True):
         return {
             "kind": "ListValueType",
-            "elementType": self.elementType.toJSON()
+            "elementType": self.elementType.toJSON(dump_location)
         }

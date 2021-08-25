@@ -7,14 +7,22 @@ class UnaryExpr(Expr):
         self.operand = operand
         self.operator = operator
 
-    def visit(self, typechecker):
-        typechecker.visit(self.operand)
-        return typechecker.UnaryExpr(self)
+    def preorder(self, visitor):
+        visitor.UnaryExpr(self)
+        visitor.visit(self.operand)
+        return self
 
-    def toJSON(self):
-        d = super().toJSON()
+    def postorder(self, visitor):
+        visitor.visit(self.operand)
+        return visitor.UnaryExpr(self)
+
+    def visit(self, visitor):
+        return visitor.UnaryExpr(self)
+
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
         d["operator"] = self.operator
-        d["operand"] = self.operand.toJSON()
+        d["operand"] = self.operand.toJSON(dump_location)
         return d
 
 

@@ -8,14 +8,24 @@ class AssignStmt(Stmt):
         self.targets = targets
         self.value = value
 
-    def visit(self, typechecker):
+    def preorder(self, visitor):
+        visitor.AssignStmt(self)
         for t in self.targets:
-            typechecker.visit(t)
-        typechecker.visit(self.value)
-        return typechecker.AssignStmt(self)
+            visitor.visit(t)
+        visitor.visit(self.value)
+        return self
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["targets"] = [t.toJSON() for t in self.targets]
-        d["value"] = self.value.toJSON()
+    def postorder(self, visitor):
+        for t in self.targets:
+            visitor.visit(t)
+        visitor.visit(self.value)
+        return visitor.AssignStmt(self)
+
+    def visit(self, visitor):
+        return visitor.AssignStmt(self)
+
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["targets"] = [t.toJSON(dump_location) for t in self.targets]
+        d["value"] = self.value.toJSON(dump_location)
         return d

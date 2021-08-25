@@ -12,13 +12,28 @@ class Program(Node):
         self.statements = [s for s in statements if s is not None]
         self.errors = errors
 
-    def visit(self, typechecker):
-        return typechecker.Program(self)
+    def preorder(self, visitor):
+        visitor.Program(self)
+        for d in self.declarations:
+            visitor.visit(d)
+        for s in self.statements:
+            visitor.visit(s)
+        return self
 
-    def toJSON(self):
-        d = super().toJSON()
-        d['declarations'] = [d.toJSON() for d in self.declarations]
-        d['statements'] = [s.toJSON() for s in self.statements]
-        d['errors'] = self.errors.toJSON()
+    def postorder(self, visitor):
+        for d in self.declarations:
+            visitor.visit(d)
+        for s in self.statements:
+            visitor.visit(s)
+        return visitor.Program(self)
+
+    def visit(self, visitor):
+        return visitor.Program(self)
+
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d['declarations'] = [d.toJSON(dump_location) for d in self.declarations]
+        d['statements'] = [s.toJSON(dump_location) for s in self.statements]
+        d['errors'] = self.errors.toJSON(dump_location)
         return d
 

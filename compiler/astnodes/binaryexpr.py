@@ -8,15 +8,24 @@ class BinaryExpr(Expr):
         self.right = right
         self.operator = operator
 
-    def visit(self, typechecker):
-        typechecker.visit(self.left)
-        typechecker.visit(self.right)
-        return typechecker.BinaryExpr(self)
+    def preorder(self, visitor):
+        visitor.BinaryExpr(self)
+        visitor.visit(self.left)
+        visitor.visit(self.right)
+        return self
 
-    def toJSON(self):
-        d = super().toJSON()
-        d["left"] = self.left.toJSON()
-        d["right"] = self.right.toJSON()
+    def postorder(self, visitor):
+        visitor.visit(self.left)
+        visitor.visit(self.right)
+        return visitor.BinaryExpr(self)
+
+    def visit(self, visitor):
+        return visitor.BinaryExpr(self)
+
+    def toJSON(self, dump_location=True):
+        d = super().toJSON(dump_location)
+        d["left"] = self.left.toJSON(dump_location)
+        d["right"] = self.right.toJSON(dump_location)
         d["operator"] = self.operator
         return d
 

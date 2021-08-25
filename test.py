@@ -1,63 +1,184 @@
 from pathlib import Path
-from compiler.compiler import Compiler
 import json
-from compiler.parser import Parser
+import ast
+import traceback
+import subprocess
 from compiler.typechecker import TypeChecker
+from compiler.typeeraser import TypeEraser
+from compiler.typesystem import TypeSystem
+from compiler.compiler import Compiler
 
-def run_all_tests(compiler: Compiler):
-    run_parse_tests(compiler)
-    run_typecheck_tests(compiler)
+dump_location = True
+error_flags = {"error", "Error", "Exception", "exception", "Expected", "expected"}
 
-def run_parse_tests(compiler: Compiler):
+def run_all_tests():
+    run_parse_tests()
+    run_typecheck_tests()
+    run_python_backend_tests()
+    run_closure_tests()
+    run_jvm_tests()
+
+def run_parse_tests():
     print("Running parser tests...\n")
     total = 0
     n_passed = 0
     passed = True
-    print("Running tests in: tests/parse/")
     parser_tests_dir = (Path(__file__).parent / "tests/parse/").resolve()
     for test in parser_tests_dir.glob('*.py'):
-        passed = run_parse_test(test, compiler)
+        passed = run_parse_test(test)
         total += 1
         if not passed:
-            print("Failed: " + test.name)
+            print("Failed: "+ str(test))
         else:
             n_passed += 1
-    print("Running tests in: tests/typecheck/")
     # typechecker tests should all successfully parse
     tc_tests_dir = (Path(__file__).parent / "tests/typecheck/").resolve()
     for test in tc_tests_dir.glob('*.py'):
-        passed = run_parse_test(test, compiler, False)
+        passed = run_parse_test(test, False)
         total += 1
         if not passed:
-            print("Failed: " + test.name)
+            print("Failed: "+ str(test))
+        else:
+            n_passed += 1
+    # runtime tests should all successfully parse
+    tc_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
+    for test in tc_tests_dir.glob('*.py'):
+        passed = run_typecheck_test(test, False)
+        total += 1
+        if not passed:
+            print("Failed: "+ str(test))
         else:
             n_passed += 1
     print("\nPassed {:d} out of {:d} parser test cases\n".format(n_passed, total))
 
-def run_typecheck_tests(compiler: Compiler):
+def run_typecheck_tests():
     print("Running typecheck tests...\n")
     total = 0
     n_passed = 0
     tc_tests_dir = (Path(__file__).parent / "tests/typecheck/").resolve()
     for test in tc_tests_dir.glob('*.py'):
-        passed = run_typecheck_test(test, compiler)
+        passed = run_typecheck_test(test)
         total += 1
         if not passed:
-            print("Failed: " + test.name)
+            print("Failed: "+ str(test))
+        else:
+            n_passed += 1
+    tc_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
+    for test in tc_tests_dir.glob('*.py'):
+        passed = run_typecheck_test(test, False)
+        total += 1
+        if not passed:
+            print("Failed: "+ str(test))
         else:
             n_passed += 1
     print("\nPassed {:d} out of {:d} typechecker test cases\n".format(n_passed, total))
 
-def run_parse_test(test, compiler: Compiler, bad=True)->bool:
+def run_closure_tests():
+    print("Running closure transformation tests...\n")
+    total = 0
+    n_passed = 0
+    tc_tests_dir = (Path(__file__).parent / "tests/typecheck/").resolve()
+    for test in tc_tests_dir.glob('*.py'):
+        if not test.name.startswith("bad"):
+            passed = run_closure_test(test)
+            total += 1
+            if not passed:
+                print("Failed: "+ str(test))
+            else:
+                n_passed += 1
+    tc_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
+    for test in tc_tests_dir.glob('*.py'):
+        passed = run_closure_test(test)
+        total += 1
+        if not passed:
+            print("Failed: "+ str(test))
+        else:
+            n_passed += 1
+    print("\nPassed {:d} out of {:d} closure transformation test cases\n".format(n_passed, total))
+    if total == n_passed:
+        subprocess.run("cd {} && rm -f *.test.py".format(
+            str(Path(__file__).parent.resolve())
+        ), shell=True)
+    print("Running closure transformation runtime tests...\n")
+    total = 0
+    n_passed = 0
+    tc_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
+    for test in tc_tests_dir.glob('*.py'):
+        passed = run_closure_runtime_test(test)
+        total += 1
+        if not passed:
+            print("Failed: "+ str(test))
+        else:
+            n_passed += 1
+    print("\nPassed {:d} out of {:d} closure transformation runtime test cases\n".format(n_passed, total))
+    if total == n_passed:
+        subprocess.run("cd {} && rm -f *.test.py".format(
+            str(Path(__file__).parent.resolve())
+        ), shell=True)
+
+def run_python_backend_tests():
+    print("Running Python backend tests...\n")
+    total = 0
+    n_passed = 0
+    tc_tests_dir = (Path(__file__).parent / "tests/typecheck/").resolve()
+    for test in tc_tests_dir.glob('*.py'):
+        if not test.name.startswith("bad"):
+            passed = run_python_emit_test(test)
+            total += 1
+            if not passed:
+                print("Failed: "+ str(test))
+            else:
+                n_passed += 1
+    print("\nPassed {:d} out of {:d} Python backend emit test cases\n".format(n_passed, total))
+    total = 0
+    n_passed = 0
+    tc_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
+    for test in tc_tests_dir.glob('*.py'):
+        passed = run_python_runtime_test(test)
+        total += 1
+        if not passed:
+            print("Failed: "+ str(test))
+        else:
+            n_passed += 1
+    if total == n_passed:
+        subprocess.run("cd {} && rm -f *.test.py".format(
+            str(Path(__file__).parent.resolve())
+        ), shell=True)
+    else:
+        print("\nNot all test cases passed. Please run `make clean` after inspecting the output")
+    print("\nPassed {:d} out of {:d} Python backend runtime test cases\n".format(n_passed, total))
+
+def run_jvm_tests():
+    print("Running JVM backend tests...\n")
+    total = 0
+    n_passed = 0
+    jvm_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
+    for test in jvm_tests_dir.glob('*.py'):
+        passed = run_jvm_test(test)
+        total += 1
+        if not passed:
+            print("Failed: "+ str(test) + "\n")
+        else:
+            n_passed += 1
+    if total == n_passed:
+        subprocess.run("cd {} && rm -f *.j && rm -f *.class".format(
+            str(Path(__file__).parent.resolve())
+        ), shell=True)
+    else:
+        print("\nNot all test cases passed. Please run `make clean` after inspecting the output")
+    print("\nPassed {:d} out of {:d} JVM backend test cases\n".format(n_passed, total))
+
+def run_parse_test(test, bad=True)->bool:
     # if bad=True, then test cases prefixed with bad are expected to fail
-    astparser = Parser()
-    ast = compiler.parse(test, astparser)
+    compiler = Compiler()
+    astparser = compiler.parser
+    ast = compiler.parse(test)
     # check that parsing error exists
     if bad and test.name.startswith("bad"):
         return len(astparser.errors) > 0
     if len(astparser.errors) > 0:
         return False
-    ast_json = ast.toJSON()
+    ast_json = ast.toJSON(True)
     try:
         with test.with_suffix(".py.ast").open("r") as f:
             correct_json = json.load(f)
@@ -67,17 +188,189 @@ def run_parse_test(test, compiler: Compiler, bad=True)->bool:
             correct_json = json.load(f)
             return ast_equals(correct_json, ast_json)
 
-def run_typecheck_test(test, compiler: Compiler)->bool:
-    astparser = Parser()
-    ast = compiler.parse(test, astparser)
-    if len(astparser.errors) > 0:
+def run_typecheck_test(test, checkAst = True)->bool:
+    try:
+        compiler = Compiler()
+        astparser = compiler.parser
+        ast = compiler.parse(test)
+        if len(astparser.errors) > 0:
+            return False
+        compiler.typecheck(ast)
+        if checkAst:
+            ast_json = ast.toJSON(True)
+            with test.with_suffix(".py.ast.typed").open("r") as f:
+                correct_json = json.load(f)
+                match = ast_equals(ast_json, correct_json)
+                return match
+        else:
+            if len(ast.errors.errors) > 0:
+                for e in ast.errors.errors:
+                    print(e.toJSON(dump_location))
+                return False
+            return True
+    except Exception as e:
+        print("Internal compiler error:", test)
+        track = traceback.format_exc()
+        print(e)
+        print(track)
         return False
-    tc = TypeChecker()
-    compiler.visit(ast, tc)
-    ast_json = ast.toJSON()
-    with test.with_suffix(".py.ast.typed").open("r") as f:
-        correct_json = json.load(f)
-        return ast_equals(correct_json, ast_json)
+
+def run_closure_test(test)->bool:
+    # check that typechecking passes with the transformed AST
+    # for valid cases only
+    try:
+        compiler = Compiler()
+        astparser = compiler.parser
+        ast = compiler.parse(test)
+        if len(astparser.errors) > 0:
+            return False
+        tc = compiler.typechecker
+        compiler.typecheck(ast)
+        compiler.closurepass(ast)
+        # clean types to get fresh typecheck
+        ast.visit(TypeEraser())
+        tc = TypeChecker(TypeSystem())
+        tc.visit(ast)
+        if len(ast.errors.errors) > 0:
+            for e in ast.errors.errors:
+                print(e.toJSON(dump_location))
+            return False
+        return True
+    except Exception as e:
+        print("Internal compiler error:", test)
+        track = traceback.format_exc()
+        print(e)
+        print(track)
+        return False
+
+def run_closure_runtime_test(test)->bool:
+    infile_name = str(test)[:-3].split("/")[-1]
+    try:
+        compiler = Compiler()
+        astparser = compiler.parser
+        chocopy_ast = compiler.parse(test)
+        if len(astparser.errors) > 0:
+            return False
+        compiler.typecheck(chocopy_ast)
+        compiler.closurepass(chocopy_ast)
+        builder = compiler.emitPython(chocopy_ast)
+        name = f"./{infile_name}.test.py"
+        with open(name, "w") as f:
+            f.write(builder.emit())
+        output = subprocess.check_output(
+            f"cd {str(Path(__file__).parent.resolve())} && python3 {name}",
+            shell=True)
+        lines = output.decode().split("\n")
+        passed = True
+        for l in lines:
+            for e in error_flags:
+                if e in l:
+                    passed = False
+                    print(l)
+                    break
+        return passed
+    except Exception as e:
+        print("Internal compiler error:", test)
+        track = traceback.format_exc()
+        print(e)
+        print(track)
+        return False
+
+def run_python_emit_test(test)->bool:
+    infile_name = str(test)[:-3].split("/")[-1]
+    try:
+        compiler = Compiler()
+        astparser = compiler.parser
+        chocopy_ast = compiler.parse(test)
+        if len(astparser.errors) > 0:
+            return False
+        compiler.typecheck(chocopy_ast)
+        builder = compiler.emitPython(chocopy_ast)
+        ast.parse(builder.emit())
+        return True
+    except Exception as e:
+        print("Internal compiler error:", test)
+        track = traceback.format_exc()
+        print(e)
+        print(track)
+        return False
+
+def run_python_runtime_test(test)->bool:
+    infile_name = str(test)[:-3].split("/")[-1]
+    try:
+        compiler = Compiler()
+        astparser = compiler.parser
+        chocopy_ast = compiler.parse(test)
+        if len(astparser.errors) > 0:
+            return False
+        compiler.typecheck(chocopy_ast)
+        builder = compiler.emitPython(chocopy_ast)
+        name = f"./{infile_name}.test.py"
+        with open(name, "w") as f:
+            f.write(builder.emit())
+        output = subprocess.check_output(
+            f"cd {str(Path(__file__).parent.resolve())} && python3 {name}",
+            shell=True)
+        lines = output.decode().split("\n")
+        passed = True
+        for l in lines:
+            for e in error_flags:
+                if e in l:
+                    passed = False
+                    print(l)
+                    break
+        return passed
+    except Exception as e:
+        print("Internal compiler error:", test)
+        track = traceback.format_exc()
+        print(e)
+        print(track)
+        return False
+
+def run_jvm_test(test)->bool:
+    passed = True
+    try:
+        infile_name = str(test)[:-3].split("/")[-1]
+        outdir = "./"
+        compiler = Compiler()
+        astparser = compiler.parser
+        ast = compiler.parse(test)
+        if len(astparser.errors) > 0:
+            return False
+        compiler.typecheck(ast)
+        if len(ast.errors.errors) > 0:
+            print(ast.errors.toJSON(False))
+            return False
+        jvm_emitters = compiler.emitJVM(infile_name, ast)
+        for cls in jvm_emitters:
+            jvm_emitter = jvm_emitters[cls]
+            fname = outdir + cls + ".j"
+            with open(fname, "w") as f:
+                f.write(jvm_emitter.emit()) 
+    except Exception as e:
+        print("Internal compiler error:", test)
+        track = traceback.format_exc()
+        print(e)
+        print(track)
+        return False
+    try:
+        assembler_commands = ["python3 ../Krakatau/assemble.py -q ./{}.j".format(cls) for cls in jvm_emitters]
+        output = subprocess.check_output("cd {} && {} && java -cp . {}".format(
+            str(Path(__file__).parent.resolve()),
+            " && ".join(assembler_commands),
+            str(test.name[:-3])
+        ), shell=True)
+        lines = output.decode().split("\n")
+        for l in lines:
+            for e in error_flags:
+                if e in l:
+                    passed = False
+                    print(l)
+                    break
+    except Exception as e:
+        print(e)
+        return False
+    return passed
 
 def ast_equals(d1, d2)->bool:
     # precondition: the input dict must represent a well-formed AST
