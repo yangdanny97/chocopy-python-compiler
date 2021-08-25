@@ -1,4 +1,4 @@
-# chocopy-python-frontend
+# chocopy-python-compiler
 
 AOT compiler for Chocopy, written entirely in Python. [Chocopy](https://chocopy.org/) is a subset of Python 3.6 that is used for Berkeley's compilers course, and has a reference compiler written in Java.
 
