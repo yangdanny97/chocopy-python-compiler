@@ -65,5 +65,6 @@ Note that in the above example commands & the `compile_jvm.sh` script all expect
 ### JVM Backend - Known Incompatibilities:
 - Since bytecode for each class is stored in a separate file, on operating systems with case-insensitive file names (like MacOS) you cannot have 2 classes whose names only differ by case.
 - The special parameter `self` in methods and constructors may not be referenced by a `nonlocal` declaration. The Java equivalent, `this`, is final and cannot be assigned to.
+- Some large programs may cause the JVM to run out of stack space, since each frame currently has a maximum stack size of 500.
 
 
