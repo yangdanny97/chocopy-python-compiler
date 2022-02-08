@@ -74,4 +74,4 @@ Note that in the above example commands & the `compile_jvm.sh` script all expect
 
 ## Test Suite
 
-Most of the test cases are taken from test suites included in the release code for CS164, with some additional tests written for more coverage. Tests include both static validation of generated/annotated ASTs, as well as runtime tests that check the correctness of output code.
+Most of the test cases are taken from test suites included in the release code for CS164, with some additional tests written for more coverage. Tests include both static validation of generated/annotated ASTs, as well as runtime tests that check the correctness of output code. The runtime test suite for the JVM backend were evaluated using Java 8 on my local machine.
