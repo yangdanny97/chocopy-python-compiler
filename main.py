@@ -11,6 +11,7 @@ mode_help = (
     'python - output untyped Python 3 source code\n' + 
     'hoist - output untyped Python 3 source code w/o nonlocals or nested function definitions\n' + 
     'jvm - output JVM bytecode formatted for the Krakatau assembler\n'
+    'cil - output CIL bytecode formatted for the Mono ilasm assembler\n'
 )
 
 def out_msg(path, verbose):
@@ -19,7 +20,7 @@ def out_msg(path, verbose):
 
 def main():
     parser = argparse.ArgumentParser(description='Chocopy frontend')
-    parser.add_argument('--mode', dest='mode', choices=["parse", "tc", "python", "jvm", "hoist"], default="python",
+    parser.add_argument('--mode', dest='mode', choices=["parse", "tc", "python", "jvm", "hoist", "cil"], default="python",
                         help=mode_help)
     parser.add_argument('--print', dest='should_print', action='store_true',
                         help="output to stdout instead of file")
@@ -45,7 +46,6 @@ def main():
         raise Exception("Error: input file must end with .py")
 
     infile_name = infile[:-3].split("/")[-1]
-    infile_no_extension = infile[:-3]
 
     if outdir is None:
         outdir = "./"
@@ -113,7 +113,18 @@ def main():
                 fname = outdir + cls + ".j"
                 with open(fname, "w") as f:
                     out_msg(fname, args.verbose)
-                    f.write(jvm_emitter.emit())       
+                    f.write(jvm_emitter.emit())      
+    elif args.mode == "cil":
+        cil_emitters = compiler.emitCIL(infile_name, tree)
+        for cls in cil_emitters:
+            cil_emitter = cil_emitters[cls]
+            if args.should_print:
+                print(cil_emitter.emit())
+            else: 
+                fname = outdir + cls + ".cil"
+                with open(fname, "w") as f:
+                    out_msg(fname, args.verbose)
+                    f.write(cil_emitter.emit())    
 
 if __name__ == "__main__":
     main()
