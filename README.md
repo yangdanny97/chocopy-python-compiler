@@ -57,10 +57,10 @@ The JVM backend for this compiler outputs JVM bytecode in plaintext formatted fo
     - Example: `java -cp <output dir> <input file name with no extensions>`
     - Example: `java -cp . binary_tree`
 
-The `compile_jvm.sh` script is a useful utility to compile and run files with the JVM backend with a single command (provide the path to the input source file as an argument). 
-- To run the same example as above, run `./compile_jvm.sh tests/runtime/binary_tree.py`
+The `demo_jvm.sh` script is a useful utility to compile and run files with the JVM backend with a single command (provide the path to the input source file as an argument). 
+- To run the same example as above, run `./demo_jvm.sh tests/runtime/binary_tree.py`
 
-Note that in the above example commands & the `compile_jvm.sh` script all expect the Krakatau directory and this repository's directory to share the same parent - commands will differ if you cloned Krakatau to a different location.
+Note that in the above example commands & the `demo_jvm.sh` script all expect the Krakatau directory and this repository's directory to share the same parent - commands will differ if you cloned Krakatau to a different location.
 
 ### JVM Backend - Known Incompatibilities:
 - Since bytecode for each class is stored in a separate file, on operating systems with case-insensitive file names (like MacOS) you cannot have 2 classes whose names only differ by case.
