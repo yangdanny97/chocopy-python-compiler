@@ -168,13 +168,16 @@ class CilBackend(Visitor):
     # LITERALS
 
     def BooleanLiteral(self, node: BooleanLiteral):
-        raise Exception("unimplemented")
+        if node.value:
+            self.instr("ldc.i4.1")
+        else:
+            self.instr("ldc.i4.0")
 
     def IntegerLiteral(self, node: IntegerLiteral):
-        raise Exception("unimplemented")
+        self.instr(f"ldc.i8 {node.value}")
 
     def NoneLiteral(self, node: NoneLiteral):
-        raise Exception("unimplemented")
+        self.instr("ldnull")
 
     def StringLiteral(self, node: StringLiteral):
         self.instr(f"ldstr {json.dumps(node.value)}")
