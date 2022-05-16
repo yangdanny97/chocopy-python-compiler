@@ -14,19 +14,19 @@ def exp(x: int, y: int) -> int:
 	return f(y)
 
 # Input parameter
-# n:int = 42
+n:int = 42
 
-# # Run [0, n]
-# i:int = 0
+# Run [0, n]
+i:int = 0
 
-# # Crunch
-# while i <= n:
-# 	print(exp(2, i % 31))
-# 	i = i + 1
+# Crunch
+while i <= n:
+	print(exp(2, i % 31))
+	i = i + 1
 
-# __assert__(exp(2,3) == 8)
-# __assert__(exp(3,3) == 27)
-# __assert__(exp(3,4) == 81)
-# __assert__(exp(4,4) == 256)
-# __assert__(exp(5,1) == 5)
-# __assert__(exp(1,99) == 1)
+__assert__(exp(2,3) == 8)
+__assert__(exp(3,3) == 27)
+__assert__(exp(3,4) == 81)
+__assert__(exp(4,4) == 256)
+__assert__(exp(5,1) == 5)
+__assert__(exp(1,99) == 1)
