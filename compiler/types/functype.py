@@ -34,7 +34,6 @@ class FuncType(SymbolType):
             else:
                 sig = p.getJavaSignature()
             params.append(sig)
-            
         return "({}){}".format("".join(params), r)
 
     def methodEquals(self, other):

@@ -16,6 +16,9 @@ class ListValueType(ValueType):
     def getJavaName(self, _=False):
         return "["+self.elementType.getJavaSignature(True)
 
+    def getCILName(self, _=False):
+        return self.elementType.getCILName(True) + "[]"
+
     def isListType(self):
         return True
 
