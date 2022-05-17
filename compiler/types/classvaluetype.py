@@ -65,7 +65,13 @@ class ClassValueType(ValueType):
         else:
             return self.className
 
-    def getCILName(self, isList = False):
+    def getCILSignature(self):
+        if self.className == "<None>":
+            return "void"
+        else:
+            return self.getCILName()
+
+    def getCILName(self):
         if self.className == "bool":
             return "bool"
         elif self.className == "str":

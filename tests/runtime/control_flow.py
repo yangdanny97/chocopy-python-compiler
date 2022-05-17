@@ -82,6 +82,9 @@ while b > 0:
 __assert__(b == 0)
 
 for char in y:
+    pass
+
+for char in y:
     z = char + z
 __assert__(z == "321")
 __assert__(char == "3")

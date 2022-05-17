@@ -20,6 +20,10 @@ class FuncType(SymbolType):
         f.freevars = self.freevars
         return f
 
+    def getCILSignature(self, name: str)->str:
+        paramSig = ", ".join([t.getCILSignature() for t in self.parameters])
+        return f"{self.returnType.getCILSignature()} {name}({paramSig})"
+
     def getJavaSignature(self)->str:
         r = None
         if self.returnType.isNone():

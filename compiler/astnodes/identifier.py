@@ -21,3 +21,9 @@ class Identifier(Expr):
         cpy.varInstance = self.varInstance
         return cpy
 
+    def getCILName(self):
+        banned = ["char"]
+        if self.name in banned:
+            return "__local__" + self.name
+        return self.name
+

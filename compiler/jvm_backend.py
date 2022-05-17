@@ -375,14 +375,11 @@ class JvmBackend(Visitor):
         operator = node.operator
         leftType = node.left.inferredType
         rightType = node.right.inferredType
-        if not self.isListConcat(operator, leftType, rightType):
-            self.visit(node.left)
-            self.visit(node.right)
+        self.visit(node.left)
+        self.visit(node.right)
         # concatenation and addition
         if operator == "+":
             if self.isListConcat(operator, leftType, rightType):
-                self.visit(node.left)
-                self.visit(node.right)
                 self.instr("dup2")
                 arrR = self.newLocal(None, True)
                 # stack is L, R, L

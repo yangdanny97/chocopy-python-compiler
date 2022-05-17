@@ -1,3 +1,4 @@
+from cmath import log
 from .astnodes import *
 from .types import *
 from .builder import Builder
@@ -6,6 +7,15 @@ from .visitor import Visitor
 from collections import defaultdict
 import json
 
+class CilStackLoc:
+    def __init__(self, name, loc, t, isArg):
+        self.name = name
+        self.loc = loc
+        self.isArg = isArg
+        self.t = t
+
+    def decl(self):
+        return f"[{self.loc}] {self.t} {self.name}"
 
 class CilBackend(Visitor):
 
@@ -57,40 +67,49 @@ class CilBackend(Visitor):
     def wrap(self, val:Expr, elementType:ValueType):
         raise Exception("unimplemented")
 
-    def store(self, name: str, t: ValueType):
+    def store(self, name: str):
         n = self.locals[-1][name]
         if n is None:
             raise Exception(
                 f"Internal compiler error: unknown name {name} for store")
-        self.instr(f"stloc {n}")
+        if n.isArg:
+            self.instr(f"starg {n.loc}")
+        else:
+            self.instr(f"stloc {n.loc}")
 
-    def load(self, name: str, t: ValueType):
+    def load(self, name: str):
         n = self.locals[-1][name]
         if n is None:
             raise Exception(
                 f"Internal compiler error: unknown name {name} for load")
-        self.instr(f"ldloc {n}")
+        if n.isArg:
+            self.instr(f"ldarg {n.loc}")
+        else:
+            self.instr(f"ldloc {n.loc}")
 
     def arrayStore(self, elementType:ValueType):
-        raise Exception("unimplemented")
+        self.instr(f"stelem {elementType.getCILName()}")
 
     def arrayLoad(self, elementType:ValueType):
-        raise Exception("unimplemented")
+        self.instr(f"ldelem {elementType.getCILName()}")
 
-    def newLocalEntry(self, name: str) -> int:
-        raise Exception("unimplemented")
+    def newLocalEntry(self, name: str, t: ValueType, isArg: bool = False) -> int:
+        # add a new entry to locals table w/o storing anything
+        n = len([k for k in self.locals[-1] if self.locals[-1][k].isArg == isArg])
+        self.locals[-1][name] = CilStackLoc(name, n, t.getCILName(), isArg)
+        return n
 
     def genLocalName(self, offset: int) -> str:
         return f"__local__{offset}"
 
-    def newLocal(self, name: str = None) -> int:
+    def newLocal(self, name: str, t: ValueType):
         # store the top of stack as a new local
-        n = len(self.locals[-1])
+        n = len([k for k in self.locals[-1] if not self.locals[-1][k].isArg])
         self.instr(f"stloc {n}")
         if name is None:
             name = self.genLocalName(n)
-        self.locals[-1][name] = n
-        return n
+        self.locals[-1][name] = CilStackLoc(name, n, t.getCILName(), False)
+        return name
 
     def visitStmtList(self, stmts:[Stmt]):
         if len(stmts) == 0:
@@ -100,7 +119,10 @@ class CilBackend(Visitor):
                 self.visit(s)
 
     def Program(self, node: Program):
-        # TODO
+        func_decls = [d for d in node.declarations if isinstance(d, FuncDef)]
+        cls_decls = [d for d in node.declarations if isinstance(d, ClassDef)]
+        var_decls = [d for d in node.declarations if isinstance(d, VarDef)]
+
         self.instr(f".assembly '{self.main}'")
         self.instr("{")
         self.instr("}")
@@ -108,32 +130,82 @@ class CilBackend(Visitor):
         self.instr(f".class public auto ansi beforefieldinit {self.main} extends [mscorlib]System.Object")
         self.indent()
 
-        var_decls = [d for d in node.declarations if isinstance(d, VarDef)]
+        # global vars (static members)
         for v in var_decls:
-            self.instr(f".field public static {v.var.t.getCILName()} {v.var.identifier.name}")
+            self.instr(f".field public static {v.var.t.getCILName()} {v.var.identifier.getCILName()}")
 
+        # main method, top level statements
         self.instr(".method public static hidebysig default void Main (string[] args)  cil managed")
         self.indent()
         self.instr(".entrypoint")
         self.instr(f".maxstack {self.localLimit}")
+        locals = self.currentBuilder().newBlock()
         self.defaultToGlobals = True
         for v in var_decls:
             self.visit(v.value)
-            self.instr(f"stsfld {v.var.t.getCILName()} {self.main}::{v.var.identifier.name}")
+            self.instr(f"stsfld {v.var.t.getCILName()} {self.main}::{v.var.identifier.getCILName()}")
         self.visitStmtList(node.statements)
         self.defaultToGlobals = False
+        self.generateLocalsDirective(locals)
         self.instr("ret")
         self.unindent()
+
+        # global functions (static funcs)
+        for d in func_decls:
+            self.visit(d)
         self.unindent()
 
     def ClassDef(self, node: ClassDef):
         raise Exception("unimplemented")
 
+    def generateLocalsDirective(self, locals):
+        # defer local declarations until we know what we need
+        locals.newLine(".locals init (").indent()
+        mapping = self.locals[-1]
+        localDecls = [mapping[k] for k in mapping if not mapping[k].isArg]
+        sortedDecls = sorted(localDecls, key=lambda x: x.loc)
+        for i in range(len(sortedDecls)):
+            comma = "," if i < len(sortedDecls) - 1 else ""
+            locals.newLine(sortedDecls[i].decl() + comma)
+        locals.unindent().newLine(")")
+
     def FuncDef(self, node: FuncDef):
-        raise Exception("unimplemented")
+        self.instr(".method public hidebysig static")
+        self.instr(f"{node.type.getCILSignature(node.name.getCILName())} cil managed")
+        self.indent()
+        self.instr(f".maxstack {self.localLimit}")
+        self.enterScope()
+
+        # initialize locals
+        locals = self.currentBuilder().newBlock()
+
+        for i in range(len(node.params)):
+            self.newLocalEntry(node.params[i].identifier.getCILName(), node.type.parameters[i], True)
+        for d in node.declarations:
+            self.visit(d)
+        self.returnType = node.type.returnType
+
+        # handle last return
+        self.visitStmtList(node.statements)
+        hasReturn = False
+        for s in node.statements:
+            if s.isReturn:
+                hasReturn = True
+        if not hasReturn:
+            self.buildReturn(None)
+        self.generateLocalsDirective(locals)
+        self.exitScope()
+        self.unindent()
 
     def VarDef(self, node: VarDef):
-        raise Exception("unimplemented")
+        varName = node.var.identifier.getCILName()
+        if node.isAttr:
+            raise Exception("unimplemented")
+        elif node.var.varInstance.isNonlocal:
+            raise Exception("unimplemented")
+        else:
+            self.visit(node.value)
+            self.newLocal(varName, node.var.t)
 
     # STATEMENTS
 
@@ -141,11 +213,22 @@ class CilBackend(Visitor):
         if isinstance(target, Identifier):
             if self.defaultToGlobals or target.varInstance.isGlobal:
                 self.instr(
-                    f"stsfld {target.inferredType.getCILName()} {self.main}::{target.name}")
+                    f"stsfld {target.inferredType.getCILName()} {self.main}::{target.getCILName()}")
             elif target.varInstance.isNonlocal:
                 raise Exception("unimplemented")
             else:
-                self.store(target.name, target.inferredType)
+                self.store(target.getCILName())
+        elif isinstance(target, IndexExpr):
+            temp = self.newLocal(None, target.inferredType)
+            self.visit(target.list)
+            self.visit(target.index)
+            self.load(temp)
+            self.arrayStore(target.inferredType)
+        elif isinstance(target, MemberExpr):
+            raise Exception("unimplemented")
+        else:
+            raise Exception(
+                "Internal compiler error: unsupported assignment target")
 
     def AssignStmt(self, node: AssignStmt):
         self.visit(node.value)
@@ -166,7 +249,6 @@ class CilBackend(Visitor):
             self.instr(f"brfalse {endLabel}")
             self.visitStmtList(node.thenBody)
             self.label(endLabel)
-            self.instr("nop")
         else:
             startLabel = self.newLabelName()
             elseLabel = self.newLabelName()
@@ -179,7 +261,6 @@ class CilBackend(Visitor):
             self.label(elseLabel)
             self.visitStmtList(node.elseBody)
             self.label(endLabel)
-            self.instr("nop")
 
     def ExprStmt(self, node: ExprStmt):
         self.visit(node.expr)
@@ -193,36 +274,39 @@ class CilBackend(Visitor):
         operator = node.operator
         leftType = node.left.inferredType
         rightType = node.right.inferredType
-        if not self.isListConcat(operator, leftType, rightType):
-            self.visit(node.left)
-            self.visit(node.right)
+        self.visit(node.left)
+        self.visit(node.right)
         if operator == "+":
             if self.isListConcat(operator, leftType, rightType):
-        # var z = new int[x.Length + y.Length];
-        # x.CopyTo(z, 0);
-        # y.CopyTo(z, x.Length);
-        # IL_000f: ldloc.0
-        # IL_0010: ldlen
-        # IL_0011: conv.i4
-        # IL_0012: ldloc.1
-        # IL_0013: ldlen
-        # IL_0014: conv.i4
-        # IL_0015: add
-        # IL_0016: newarr [mscorlib]System.Int32
-        # IL_001b: stloc.2
-        # IL_001c: ldloc.0
-        # IL_001d: ldloc.2
-        # IL_001e: ldc.i4.0
-        # IL_001f: callvirt instance void [mscorlib]System.Array::CopyTo(class [mscorlib]System.Array, int32)
-        # IL_0024: nop
-        # IL_0025: ldloc.1
-        # IL_0026: ldloc.2
-        # IL_0027: ldloc.0
-        # IL_0028: ldlen
-        # IL_0029: conv.i4
-        # IL_002a: callvirt instance void [mscorlib]System.Array::CopyTo(class [mscorlib]System.Array, int32)
-                # TODO
-                pass
+                """
+                var x = new int[];
+                var y = new int[];
+                var z = new int[x.Length + y.Length];
+                x.CopyTo(z, 0);
+                y.CopyTo(z, x.Length);
+                """
+                r = self.newLocal(None, rightType)
+                l = self.newLocal(None, leftType)
+                self.load(l)
+                self.instr("ldlen")
+                self.load(r)
+                self.instr("ldlen")
+                self.instr("add")
+                self.instr("conv.i4")
+                merged_t = self.ts.join(leftType, rightType).elementType
+                self.instr(f"newarr {merged_t.getCILName()}")
+                merged = self.newLocal(None, ListValueType(merged_t))
+                self.load(l)
+                self.load(merged)
+                self.instr("ldc.i4 0")
+                self.instr("callvirt instance void [mscorlib]System.Array::CopyTo(class [mscorlib]System.Array, int32)")
+                self.load(r)
+                self.load(merged)
+                self.load(l)
+                self.instr("ldlen")
+                self.instr("conv.i4")
+                self.instr("callvirt instance void [mscorlib]System.Array::CopyTo(class [mscorlib]System.Array, int32)")
+                self.load(merged)
             elif leftType == StrType():
                 self.instr("call string [mscorlib]System.String::Concat(string, string)")
             elif leftType == IntType():
@@ -277,7 +361,7 @@ class CilBackend(Visitor):
         self.visit(node.index)
         self.instr("conv.i4")
         if node.list.inferredType.isListType():
-            raise Exception("unimplemented")
+            self.arrayLoad(node.list.inferredType.elementType)
         else:
             self.instr("call instance char [mscorlib]System.String::get_Chars(int32)")
             self.instr("ldc.i4.1")
@@ -292,10 +376,10 @@ class CilBackend(Visitor):
             self.instr("ceq")
 
     def CallExpr(self, node: CallExpr):
-        name = node.function.name
+        name = node.function.getCILName()
         if node.isConstructor:
-            raise Exception("unimplemented")
-        if name == "print":
+            self.instr(f"newobj instance void [mscorlib]System.Object::.ctor()")
+        elif name == "print":
             self.emit_print(node.args[0])
         elif name == "len":
             self.emit_len(node.args[0])
@@ -306,16 +390,87 @@ class CilBackend(Visitor):
         else:
             for i in range(len(node.args)):
                 self.visitArg(node.function.inferredType, i, node.args[i])
-            raise Exception("unimplemented")
+            signature = node.function.inferredType.getCILSignature(f"{self.main}::{name}")
+            self.instr(f"call {signature}")
+            if node.function.inferredType.returnType.isNone():
+                self.NoneLiteral(None)  # push null for void return
 
     def ForStmt(self, node: ForStmt):
-        raise Exception("unimplemented")
+        # itr = {expr}, idx = 0
+        self.visit(node.iterable)
+        itr = self.newLocal(None, node.iterable.inferredType)
+        self.instr("ldc.i8 0")
+        idx = self.newLocal(None, IntType())
+        startLabel = self.newLabelName()
+        endLabel = self.newLabelName()
+        self.label(startLabel)
+        # while idx < len(itr)
+        self.load(idx)
+        self.instr("conv.i4")
+        self.load(itr)
+        if node.iterable.inferredType.isListType():
+            self.instr("ldlen")
+        else:
+            self.instr("callvirt instance int32 [mscorlib]System.String::get_Length()")
+        self.instr("conv.i4")
+        self.instr("clt")
+        self.instr(f"brfalse {endLabel}")
+        # x = itr[idx]
+        self.load(itr)
+        self.load(idx)
+        self.instr("conv.i4")
+        if node.iterable.inferredType.isListType():
+            self.arrayLoad(node.iterable.inferredType.elementType)
+        else:
+            self.instr("call instance char [mscorlib]System.String::get_Chars(int32)")
+            self.instr("ldc.i4.1")
+            self.instr("newobj instance void [mscorlib]System.String::.ctor(char, int32)")
+        if self.defaultToGlobals or node.identifier.varInstance.isGlobal:
+            self.instr(
+                f"stsfld {node.identifier.inferredType.getCILName()} {self.main}::{node.identifier.getCILName()}")
+        else:
+            self.store(node.identifier.getCILName())
+        # body
+        self.visitStmtList(node.body)
+        # idx = idx + 1
+        self.load(idx)
+        self.instr("ldc.i8 1")
+        self.instr("add")
+        self.store(idx)
+        self.instr(f"br {startLabel}")
+        self.label(endLabel)
+
+
+        
 
     def ListExpr(self, node: ListExpr):
-        raise Exception("unimplemented")
+        t = node.inferredType
+        length = len(node.elements)
+        self.instr(f"ldc.i4 {length}")
+        elementType = None
+        if isinstance(t, ClassValueType):
+            if node.emptyListType:
+                elementType = node.emptyListType
+            else:
+                elementType = ClassValueType("object")
+        else:
+            elementType = t.elementType
+        self.instr(f"newarr {elementType.getCILName()}")
+        for i in range(len(node.elements)):
+            self.instr("dup")
+            self.instr(f"ldc.i4 {i}")
+            self.visit(node.elements[i])
+            self.arrayStore(elementType)
 
     def WhileStmt(self, node: WhileStmt):
-        raise Exception("unimplemented")
+        startLabel = self.newLabelName()
+        endLabel = self.newLabelName()
+        self.label(startLabel)
+        self.visit(node.condition)
+        self.instr(f"brfalse {endLabel}")
+        self.visitStmtList(node.body)
+        self.instr(f"br {startLabel}")
+        self.label(endLabel)
 
     def buildReturn(self, value: Expr):
         if not self.returnType.isNone():
@@ -330,11 +485,11 @@ class CilBackend(Visitor):
 
     def Identifier(self, node: Identifier):
         if self.defaultToGlobals or node.varInstance.isGlobal:
-            self.instr(f"ldsfld {node.inferredType.getCILName()} {self.main}::{node.name}")
+            self.instr(f"ldsfld {node.inferredType.getCILName()} {self.main}::{node.getCILName()}")
         elif node.varInstance.isNonlocal:
             raise Exception("unimplemented")
         else:
-            self.load(node.name, node.inferredType)
+            self.load(node.getCILName())
 
     def MemberExpr(self, node: MemberExpr):
         raise Exception("unimplemented")
@@ -349,7 +504,6 @@ class CilBackend(Visitor):
         self.label(l1)
         self.visit(node.thenExpr)
         self.label(l2)
-        self.instr("nop")
 
     def MethodCallExpr(self, node: MethodCallExpr):
         raise Exception("unimplemented")
@@ -409,7 +563,7 @@ class CilBackend(Visitor):
         self.instr("throw")
 
     def emit_input(self):
-        self.instr("call string [System.Console]System.Console::ReadLine()")
+        self.instr("call string [mscorlib]System.Console::ReadLine()")
 
     def emit_len(self, arg: Expr):
         t = arg.inferredType
@@ -436,7 +590,7 @@ class CilBackend(Visitor):
 
     def emit_print(self, arg: Expr):
         self.visit(arg)
-        self.instr("call void class [mscorlib]System.Console::WriteLine(string)")
+        self.instr(f"call void class [mscorlib]System.Console::WriteLine({arg.inferredType.getCILName()})")
         self.NoneLiteral(None)
 
     def visitArg(self, funcType, paramIdx: int, arg: Expr):
