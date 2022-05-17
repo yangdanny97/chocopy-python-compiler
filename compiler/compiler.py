@@ -8,6 +8,7 @@ from .closuretransformer import ClosureTransformer
 from .nestedfunchoister import NestedFuncHoister
 from .typesystem import TypeSystem
 from .jvm_backend import JvmBackend
+from .cil_backend import CilBackend
 from .python_backend import PythonBackend
 import ast
 from pathlib import Path
@@ -64,5 +65,11 @@ class Compiler:
         jvm_backend = JvmBackend(main, self.transformer.ts)
         jvm_backend.visit(ast)
         return jvm_backend.classes
-        
+
+    def emitCIL(self, main:str, ast: Node):
+        self.closurepass(ast)
+        EmptyListTyper().visit(ast)
+        cil_backend = CilBackend(main, self.transformer.ts)
+        cil_backend.visit(ast)
+        return cil_backend.builder
     

@@ -197,21 +197,11 @@ class JvmBackend(Visitor):
             else:
                 self.method(d)
         if constructor_def == None:
-            funcDef = FuncDef(node.location, 
-                Identifier(node.location, "__init__"), 
-                [TypedVar(node.location, 
-                        Identifier(node.location, "self"), 
-                        ClassType(node.location, self.currentClass)
-                )], 
-                ClassType(node.location, "<None>"), 
-                var_decls, 
-                [], True
-            )
-            funcDef.type = FuncType([ClassValueType(self.currentClass)], NoneType())
+            funcDef = node.getDefaultConstructor()
             self.constructor(superclass, funcDef)
         self.instr(".end class")
 
-    def funcDefHelper(self, node: FuncDef, isConstructor = False):
+    def funcDefHelper(self, node: FuncDef):
         for i in range(len(node.params)):
             self.newLocalEntry(node.params[i].identifier.name)
         for d in node.declarations:
@@ -237,7 +227,7 @@ class JvmBackend(Visitor):
         # call superclass constructor
         self.instr("aload 0")
         self.instr(f"invokespecial Method {superclass} <init> ()V ")
-        self.funcDefHelper(node, True)
+        self.funcDefHelper(node)
         self.instr(".end code")
         self.currentBuilder().unindent()
         self.instr(".end method")
@@ -375,14 +365,11 @@ class JvmBackend(Visitor):
         operator = node.operator
         leftType = node.left.inferredType
         rightType = node.right.inferredType
-        if not self.isListConcat(operator, leftType, rightType):
-            self.visit(node.left)
-            self.visit(node.right)
+        self.visit(node.left)
+        self.visit(node.right)
         # concatenation and addition
         if operator == "+":
             if self.isListConcat(operator, leftType, rightType):
-                self.visit(node.left)
-                self.visit(node.right)
                 self.instr("dup2")
                 arrR = self.newLocal(None, True)
                 # stack is L, R, L

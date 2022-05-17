@@ -17,6 +17,7 @@ def run_all_tests():
     run_python_backend_tests()
     run_closure_tests()
     run_jvm_tests()
+    run_cil_tests()
 
 def run_parse_tests():
     print("Running parser tests...\n")
@@ -167,6 +168,26 @@ def run_jvm_tests():
     else:
         print("\nNot all test cases passed. Please run `make clean` after inspecting the output")
     print("\nPassed {:d} out of {:d} JVM backend test cases\n".format(n_passed, total))
+
+def run_cil_tests():
+    print("Running CIL backend tests...\n")
+    total = 0
+    n_passed = 0
+    cil_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
+    for test in cil_tests_dir.glob('*.py'):
+        passed = run_cil_test(test)
+        total += 1
+        if not passed:
+            print("Failed: "+ str(test) + "\n")
+        else:
+            n_passed += 1
+    if total == n_passed:
+        subprocess.run("cd {} && rm -f *.cil && rm -f *.exe".format(
+            str(Path(__file__).parent.resolve())
+        ), shell=True)
+    else:
+        print("\nNot all test cases passed. Please run `make clean` after inspecting the output")
+    print("\nPassed {:d} out of {:d} CIL backend test cases\n".format(n_passed, total))
 
 def run_parse_test(test, bad=True)->bool:
     # if bad=True, then test cases prefixed with bad are expected to fail
@@ -356,6 +377,49 @@ def run_jvm_test(test)->bool:
     try:
         assembler_commands = ["python3 ../Krakatau/assemble.py -q ./{}.j".format(cls) for cls in jvm_emitters]
         output = subprocess.check_output("cd {} && {} && java -cp . {}".format(
+            str(Path(__file__).parent.resolve()),
+            " && ".join(assembler_commands),
+            str(test.name[:-3])
+        ), shell=True)
+        lines = output.decode().split("\n")
+        for l in lines:
+            for e in error_flags:
+                if e in l:
+                    passed = False
+                    print(l)
+                    break
+    except Exception as e:
+        print(e)
+        return False
+    return passed
+
+def run_cil_test(test)->bool:
+    passed = True
+    try:
+        infile_name = str(test)[:-3].split("/")[-1]
+        outdir = "./"
+        compiler = Compiler()
+        astparser = compiler.parser
+        ast = compiler.parse(test)
+        if len(astparser.errors) > 0:
+            return False
+        compiler.typecheck(ast)
+        if len(ast.errors.errors) > 0:
+            print(ast.errors.toJSON(False))
+            return False
+        cil_emitter = compiler.emitCIL(infile_name, ast)
+        fname = outdir + cil_emitter.name + ".cil"
+        with open(fname, "w") as f:
+            f.write(cil_emitter.emit()) 
+    except Exception as e:
+        print("Internal compiler error:", test)
+        track = traceback.format_exc()
+        print(e)
+        print(track)
+        return False
+    try:
+        assembler_commands = ["ilasm {}.cil".format(str(test.name[:-3]))]
+        output = subprocess.check_output("cd {} && {} && mono {}.exe".format(
             str(Path(__file__).parent.resolve()),
             " && ".join(assembler_commands),
             str(test.name[:-3])

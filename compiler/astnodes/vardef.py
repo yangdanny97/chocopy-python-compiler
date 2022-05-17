@@ -4,11 +4,12 @@ from .typedvar import TypedVar
 
 class VarDef(Declaration):
 
-    def __init__(self, location:[int], var:TypedVar, value:Expr, isAttr:bool=False):
+    def __init__(self, location:[int], var:TypedVar, value:Expr, isAttr:bool=False, attrOfClass=None):
         super().__init__(location, "VarDef")
         self.var = var
         self.value = value
         self.isAttr = isAttr
+        self.attrOfClass = attrOfClass
 
     def preorder(self, visitor):
         visitor.VarDef(self)
@@ -30,3 +31,6 @@ class VarDef(Declaration):
 
     def getIdentifier(self):
         return self.var.identifier
+
+    def getName(self)->str:
+        return self.var.identifier.name

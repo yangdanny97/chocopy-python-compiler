@@ -1,22 +1,35 @@
 # chocopy-python-compiler
 
-An ahead-of-time compiler for Chocopy, written entirely in Python. [Chocopy](https://chocopy.org/) is a subset of Python 3.6 that is used as a teaching language for Berkeley's compilers course, and has a reference implementation targeting RISC-V written in Java. It includes a relatively large set of features from Python, such as: lists, classes, methods, nested functions, and nonlocals.
+Ahead-of-time compiler for [Chocopy](https://chocopy.org/), a subset of Python 3.6 with type annotations static type checking. 
 
-This project is mostly a tool for me to learn/practice compiler writing, and I plan to extend it with additional backends if/when I have time. I hope that this project will also become a useful educational reference for other people. 
+Chocopy is used in compiler courses at several universities. This project has no relation to those courses, and is purely for my own learning/practice/fun. 
 
 Progress is documented on my [blog](https://yangdanny97.github.io/blog/):
 - [Part 1: Frontend/Typechecker](https://yangdanny97.github.io/blog/2020/05/29/chocopy-typechecker)
 - [Part 2: JVM backend](https://yangdanny97.github.io/blog/2021/08/26/chocopy-jvm-backend)
+- Part 3: CIL backend - coming soon!
 
-This compiler's frontend matches the functionality of the first 2 passes (parsing & typechecking) Chocopy's reference compiler implementation, and outputs the AST in a JSON format that is compatible with the reference implementation. That means that you can parse and typecheck the Chocopy file with this compiler, then use the reference implementation's backend to handle assembly code generation.
+## Features
 
-This compiler currently supports 2 backends, which are not found in the reference implementation: 
+This compiler is written entirely in Python. Since Chocopy is itself a subset of Python, lexing and parsing can be entirely handled by Python's `ast` module.
+
+This compiler matches the functionality of the first 2 passes (parsing & typechecking) Chocopy's reference compiler implementation, and outputs the AST in a JSON format that is compatible with the reference implementation's backend. That means that you can parse and typecheck the Chocopy file with this compiler, then use the reference implementation's backend to handle assembly code generation.
+
+Additionally, this compiler contains 2 backends not found in the reference implementation: 
 - Untyped Python 3 source code
 - JVM bytecode, formatted for the Krakatau assembler
+- CIL bytecode, formatted for the Mono ilasm assembler
 
-## Requires:
+The test suite includes both static validation of generated/annotated ASTs, as well as runtime tests that actually execute the output programs to check correctness. Many of the AST validation test cases are taken from test suites included in the release code for Berkeley's CS164, with some additional tests written for more coverage.
+
+## Requirements:
 - Python 3.6 - 3.8
-- [Krakatau assembler](https://github.com/Storyyeller/Krakatau) (only if you want to use the JVM backend)
+- JVM Backend Requirements:
+  - [Krakatau JVM Assembler](https://github.com/Storyyeller/Krakatau)
+  - Tested with Java 8
+- CIL Backend Requirements:
+  - [Mono](https://www.mono-project.com/)
+  - Tested with Mono 6.12
 
 ## Usage
 
@@ -26,6 +39,7 @@ The input file should have extension `.py`. If the output file is not provided, 
 - AST JSON outputs will be written to a file of the same name/location as the input file, with extension `.py.ast`
 - Python source outputs will be written to a file of the same name/location as the input file, with extension `.out.py`
 - JVM outputs will be written to the same location as the input file, with the extension `.j`
+- CIL outputs will be written to the same location as the input file, with the extension `.cil`
 
 **Flags:**
 
@@ -39,6 +53,7 @@ The input file should have extension `.py`. If the output file is not provided, 
     - `python` - output untyped Python 3 source code
     - `hoist` - output untyped Python 3 source code w/o nonlocals or nested function definitions
     - `jvm` - output JVM bytecode formatted for the Krakatau assembler
+    - `cil` - output CIL bytecode formatted for the Mono ilasm assembler
 
 ## Differences from the reference implementation:
 
@@ -61,17 +76,44 @@ The JVM backend for this compiler outputs JVM bytecode in plaintext formatted fo
     - Example: `java -cp <output dir> <input file name with no extensions>`
     - Example: `java -cp . binary_tree`
 
-The `compile_jvm.sh` script is a useful utility to compile and run files with the JVM backend with a single command (provide the path to the input source file as an argument). 
-- To run the same example as above, run `./compile_jvm.sh tests/runtime/binary_tree.py`
+The `demo_jvm.sh` script is a useful utility to compile and run files with the JVM backend with a single command (provide the path to the input source file as an argument). 
+- To run the same example as above, run `./demo_jvm.sh tests/runtime/binary_tree.py`
 
-Note that in the above example commands & the `compile_jvm.sh` script all expect the Krakatau directory and this repository's directory to share the same parent - commands will differ if you cloned Krakatau to a different location.
+Note that in the above example commands & the `demo_jvm.sh` script all expect the Krakatau directory and this repository's directory to share the same parent - commands will differ if you cloned Krakatau to a different location.
 
-### JVM Backend - Known Issues:
-- Since bytecode for each class is stored in a separate file, on operating systems with case-insensitive file names (like MacOS) you cannot have 2 classes whose names only differ by case.
-- Since the main JVM class for a Chocopy program shares the name of the file, do not define classes with the same name as the source file.
+### JVM Backend - Known Issues/Incompatibilities:
+
+- Since bytecode for each class is stored in a separate file, on operating systems with case-insensitive file names you cannot have 2 classes whose names only differ by case.
+- Since the main JVM class for a Chocopy program shares the name of the file, do not define other classes with the same name as the source file.
 - The special parameter `self` in methods and constructors may not be referenced by a `nonlocal` declaration. The Java equivalent, `this`, is final and cannot be assigned to.
-- Some large programs may cause the JVM to run out of stack space, since each frame currently has a maximum stack size of 500.
+- Some large programs may cause the JVM to run out of stack space, since each frame currently has a hardcoded maximum stack size of 500.
+- Integers are compiled to regular ints instead of longs, so this backend will not work on 32-bit JVMs.
 
-## Test Suite
+## CIL Backend Notes:
+
+The CIL backend for this compiler outputs CIL bytecode in plaintext formatted for the Mono ilsam assembler:
+1. Use this compiler to generate plaintext bytecode 
+    - Format:  `python3 main.py --mode cil <input file> <output dir>`
+    - Example: `python3 main.py --mode cil tests/runtime/binary_tree.py .`
+2. Run the ilasm assembler to generate `.exe` files - note that this must be done for EACH .cil file generated by the compiler
+    - Format:  `ilasm <.cil file>`
+    - Example: `ls *.cil | xargs -L1 ilasm`
+3. Run the `.exe` files
+    - Example: `mono <.exe file>`
+    - Example: `mono binary_tree.exe`
+
+The `demo_cil.sh` script is a useful utility to compile and run files with the CIL backend with a single command (provide the path to the input source file as an argument). 
+- To run the same example as above, run `./demo_cil.sh tests/runtime/binary_tree.py`
+
+## FAQ
+
+- What is this for?
+  - The primary goal of the project is for me to practice compiler implementation. The secondary goal is to provide a reference to anyone else who is interested in the topics I explore through working on this project - I go into more detail about each part of the compiler on my blog. 
+- Why Chocopy?
+  - It has a detailed spec and is a relatively small language while being non-trivial enough to offer interesting compiler implementation problems. 
+- Why not design your own language?
+  - This project is focused on compiler implementation. I want to keep the project very focused and make each addition manageable so that I can make progress in my very limited spare time.
+- Why implement this in Python?
+  - Since Chocopy is a subset of Python, implementing the compiler in Python means I do not have to write my own lexer and parser. This was explicitly something I wanted to experiment with while writing the frontend, and it worked wonderfully. The secondary reason is that writing it in Python means I can prototype new ideas faster. The lack of type safety in the compiler codebase is mitigated by an extensive test suite.
 
 Most of the test cases are taken from test suites included in the release code for CS164, with some additional tests written for more coverage. Tests include both static validation of generated/annotated ASTs, as well as runtime tests that check the correctness of output code. The runtime test suite for the JVM backend were evaluated using Java 8 on my local machine.

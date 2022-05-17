@@ -43,3 +43,6 @@ __assert__(f7() == 5)
 __assert__(f8(0) == 0)
 __assert__(f8(1) == 1)
 __assert__(f8(f7()) == 5)
+
+print(1)
+print(True)

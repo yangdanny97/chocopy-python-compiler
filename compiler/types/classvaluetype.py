@@ -64,6 +64,28 @@ class ClassValueType(ValueType):
                 return self.className
         else:
             return self.className
+
+    def getCILSignature(self):
+        if self.className == "<None>":
+            return "void"
+        else:
+            return self.getCILName()
+
+    def getCILName(self):
+        if self.className == "bool":
+            return "bool"
+        elif self.className == "str":
+            return "string"
+        elif self.className == "object":
+            return "object"
+        elif self.className == "<None>":
+            return "object"
+        elif self.className == "<Empty>":
+            return "object[]"
+        elif self.className == "int":
+            return "int64"
+        else:
+            return "class "+self.className
     
     def __str__(self):
         return self.className

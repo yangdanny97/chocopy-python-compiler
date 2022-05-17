@@ -1,6 +1,8 @@
 clean:
 	rm -f *.j
 	rm -f *.class
+	rm -f *.cil
+	rm -f *.exe
 	rm -f *.ast
 	rm -f *.ast.typed
 	rm -f *.test.py
