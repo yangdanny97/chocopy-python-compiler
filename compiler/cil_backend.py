@@ -166,11 +166,8 @@ class CilBackend(Visitor):
             func.name.name = ".ctor"
             # add call to parent constructor after child field initialization
             # before other constructor statements
-            call = CallExpr(func.location, Identifier(func.location, node.superclass.getCILName()), [])
-            call.isConstructor = True
-            parentCall = ExprStmt(func.location, call)
-            func.statements.insert(0, parentCall)
-            self.FuncDef(func, "specialname rtspecialname instance", True)
+            self.FuncDef(func, "specialname rtspecialname instance",
+                         node.superclass.getCILName())
 
         func_decls = [d for d in node.declarations if isinstance(d, FuncDef)]
         var_decls = [d for d in node.declarations if isinstance(d, VarDef)]
@@ -195,7 +192,7 @@ class CilBackend(Visitor):
             else:
                 # method
                 d.type = d.type.dropFirstParam()
-                self.FuncDef(d, "virtual instance", True)
+                self.FuncDef(d, "virtual instance")
         if constructor_def == None:
             # give a default constructor if none exists
             funcDef = node.getDefaultConstructor()
@@ -214,7 +211,7 @@ class CilBackend(Visitor):
             locals.newLine(sortedDecls[i].decl() + comma)
         locals.unindent().newLine(")")
 
-    def FuncDef(self, node: FuncDef, funcType: str = "static", isMethod: bool = False):
+    def FuncDef(self, node: FuncDef, funcType: str = "static", superConstructor=None):
         self.instr(f".method public hidebysig {funcType}")
         self.instr(
             f"{node.type.getCILSignature(node.name.getCILName())} cil managed")
@@ -232,6 +229,9 @@ class CilBackend(Visitor):
         self.returnType = node.type.returnType
 
         # handle last return
+        if superConstructor:
+            self.instr("ldarg.0")
+            self.instr(f"call instance void {superConstructor}::.ctor()")
         self.visitStmtList(node.statements)
         hasReturn = False
         for s in node.statements:
