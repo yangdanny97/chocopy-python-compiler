@@ -83,23 +83,23 @@ b:Nonlocals = None
 # nonlocals can be mutated 
 __assert__(test(1) == 2)
 
-# __assert__(test3() == 3)
+__assert__(test3() == 3)
 
 
-# # nonlocals passed into functions cannot be mutated
-# a = 0
-# test9(a)
-# __assert__(a == 0)
+# nonlocals passed into functions cannot be mutated
+a = 0
+test9(a)
+__assert__(a == 0)
 
-# # array idx's can be mutated w/o nonlocal
-# test7()
+# array idx's can be mutated w/o nonlocal
+test7()
 
-# test10()
+test10()
 
-# a = 0
-# b = Nonlocals()
-# b.testMethod(a)
-# b.testMethod(0)
-# __assert__(a == 0)
-# b.testMethod(1)
-# b.testMethod4()
+a = 0
+b = Nonlocals()
+b.testMethod(a)
+b.testMethod(0)
+__assert__(a == 0)
+b.testMethod(1)
+b.testMethod4()

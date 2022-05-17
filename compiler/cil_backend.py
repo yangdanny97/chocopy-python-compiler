@@ -269,7 +269,7 @@ class CilBackend(Visitor):
                     f"stsfld {target.inferredType.getCILName()} {self.main}::{target.getCILName()}")
             elif target.varInstance.isNonlocal:
                 temp = self.newLocal(None, target.inferredType)
-                self.visit(target)
+                self.load(target.name)
                 self.instr("ldc.i4 0")
                 self.load(temp)
                 self.arrayStore(target.inferredType)

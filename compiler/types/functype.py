@@ -21,7 +21,15 @@ class FuncType(SymbolType):
         return f
 
     def getCILSignature(self, name: str)->str:
-        paramSig = ", ".join([t.getCILSignature() for t in self.parameters])
+        params = []
+        for i in range(len(self.parameters)):
+            p = self.parameters[i]
+            if i in self.refParams and isinstance(p, ClassValueType):
+                sig = p.getCILSignature() + "[]"
+            else:
+                sig = p.getCILSignature()
+            params.append(sig)
+        paramSig = ", ".join(params)
         return f"{self.returnType.getCILSignature()} {name}({paramSig})"
 
     def getJavaSignature(self)->str:
