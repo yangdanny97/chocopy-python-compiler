@@ -1,6 +1,6 @@
 from .expr import Expr
 
-CIL_KEYWORDS = set(["char", "value"] +
+CIL_KEYWORDS = set(["char", "value", "int32", "int64", "string", "long", "null"] +
                      ["add",
                       "and",
                       "any",
