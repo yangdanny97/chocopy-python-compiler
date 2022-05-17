@@ -71,5 +71,5 @@ class Compiler:
         EmptyListTyper().visit(ast)
         cil_backend = CilBackend(main, self.transformer.ts)
         cil_backend.visit(ast)
-        return cil_backend.classes
+        return cil_backend.builder
     

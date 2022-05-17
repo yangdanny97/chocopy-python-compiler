@@ -115,16 +115,14 @@ def main():
                     out_msg(fname, args.verbose)
                     f.write(jvm_emitter.emit())      
     elif args.mode == "cil":
-        cil_emitters = compiler.emitCIL(infile_name, tree)
-        for cls in cil_emitters:
-            cil_emitter = cil_emitters[cls]
-            if args.should_print:
-                print(cil_emitter.emit())
-            else: 
-                fname = outdir + cls + ".cil"
-                with open(fname, "w") as f:
-                    out_msg(fname, args.verbose)
-                    f.write(cil_emitter.emit())    
+        cil_emitter = compiler.emitCIL(infile_name, tree)
+        if args.should_print:
+            print(cil_emitter.emit())
+        else: 
+            fname = outdir + cil_emitter.name + ".cil"
+            with open(fname, "w") as f:
+                out_msg(fname, args.verbose)
+                f.write(cil_emitter.emit())    
 
 if __name__ == "__main__":
     main()

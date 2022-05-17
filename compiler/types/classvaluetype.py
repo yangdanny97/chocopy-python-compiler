@@ -85,7 +85,7 @@ class ClassValueType(ValueType):
         elif self.className == "int":
             return "int64"
         else:
-            return self.className
+            return "class "+self.className
     
     def __str__(self):
         return self.className
