@@ -253,7 +253,9 @@ class CilBackend(Visitor):
             self.instr(
                 f"stfld {node.var.t.getCILName()} {className.getCILName()}::{node.getIdentifier().getCILName()}")
         elif node.var.varInstance.isNonlocal:
-            raise Exception("unimplemented")
+            elementType = node.var.t
+            self.wrap(node.value, elementType)
+            self.newLocal(varName, ListValueType(elementType))
         else:
             self.visit(node.value)
             self.newLocal(varName, node.var.t)
@@ -266,7 +268,11 @@ class CilBackend(Visitor):
                 self.instr(
                     f"stsfld {target.inferredType.getCILName()} {self.main}::{target.getCILName()}")
             elif target.varInstance.isNonlocal:
-                raise Exception("unimplemented")
+                temp = self.newLocal(None, target.inferredType)
+                self.visit(target)
+                self.instr("ldc.i4 0")
+                self.load(temp)
+                self.arrayStore(target.inferredType)
             else:
                 self.store(target.getCILName())
         elif isinstance(target, IndexExpr):
@@ -550,7 +556,9 @@ class CilBackend(Visitor):
             self.instr(
                 f"ldsfld {node.inferredType.getCILName()} {self.main}::{node.getCILName()}")
         elif node.varInstance.isNonlocal:
-            raise Exception("unimplemented")
+            self.load(node.name)
+            self.instr("ldc.i4 0")
+            self.arrayLoad(node.inferredType)
         else:
             self.load(node.getCILName())
 
@@ -674,5 +682,22 @@ class CilBackend(Visitor):
         self.NoneLiteral(None)
 
     def visitArg(self, funcType, paramIdx: int, arg: Expr):
-        self.visit(arg)
-        # TODO
+        argIsRef = isinstance(arg, Identifier) and arg.varInstance.isNonlocal
+        paramIsRef = paramIdx in funcType.refParams
+        if argIsRef and paramIsRef and arg.varInstance == funcType.refParams[paramIdx]: 
+            # ref arg and ref param, pass ref arg
+            self.load(arg.name)
+        elif paramIsRef:
+            # non-ref arg and ref param, or do not pass ref arg
+            # unwrap if necessary, re-wrap
+            self.wrap(arg, arg.inferredType)
+        else: # non-ref param, maybe unwrap
+            self.visit(arg)
+
+    def wrap(self, val:Expr, elementType:ValueType):
+        self.instr("ldc.i4 1")
+        self.instr(f"newarr {elementType.getCILName()}")
+        self.instr("dup")
+        self.instr("ldc.i4 0")
+        self.visit(val)
+        self.arrayStore(elementType)
