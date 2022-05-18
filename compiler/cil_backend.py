@@ -1,9 +1,8 @@
-from cmath import log
 from .astnodes import *
 from .types import *
 from .builder import Builder
 from .typesystem import TypeSystem
-from .visitor import Visitor
+from .visitor import CommonVisitor
 from collections import defaultdict
 import json
 
@@ -19,18 +18,15 @@ class CilStackLoc:
         return f"[{self.loc}] {self.t} {self.name}"
 
 
-class CilBackend(Visitor):
+class CilBackend(CommonVisitor):
+    stackLimit = 500
+    defaultToGlobals = False  # treat all vars as global if this is true
 
     def __init__(self, main: str, ts: TypeSystem):
         self.builder = Builder(main)
         self.main = main  # name of main class
-        self.locals = [defaultdict(lambda: None)]
-        self.counter = 0  # for labels
-        self.returnType = None
-        self.localLimit = 50
-        self.stackLimit = 500
         self.ts = ts
-        self.defaultToGlobals = False  # treat all vars as global if this is true
+        self.enterScope()
 
     def indent(self):
         self.instr("{")
@@ -40,11 +36,8 @@ class CilBackend(Visitor):
         self.builder.unindent()
         self.instr("}")
 
-    def visit(self, node: Node):
-        node.visit(self)
-
-    def instr(self, instr: str):
-        self.builder.newLine(instr)
+    def currentBuilder(self):
+        return self.builder
 
     def newLabelName(self) -> str:
         self.counter += 1
@@ -54,15 +47,6 @@ class CilBackend(Visitor):
         self.builder.unindent()
         self.instr(name+": nop")
         self.builder.indent()
-
-    def enterScope(self):
-        self.locals.append(defaultdict(lambda: None))
-
-    def exitScope(self):
-        self.locals.pop()
-
-    def wrap(self, val: Expr, elementType: ValueType):
-        raise Exception("unimplemented")
 
     def store(self, name: str):
         n = self.locals[-1][name]
@@ -138,7 +122,7 @@ class CilBackend(Visitor):
             ".method public static hidebysig default void Main (string[] args)  cil managed")
         self.indent()
         self.instr(".entrypoint")
-        self.instr(f".maxstack {self.localLimit}")
+        self.instr(f".maxstack {self.stackLimit}")
         locals = self.builder.newBlock()
         self.defaultToGlobals = True
         for v in var_decls:
@@ -216,7 +200,7 @@ class CilBackend(Visitor):
         self.instr(
             f"{node.type.getCILSignature(node.name.getCILName())} cil managed")
         self.indent()
-        self.instr(f".maxstack {self.localLimit}")
+        self.instr(f".maxstack {self.stackLimit}")
         self.enterScope()
 
         # initialize locals
@@ -609,28 +593,6 @@ class CilBackend(Visitor):
 
     def StringLiteral(self, node: StringLiteral):
         self.instr(f"ldstr {json.dumps(node.value)}")
-
-    # TYPES
-
-    def TypedVar(self, node: TypedVar):
-        pass
-
-    def ListType(self, node: ListType):
-        pass
-
-    def ClassType(self, node: ClassType):
-        pass
-
-    def emit(self) -> str:
-        return self.builder.emit()
-
-    # SUGAR
-
-    def NonLocalDecl(self, node: NonLocalDecl):
-        pass
-
-    def GlobalDecl(self, node: GlobalDecl):
-        pass
 
     # BUILT-INS - note: these are in-lined
     def emit_assert(self, arg: Expr):

@@ -2,34 +2,26 @@ from .astnodes import *
 from .types import *
 from .builder import Builder
 from .typesystem import TypeSystem
-from .visitor import Visitor
+from .visitor import CommonVisitor
 from collections import defaultdict
 import json
 
 
-class JvmBackend(Visitor):
+class JvmBackend(CommonVisitor):
+    classes = dict()
+    localLimit = 50
+    stackLimit = 500
+    defaultToGlobals = False  # treat all vars as global if this is true
 
     def __init__(self, main: str, ts: TypeSystem):
-        self.classes = dict()
         self.classes[main] = Builder(main)
         self.currentClass = main
         self.main = main  # name of main class
-        self.locals = [defaultdict(lambda: None)]
-        self.counter = 0  # for labels
-        self.returnType = None
-        self.localLimit = 50
-        self.stackLimit = 500
         self.ts = ts
-        self.defaultToGlobals = False  # treat all vars as global if this is true
+        self.enterScope()
 
     def currentBuilder(self):
         return self.classes[self.currentClass]
-
-    def visit(self, node: Node):
-        node.visit(self)
-
-    def instr(self, instr: str):
-        self.currentBuilder().newLine(instr)
 
     def newLabelName(self) -> str:
         self.counter += 1
@@ -39,12 +31,6 @@ class JvmBackend(Visitor):
         self.currentBuilder().unindent()
         self.instr(name+":")
         self.currentBuilder().indent()
-
-    def enterScope(self):
-        self.locals.append(defaultdict(lambda: None))
-
-    def exitScope(self):
-        self.locals.pop()
 
     def returnInstr(self, exprType: ValueType):
         if exprType.isJavaRef():
@@ -653,28 +639,6 @@ class JvmBackend(Visitor):
 
     def StringLiteral(self, node: StringLiteral):
         self.instr(f"ldc {json.dumps(node.value)}")
-
-    # TYPES
-
-    def TypedVar(self, node: TypedVar):
-        pass
-
-    def ListType(self, node: ListType):
-        pass
-
-    def ClassType(self, node: ClassType):
-        pass
-
-    def emit(self) -> str:
-        return self.currentBuilder().emit()
-
-    # SUGAR
-
-    def NonLocalDecl(self, node: NonLocalDecl):
-        pass
-
-    def GlobalDecl(self, node: GlobalDecl):
-        pass
 
     # BUILT-INS - note: these are in-lined
     def emit_assert(self, arg: Expr):
