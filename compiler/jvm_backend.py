@@ -8,12 +8,12 @@ import json
 
 
 class JvmBackend(CommonVisitor):
-    classes = dict()
     localLimit = 50
     stackLimit = 500
     defaultToGlobals = False  # treat all vars as global if this is true
 
     def __init__(self, main: str, ts: TypeSystem):
+        self.classes  = dict()
         self.classes[main] = Builder(main)
         self.currentClass = main
         self.main = main  # name of main class
