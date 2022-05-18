@@ -2,9 +2,9 @@ from unicodedata import name
 
 
 class Builder:
-    def __init__(self, name:str):
+    def __init__(self, name: str):
         self.name = name
-        self.lines = [] # list of strings or children builders
+        self.lines = []  # list of strings or children builders
         self.indentation = 0
 
     def newLine(self, line=""):
@@ -32,7 +32,7 @@ class Builder:
         self.indentation -= 1
         return self
 
-    def emit(self)->str:
+    def emit(self) -> str:
         lines = []
         for l in self.lines:
             if isinstance(l, str):

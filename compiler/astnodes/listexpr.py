@@ -1,8 +1,9 @@
 from .expr import Expr
 
+
 class ListExpr(Expr):
 
-    def __init__(self, location:[int], elements:[Expr]):
+    def __init__(self, location: [int], elements: [Expr]):
         super().__init__(location, "ListExpr")
         self.elements = elements
         self.emptyListType = None
@@ -25,5 +26,3 @@ class ListExpr(Expr):
         d = super().toJSON(dump_location)
         d["elements"] = [e.toJSON(dump_location) for e in self.elements]
         return d
-
-

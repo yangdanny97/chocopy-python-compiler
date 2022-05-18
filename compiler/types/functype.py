@@ -2,12 +2,13 @@ from compiler.types.classvaluetype import ClassValueType
 from .valuetype import ValueType
 from .symboltype import SymbolType
 
+
 class FuncType(SymbolType):
-    def __init__(self, parameters:[ValueType], returnType:ValueType):
+    def __init__(self, parameters: [ValueType], returnType: ValueType):
         self.parameters = parameters
         self.returnType = returnType
         self.refParams = {}
-        self.freevars = [] # used in AST transformations, not printed out
+        self.freevars = []  # used in AST transformations, not printed out
 
     def __eq__(self, other):
         if isinstance(other, FuncType):
@@ -20,7 +21,7 @@ class FuncType(SymbolType):
         f.freevars = self.freevars
         return f
 
-    def getCILSignature(self, name: str)->str:
+    def getCILSignature(self, name: str) -> str:
         params = []
         for i in range(len(self.parameters)):
             p = self.parameters[i]
@@ -32,7 +33,7 @@ class FuncType(SymbolType):
         paramSig = ", ".join(params)
         return f"{self.returnType.getCILSignature()} {name}({paramSig})"
 
-    def getJavaSignature(self)->str:
+    def getJavaSignature(self) -> str:
         r = None
         if self.returnType.isNone():
             r = "V"
@@ -59,7 +60,7 @@ class FuncType(SymbolType):
     def __str__(self):
         paramStr = ",".join([str(t) for t in self.parameters])
         return F"[{paramStr}]->{self.returnType}"
-    
+
     def __hash__(self):
         paramStr = ",".join([str(t) for t in self.parameters])
         return (F"[{paramStr}]->{self.returnType}").__hash__()

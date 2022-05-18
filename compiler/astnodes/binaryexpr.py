@@ -1,8 +1,9 @@
 from .expr import Expr
 
+
 class BinaryExpr(Expr):
 
-    def __init__(self, location:[int], left:Expr, operator:str, right:Expr):
+    def __init__(self, location: [int], left: Expr, operator: str, right: Expr):
         super().__init__(location, "BinaryExpr")
         self.left = left
         self.right = right
@@ -28,5 +29,3 @@ class BinaryExpr(Expr):
         d["right"] = self.right.toJSON(dump_location)
         d["operator"] = self.operator
         return d
-
-

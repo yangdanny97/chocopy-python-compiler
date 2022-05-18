@@ -1,9 +1,10 @@
 from .expr import Expr
 from .memberexpr import MemberExpr
 
+
 class MethodCallExpr(Expr):
 
-    def __init__(self, location:[int], method:MemberExpr, args:[Expr]):
+    def __init__(self, location: [int], method: MemberExpr, args: [Expr]):
         super().__init__(location, "MethodCallExpr")
         self.method = method
         self.args = args
@@ -29,5 +30,3 @@ class MethodCallExpr(Expr):
         d["method"] = self.method.toJSON(dump_location)
         d["args"] = [a.toJSON(dump_location) for a in self.args]
         return d
-
-

@@ -127,10 +127,12 @@ class Parser(NodeVisitor):
         location = self.getLocation(node)
         identifier = Identifier([location[0], location[1] + 6], node.name)
         if len(node.bases) > 1:
-            raise ParseError("Multiple inheritance is unsupported", node.bases[1])
+            raise ParseError(
+                "Multiple inheritance is unsupported", node.bases[1])
         base = None
         if len(node.bases) == 0:
-            base = Identifier([location[0], location[1] + 7 + len(node.name)], "object")
+            base = Identifier([location[0], location[1] +
+                               7 + len(node.name)], "object")
         else:
             base = self.visit(node.bases[0])
         if node.keywords:

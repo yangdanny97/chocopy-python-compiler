@@ -1,8 +1,9 @@
 from .node import Node
 
+
 class CompilerError(Node):
 
-    def __init__(self, location:[int], message:str, syntax:bool=False):
+    def __init__(self, location: [int], message: str, syntax: bool = False):
         super().__init__(location, "CompilerError")
         self.message = message
         self.syntax = syntax

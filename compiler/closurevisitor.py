@@ -3,15 +3,18 @@ from .types import *
 from .visitor import Visitor
 from .varcollector import VarCollector
 
+
 class VarInstance:
     def __init__(self):
         self.isNonlocal = False
         self.isGlobal = False
         self.isSelf = False
 
-def newInstance(tv: TypedVar)->VarInstance:
+
+def newInstance(tv: TypedVar) -> VarInstance:
     tv.varInstance = VarInstance()
     return tv.varInstance
+
 
 def merge(d1, d2):
     combined = {}
@@ -21,7 +24,8 @@ def merge(d1, d2):
         combined[k] = d2[k]
     return combined
 
-def deduplicate(ids:[Identifier])->[Identifier]:
+
+def deduplicate(ids: [Identifier]) -> [Identifier]:
     seen = set()
     res = []
     for i in ids:
@@ -41,10 +45,10 @@ class ClosureVisitor(Visitor):
 
     def __init__(self):
         self.globals = {}
-        self.nonlocals = [] # uncaptured nonlocals
+        self.nonlocals = []  # uncaptured nonlocals
         self.decls = []
 
-    def getInstance(self, name:str)->VarInstance:
+    def getInstance(self, name: str) -> VarInstance:
         for i in self.decls[::-1]:
             if name in i:
                 return i[name]
@@ -89,11 +93,12 @@ class ClosureVisitor(Visitor):
             elif isinstance(d, NonLocalDecl):
                 varInstance = self.getInstance(d.variable.name)
                 if varInstance.isSelf:
-                    raise Exception("Special parameter 'self' may not be used in a nonlocal declaration")
+                    raise Exception(
+                        "Special parameter 'self' may not be used in a nonlocal declaration")
                 varInstance.isNonlocal = True
             elif isinstance(d, VarDef):
                 decls[d.getIdentifier().name] = newInstance(d.var)
-        
+
         self.decls.append(decls)
         vars = VarCollector().getVarsFromList(node.statements)
         freevars = []
@@ -112,11 +117,6 @@ class ClosureVisitor(Visitor):
         node.freevars = deduplicate(freevars)
         # remove nonlocal decls
         node.declarations = [
-            d for d in node.declarations 
+            d for d in node.declarations
             if not isinstance(d, NonLocalDecl)
         ]
-
-
-
-
-

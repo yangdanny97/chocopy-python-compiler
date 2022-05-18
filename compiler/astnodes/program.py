@@ -4,9 +4,11 @@ from .stmt import Stmt
 from .errors import Errors
 
 # root AST for source file
+
+
 class Program(Node):
 
-    def __init__(self, location:[int], declarations:[Declaration], statements:[Stmt], errors:Errors):
+    def __init__(self, location: [int], declarations: [Declaration], statements: [Stmt], errors: Errors):
         super().__init__(location, "Program")
         self.declarations = [d for d in declarations if d is not None]
         self.statements = [s for s in statements if s is not None]
@@ -32,8 +34,8 @@ class Program(Node):
 
     def toJSON(self, dump_location=True):
         d = super().toJSON(dump_location)
-        d['declarations'] = [d.toJSON(dump_location) for d in self.declarations]
+        d['declarations'] = [d.toJSON(dump_location)
+                             for d in self.declarations]
         d['statements'] = [s.toJSON(dump_location) for s in self.statements]
         d['errors'] = self.errors.toJSON(dump_location)
         return d
-

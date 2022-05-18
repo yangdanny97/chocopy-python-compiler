@@ -4,6 +4,7 @@ from .typedvar import TypedVar
 from .typeannotation import TypeAnnotation
 from .stmt import Stmt
 
+
 class FuncDef(Declaration):
 
     # The AST for
@@ -11,8 +12,8 @@ class FuncDef(Declaration):
     #         DECLARATIONS
     #         STATEMENTS
 
-    def __init__(self, location:[int], name:Identifier, params:[TypedVar], returnType:TypeAnnotation, 
-        declarations:[Declaration], statements:[Stmt], isMethod:bool = False):
+    def __init__(self, location: [int], name: Identifier, params: [TypedVar], returnType: TypeAnnotation,
+                 declarations: [Declaration], statements: [Stmt], isMethod: bool = False):
         super().__init__(location, "FuncDef")
         self.name = name
         self.params = params
@@ -20,8 +21,8 @@ class FuncDef(Declaration):
         self.declarations = declarations
         self.statements = [s for s in statements if s is not None]
         self.isMethod = isMethod
-        self.freevars = [] # used in AST transformations, not printed out
-        self.type = None # type signature of function
+        self.freevars = []  # used in AST transformations, not printed out
+        self.type = None  # type signature of function
 
     def getFreevarNames(self):
         return set([v.name for v in self.freevars])
@@ -49,10 +50,10 @@ class FuncDef(Declaration):
         d["name"] = self.name.toJSON(dump_location)
         d["params"] = [t.toJSON(dump_location) for t in self.params]
         d["returnType"] = self.returnType.toJSON(dump_location)
-        d["declarations"] = [decl.toJSON(dump_location) for decl in self.declarations]
+        d["declarations"] = [decl.toJSON(dump_location)
+                             for decl in self.declarations]
         d["statements"] = [s.toJSON(dump_location) for s in self.statements]
         return d
 
     def getIdentifier(self):
         return self.name
-

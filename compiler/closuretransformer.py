@@ -3,11 +3,13 @@ from .typesystem import TypeSystem
 from .astnodes import *
 from .types import *
 
-def typeToAnnotation(t: ValueType)->SymbolType:
+
+def typeToAnnotation(t: ValueType) -> SymbolType:
     if isinstance(t, ListValueType):
-        return ListType([0,0], typeToAnnotation(t.elementType))
+        return ListType([0, 0], typeToAnnotation(t.elementType))
     elif isinstance(t, ClassValueType):
-        return ClassType([0,0], t.className)
+        return ClassType([0, 0], t.className)
+
 
 class ClosureTransformer(TypeChecker):
     # rewriting function signatures to include free vars as explicit arguments
@@ -28,10 +30,11 @@ class ClosureTransformer(TypeChecker):
                 t.refParams[i] = node.params[i].varInstance
         for i in range(len(node.freevars)):
             if node.freevars[i].varInstance.isNonlocal:
-                t.refParams[len(node.params) + i] = node.freevars[i].varInstance
+                t.refParams[len(node.params) +
+                            i] = node.freevars[i].varInstance
         return t
 
-    def funcParams(self, node:FuncDef):
+    def funcParams(self, node: FuncDef):
         for fv in node.freevars:
             ident = fv.copy()
             annot = typeToAnnotation(ident.inferredType)
@@ -63,5 +66,3 @@ class ClosureTransformer(TypeChecker):
     def MethodCallExpr(self, node: MethodCallExpr):
         self.callHelper(node)
         return super().MethodCallExpr(node)
-
-

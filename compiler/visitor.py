@@ -2,6 +2,7 @@ from .astnodes import *
 from collections import defaultdict
 from .builder import Builder
 
+
 class Visitor:
 
     def visit(self, node: Node):
@@ -99,8 +100,9 @@ class Visitor:
     def ClassType(self, node: ClassType):
         pass
 
+
 class CommonVisitor(Visitor):
-    returnType = None # for tracking return types in functions
+    returnType = None  # for tracking return types in functions
     counter = 0  # for labels
 
     # helpers for handling locals
@@ -117,8 +119,8 @@ class CommonVisitor(Visitor):
 
     def instr(self, instr: str):
         self.currentBuilder().newLine(instr)
-    
-    def currentBuilder(self)->Builder:
+
+    def currentBuilder(self) -> Builder:
         raise Exception("unimplemented")
 
     def emit(self) -> str:

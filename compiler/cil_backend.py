@@ -646,17 +646,17 @@ class CilBackend(CommonVisitor):
     def visitArg(self, funcType, paramIdx: int, arg: Expr):
         argIsRef = isinstance(arg, Identifier) and arg.varInstance.isNonlocal
         paramIsRef = paramIdx in funcType.refParams
-        if argIsRef and paramIsRef and arg.varInstance == funcType.refParams[paramIdx]: 
+        if argIsRef and paramIsRef and arg.varInstance == funcType.refParams[paramIdx]:
             # ref arg and ref param, pass ref arg
             self.load(arg.name)
         elif paramIsRef:
             # non-ref arg and ref param, or do not pass ref arg
             # unwrap if necessary, re-wrap
             self.wrap(arg, arg.inferredType)
-        else: # non-ref param, maybe unwrap
+        else:  # non-ref param, maybe unwrap
             self.visit(arg)
 
-    def wrap(self, val:Expr, elementType:ValueType):
+    def wrap(self, val: Expr, elementType: ValueType):
         self.instr("ldc.i4 1")
         self.instr(f"newarr {elementType.getCILName()}")
         self.instr("dup")

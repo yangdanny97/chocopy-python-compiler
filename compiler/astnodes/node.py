@@ -1,7 +1,7 @@
 
 class Node:
 
-    def __init__(self, location:[int], kind:str):
+    def __init__(self, location: [int], kind: str):
         if len(location) != 2:
             raise Exception('location must be length 2')
         self.kind = kind
@@ -25,4 +25,3 @@ class Node:
         if self.errorMsg is not None:
             d['errorMsg'] = self.errorMsg
         return d
-

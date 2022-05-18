@@ -2,10 +2,12 @@ from .astnodes import *
 from .types import *
 from .visitor import Visitor
 
+
 class HoistedFunctionInfo:
     def __init__(self, name, decl):
         self.name = name
         self.decl = decl
+
 
 class NestedFuncHoister(Visitor):
     # hoist all nested funcs to be top level funcs
@@ -26,8 +28,8 @@ class NestedFuncHoister(Visitor):
         else:
             return node.visit(self)
 
-    def genFuncName(self, name:str):
-        # example: 
+    def genFuncName(self, name: str):
+        # example:
         # f2 declared inside f1 will be named f1__f2
         # f4 declared inside C.f3 will be named C__f3__f4
         if len(self.nestingNames) == 0:
@@ -62,12 +64,13 @@ class NestedFuncHoister(Visitor):
         self.nestingNames.pop()
         self.currentClass = None
 
-    def rename(self, node:FuncDef):
+    def rename(self, node: FuncDef):
         identifier = node.getIdentifier()
         oldname = identifier.name
         if self.nestingLevel != 0:
             identifier.name = self.genFuncName(identifier.name)
-        self.functionInfo[-1][oldname] = HoistedFunctionInfo(identifier.name, node)
+        self.functionInfo[-1][oldname] = HoistedFunctionInfo(
+            identifier.name, node)
 
     def FuncDef(self, node: FuncDef):
         identifier = node.getIdentifier()
@@ -82,14 +85,14 @@ class NestedFuncHoister(Visitor):
 
         for s in node.statements:
             self.visit(s)
-        
+
         self.functionInfo.pop()
         self.nestingNames.pop()
         self.nestingLevel -= 1
 
         if self.nestingLevel > 0:
             self.hoisted.append(node)
-        
+
         node.declarations = [
             d for d in node.declarations
             if not isinstance(d, FuncDef)
@@ -106,6 +109,5 @@ class NestedFuncHoister(Visitor):
             return
         if node.function.name in self.classes:
             return
-        raise Exception("Unable to find function declaration for " + node.function.name)
-
-
+        raise Exception(
+            "Unable to find function declaration for " + node.function.name)

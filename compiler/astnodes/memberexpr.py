@@ -1,9 +1,10 @@
 from .expr import Expr
 from .identifier import Identifier
 
+
 class MemberExpr(Expr):
 
-    def __init__(self, location:[int], obj:Expr, member:Identifier):
+    def __init__(self, location: [int], obj: Expr, member: Identifier):
         super().__init__(location, "MemberExpr")
         self.object = obj
         self.member = member
@@ -12,6 +13,7 @@ class MemberExpr(Expr):
         visitor.MemberExpr(self)
         visitor.visit(self.object)
         return self
+
     def postorder(self, visitor):
         visitor.visit(self.object)
         return visitor.MemberExpr(self)

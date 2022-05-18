@@ -38,7 +38,7 @@ class JvmBackend(CommonVisitor):
         else:
             self.instr("ireturn")
 
-    def wrap(self, val:Expr, elementType:ValueType):
+    def wrap(self, val: Expr, elementType: ValueType):
         self.loadInt(1)
         self.instr(f"anewarray {elementType.getJavaName(True)}")
         self.instr("dup")
@@ -66,21 +66,24 @@ class JvmBackend(CommonVisitor):
         else:
             self.instr(f"iload {n}")
 
-    def arrayStore(self, elementType:ValueType):
+    def arrayStore(self, elementType: ValueType):
         # expect the stack to be array, idx, value
         if elementType == IntType():
-            self.instr("invokestatic Method java/lang/Integer valueOf (I)Ljava/lang/Integer;")
+            self.instr(
+                "invokestatic Method java/lang/Integer valueOf (I)Ljava/lang/Integer;")
         elif elementType == BoolType():
-            self.instr("invokestatic Method java/lang/Boolean valueOf (Z)Ljava/lang/Boolean;")
+            self.instr(
+                "invokestatic Method java/lang/Boolean valueOf (Z)Ljava/lang/Boolean;")
         self.instr("aastore")
 
-    def arrayLoad(self, elementType:ValueType):
+    def arrayLoad(self, elementType: ValueType):
         # expect the stack to be array, idx
         self.instr("aaload")
         if elementType == IntType():
             self.instr("invokevirtual Method java/lang/Integer intValue ()I")
         elif elementType == BoolType():
-            self.instr("invokevirtual Method java/lang/Boolean booleanValue ()Z")
+            self.instr(
+                "invokevirtual Method java/lang/Boolean booleanValue ()Z")
 
     def newLocalEntry(self, name: str) -> int:
         # add a new entry to locals table w/o storing anything
@@ -103,7 +106,7 @@ class JvmBackend(CommonVisitor):
         self.locals[-1][name] = n
         return n
 
-    def visitStmtList(self, stmts:[Stmt]):
+    def visitStmtList(self, stmts: [Stmt]):
         if len(stmts) == 0:
             self.instr("nop")
         else:
@@ -126,7 +129,8 @@ class JvmBackend(CommonVisitor):
         # main
         self.instr(".method public static main : ([Ljava/lang/String;)V")
         self.currentBuilder().indent()
-        self.instr(f".code stack {self.stackLimit} locals {len(node.declarations) + self.localLimit}")
+        self.instr(
+            f".code stack {self.stackLimit} locals {len(node.declarations) + self.localLimit}")
         self.defaultToGlobals = True
         self.visitStmtList(node.statements)
         self.defaultToGlobals = False
@@ -203,13 +207,14 @@ class JvmBackend(CommonVisitor):
             self.buildReturn(None)
         self.exitScope()
 
-    def constructor(self, superclass:str, node: FuncDef):
+    def constructor(self, superclass: str, node: FuncDef):
         self.enterScope()
         constructorSig = node.type.dropFirstParam()
         self.instr(
             f".method public <init> : {constructorSig.getJavaSignature()}")
         self.currentBuilder().indent()
-        self.instr(f".code stack {self.stackLimit} locals {len(node.declarations) + self.localLimit}")
+        self.instr(
+            f".code stack {self.stackLimit} locals {len(node.declarations) + self.localLimit}")
         # call superclass constructor
         self.instr("aload 0")
         self.instr(f"invokespecial Method {superclass} <init> ()V ")
@@ -224,7 +229,8 @@ class JvmBackend(CommonVisitor):
         self.instr(
             f".method public {node.name.name} : {methodSig.getJavaSignature()}")
         self.currentBuilder().indent()
-        self.instr(f".code stack {self.stackLimit} locals {len(node.declarations) + self.localLimit}")
+        self.instr(
+            f".code stack {self.stackLimit} locals {len(node.declarations) + self.localLimit}")
         self.funcDefHelper(node)
         self.instr(".end code")
         self.currentBuilder().unindent()
@@ -235,7 +241,8 @@ class JvmBackend(CommonVisitor):
         self.instr(
             f".method public static {node.name.name} : {node.type.getJavaSignature()}")
         self.currentBuilder().indent()
-        self.instr(f".code stack {self.stackLimit} locals {len(node.declarations) + self.localLimit}")
+        self.instr(
+            f".code stack {self.stackLimit} locals {len(node.declarations) + self.localLimit}")
         self.funcDefHelper(node)
         self.instr(".end code")
         self.currentBuilder().unindent()
@@ -367,7 +374,8 @@ class JvmBackend(CommonVisitor):
                 self.instr(f"iload {lenR}")
                 self.instr("iadd")
                 # stack is L, total_length
-                self.instr(f"anewarray {self.ts.join(leftType, rightType).elementType.getJavaName(True)}")
+                self.instr(
+                    f"anewarray {self.ts.join(leftType, rightType).elementType.getJavaName(True)}")
                 newArr = self.newLocal(None, True)
                 self.instr("iconst_0")
                 self.instr(f"aload {newArr}")
@@ -625,7 +633,7 @@ class JvmBackend(CommonVisitor):
         else:
             self.instr("iconst_0")
 
-    def loadInt(self, value:int):
+    def loadInt(self, value: int):
         if value >= 0 and value <= 5:
             self.instr(f"iconst_{value}")
         else:
@@ -705,12 +713,12 @@ class JvmBackend(CommonVisitor):
     def visitArg(self, funcType, paramIdx: int, arg: Expr):
         argIsRef = isinstance(arg, Identifier) and arg.varInstance.isNonlocal
         paramIsRef = paramIdx in funcType.refParams
-        if argIsRef and paramIsRef and arg.varInstance == funcType.refParams[paramIdx]: 
+        if argIsRef and paramIsRef and arg.varInstance == funcType.refParams[paramIdx]:
             # ref arg and ref param, pass ref arg
             self.load(arg.name, ListValueType(arg.inferredType))
         elif paramIsRef:
             # non-ref arg and ref param, or do not pass ref arg
             # unwrap if necessary, re-wrap
             self.wrap(arg, arg.inferredType)
-        else: # non-ref param, maybe unwrap
+        else:  # non-ref param, maybe unwrap
             self.visit(arg)

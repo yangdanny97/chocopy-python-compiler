@@ -1,8 +1,9 @@
 from .expr import Expr
 
+
 class UnaryExpr(Expr):
 
-    def __init__(self, location:[int], operator:str, operand:Expr):
+    def __init__(self, location: [int], operator: str, operand: Expr):
         super().__init__(location, "UnaryExpr")
         self.operand = operand
         self.operator = operator
@@ -24,5 +25,3 @@ class UnaryExpr(Expr):
         d["operator"] = self.operator
         d["operand"] = self.operand.toJSON(dump_location)
         return d
-
-

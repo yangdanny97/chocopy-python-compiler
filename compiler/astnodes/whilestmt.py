@@ -1,9 +1,10 @@
 from .stmt import Stmt
 from .expr import Expr
 
+
 class WhileStmt(Stmt):
 
-    def __init__(self, location:[int], condition:Expr, body:[Stmt]):
+    def __init__(self, location: [int], condition: Expr, body: [Stmt]):
         super().__init__(location, "WhileStmt")
         self.condition = condition
         self.body = [s for s in body if s is not None]
@@ -29,4 +30,3 @@ class WhileStmt(Stmt):
         d["condition"] = self.condition.toJSON(dump_location)
         d["body"] = [s.toJSON(dump_location) for s in self.body]
         return d
-

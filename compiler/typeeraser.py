@@ -3,6 +3,8 @@ from .types import *
 from .visitor import Visitor
 
 # A utility visitor to erase the inferred types of expressions
+
+
 class TypeEraser(Visitor):
 
     def visit(self, node: Node):
@@ -37,4 +39,3 @@ class TypeEraser(Visitor):
 
     def GlobalDecl(self, node: GlobalDecl):
         self.visit(node.variable)
-

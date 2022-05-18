@@ -1,7 +1,8 @@
 from .valuetype import ValueType
 
+
 class ClassValueType(ValueType):
-    def __init__(self, className:str):
+    def __init__(self, className: str):
         self.className = className
 
     def __eq__(self, other):
@@ -9,10 +10,10 @@ class ClassValueType(ValueType):
             return self.className == other.className
         return False
 
-    def isListType(self)->bool:
+    def isListType(self) -> bool:
         return self.className in {"<Empty>", "<None>"}
 
-    def getJavaSignature(self, isList = False)->str:
+    def getJavaSignature(self, isList=False) -> str:
         if self.className == "bool":
             if isList:
                 return "Ljava/lang/Boolean;"
@@ -43,7 +44,7 @@ class ClassValueType(ValueType):
     def isJavaRef(self):
         return self.className not in ["int", "bool"]
 
-    def getJavaName(self, isList = False):
+    def getJavaName(self, isList=False):
         if self.className == "bool":
             if isList:
                 return "java/lang/Boolean"
@@ -86,7 +87,7 @@ class ClassValueType(ValueType):
             return "int64"
         else:
             return "class "+self.className
-    
+
     def __str__(self):
         return self.className
 

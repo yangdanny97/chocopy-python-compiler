@@ -1,9 +1,10 @@
 from .stmt import Stmt
 from .expr import Expr
 
+
 class ReturnStmt(Stmt):
 
-    def __init__(self, location:[int], value:Expr):
+    def __init__(self, location: [int], value: Expr):
         super().__init__(location, "ReturnStmt")
         self.value = value
         self.isReturn = True
@@ -30,4 +31,3 @@ class ReturnStmt(Stmt):
         else:
             d["value"] = None
         return d
-

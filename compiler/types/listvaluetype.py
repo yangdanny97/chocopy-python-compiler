@@ -1,8 +1,9 @@
 from .valuetype import ValueType
 
+
 class ListValueType(ValueType):
-    
-    def __init__(self, elementType:ValueType):
+
+    def __init__(self, elementType: ValueType):
         self.elementType = elementType
 
     def __eq__(self, other):

@@ -2,9 +2,10 @@ from .stmt import Stmt
 from .expr import Expr
 from .identifier import Identifier
 
+
 class ForStmt(Stmt):
 
-    def __init__(self, location:[int], identifier:Identifier, iterable:Expr, body:[Stmt]):
+    def __init__(self, location: [int], identifier: Identifier, iterable: Expr, body: [Stmt]):
         super().__init__(location, "ForStmt")
         self.identifier = identifier
         self.iterable = iterable
@@ -34,4 +35,3 @@ class ForStmt(Stmt):
         d["iterable"] = self.iterable.toJSON(dump_location)
         d["body"] = [s.toJSON(dump_location) for s in self.body]
         return d
-

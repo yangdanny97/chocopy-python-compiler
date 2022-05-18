@@ -2,9 +2,10 @@ from .declaration import Declaration
 from .expr import Expr
 from .typedvar import TypedVar
 
+
 class VarDef(Declaration):
 
-    def __init__(self, location:[int], var:TypedVar, value:Expr, isAttr:bool=False, attrOfClass=None):
+    def __init__(self, location: [int], var: TypedVar, value: Expr, isAttr: bool = False, attrOfClass=None):
         super().__init__(location, "VarDef")
         self.var = var
         self.value = value
@@ -32,5 +33,5 @@ class VarDef(Declaration):
     def getIdentifier(self):
         return self.var.identifier
 
-    def getName(self)->str:
+    def getName(self) -> str:
         return self.var.identifier.name

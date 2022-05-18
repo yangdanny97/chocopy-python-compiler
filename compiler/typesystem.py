@@ -1,16 +1,18 @@
 from .types import *
 from collections import defaultdict
 
+
 class ClassInfo:
-    def __init__(self, name:str, superclass:str = None):
+    def __init__(self, name: str, superclass: str = None):
         self.name = name
         self.superclass = superclass
-        self.attrs = defaultdict(lambda: None) # (attr type, init value)
-        self.methods = defaultdict(lambda: None) # type of method
+        self.attrs = defaultdict(lambda: None)  # (attr type, init value)
+        self.methods = defaultdict(lambda: None)  # type of method
         self.orderedAttrs = []
-    
+
     def __str__(self):
         return F"class {self.name}({self.superclass}): {self.attrs} {self.methods}"
+
 
 class TypeSystem:
     def __init__(self):
@@ -19,7 +21,7 @@ class TypeSystem:
 
         objectInfo = ClassInfo("object")
         objectInfo.methods["__init__"] = FuncType([ObjectType()], NoneType())
-        
+
         intInfo = ClassInfo("int", "object")
         intInfo.methods["__init__"] = FuncType([ObjectType()], NoneType())
 
@@ -151,7 +153,7 @@ class TypeSystem:
         return ObjectType()
 
     def getAllMethods(self, className: str):
-        # return map of method names to tuples of 
+        # return map of method names to tuples of
         # (signature, classname of their definition)
         methods = {}
         if self.classes[className].superclass is not None:
@@ -160,7 +162,7 @@ class TypeSystem:
             methods[name] = (self.classes[className].methods[name], className)
         return methods
 
-    def getOrderedAttrs(self, className:str):
+    def getOrderedAttrs(self, className: str):
         # return list of (name, type, init value) triples
         attrs = []
         if self.classes[className].superclass is not None:

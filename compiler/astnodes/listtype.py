@@ -1,8 +1,9 @@
 from .typeannotation import TypeAnnotation
 
+
 class ListType(TypeAnnotation):
 
-    def __init__(self, location:[int], elementType:TypeAnnotation):
+    def __init__(self, location: [int], elementType: TypeAnnotation):
         super().__init__(location, "ListType")
         self.elementType = elementType
 
@@ -13,4 +14,3 @@ class ListType(TypeAnnotation):
         d = super().toJSON(dump_location)
         d["elementType"] = self.elementType.toJSON(dump_location)
         return d
-

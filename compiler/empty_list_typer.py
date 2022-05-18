@@ -3,6 +3,8 @@ from .types import *
 from .visitor import Visitor
 
 # A visitor to refine the types of empty list literals
+
+
 class EmptyListTyper(Visitor):
 
     def __init__(self):
@@ -20,8 +22,8 @@ class EmptyListTyper(Visitor):
         if len(node.value.elements) > 0:
             return False
         return True
-            
-    def transformMultiAssign(self, node:AssignStmt)->[AssignStmt]:
+
+    def transformMultiAssign(self, node: AssignStmt) -> [AssignStmt]:
         statements = []
         for t in node.targets:
             statements.append(AssignStmt(node.location, [t], node.value))
@@ -75,5 +77,3 @@ class EmptyListTyper(Visitor):
 
     def ReturnStmt(self, node: ReturnStmt):
         self.expectedType = self.expReturnType
-
-

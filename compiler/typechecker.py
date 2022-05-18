@@ -4,6 +4,7 @@ from collections import defaultdict
 from .typesystem import TypeSystem, ClassInfo
 from .visitor import Visitor
 
+
 class TypeChecker(Visitor):
     def __init__(self, ts: TypeSystem):
         # typechecker attributes and their chocopy typing judgement analogues:
@@ -37,7 +38,7 @@ class TypeChecker(Visitor):
         else:
             return node.postorder(self)
 
-    def funcParams(self, node:FuncDef):
+    def funcParams(self, node: FuncDef):
         pass
 
     def enterScope(self):
@@ -164,7 +165,7 @@ class TypeChecker(Visitor):
                         continue
                     if not t.methodEquals(funcType):  # excluding self argument
                         self.addError(d.getIdentifier(),
-                                    F"Redefined method doesn't match superclass signature: {funcName}")
+                                      F"Redefined method doesn't match superclass signature: {funcName}")
                         continue
                 self.ts.classes[className].methods[funcName] = funcType
             if isinstance(d, VarDef):  # attributes

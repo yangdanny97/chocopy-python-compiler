@@ -1,8 +1,9 @@
 from .typeannotation import TypeAnnotation
 
+
 class ClassType(TypeAnnotation):
 
-    def __init__(self, location:[int], className:str):
+    def __init__(self, location: [int], className: str):
         super().__init__(location, "ClassType")
         self.className = className
 
@@ -13,5 +14,3 @@ class ClassType(TypeAnnotation):
         d = super().toJSON(dump_location)
         d["className"] = self.className
         return d
-
-

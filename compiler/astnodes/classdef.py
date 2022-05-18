@@ -8,6 +8,7 @@ from ..types.classvaluetype import ClassValueType
 from ..types.functype import FuncType
 from ..types.Types import NoneType
 
+
 class ClassDef(Declaration):
 
     def __init__(self, location: [int], name: Identifier, superclass: Identifier, declarations: [Declaration]):
@@ -47,19 +48,20 @@ class ClassDef(Declaration):
     def getIdentifier(self):
         return self.name
 
-    def getDefaultConstructor(self)->FuncDef:
+    def getDefaultConstructor(self) -> FuncDef:
         var_decls = [d for d in self.declarations if isinstance(d, VarDef)]
         constructor = FuncDef(self.location,
-                       Identifier(self.location, "__init__"),
-                       [TypedVar(self.location,
-                                 Identifier(self.location, "self"),
-                                 ClassType(self.location, self.name.name)
-                                 )],
-                       ClassType(self.location, "<None>"),
-                       var_decls,
-                       [], True
-                       )
+                              Identifier(self.location, "__init__"),
+                              [TypedVar(self.location,
+                                        Identifier(self.location, "self"),
+                                        ClassType(self.location,
+                                                  self.name.name)
+                                        )],
+                              ClassType(self.location, "<None>"),
+                              var_decls,
+                              [], True
+                              )
         constructor.params[0].t = ClassValueType(self.name.name)
         constructor.type = FuncType(
-                [ClassValueType(self.name.name)], NoneType())
+            [ClassValueType(self.name.name)], NoneType())
         return constructor

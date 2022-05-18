@@ -3,6 +3,7 @@ from .astnodes import *
 from .types import *
 from .visitor import Visitor
 
+
 class VarCollector(Visitor):
     # simple visitor to collect all the identifiers used as expressions or assignment targets
 
@@ -17,7 +18,7 @@ class VarCollector(Visitor):
         for n in nodes:
             self.visit(n)
         return self.vars
-    
+
     def visit(self, node: Node):
         return node.postorder(self)
 

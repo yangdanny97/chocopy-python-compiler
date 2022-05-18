@@ -4,14 +4,15 @@ from .builder import Builder
 from .visitor import Visitor
 import json
 
+
 class PythonBackend(Visitor):
     def __init__(self):
         self.builder = Builder(None)
 
     def visit(self, node: Node):
         return node.visit(self)
-    
-    def addText(self, text:str):
+
+    def addText(self, text: str):
         self.builder.addText(text)
 
     # TOP LEVEL & DECLARATIONS
@@ -142,15 +143,15 @@ class PythonBackend(Visitor):
             return
         argIsRef = isinstance(arg, Identifier) and arg.varInstance.isNonlocal
         paramIsRef = paramIdx in funcType.refParams
-        if argIsRef and paramIsRef and arg.varInstance == funcType.refParams[paramIdx]: 
+        if argIsRef and paramIsRef and arg.varInstance == funcType.refParams[paramIdx]:
             # ref arg and ref param, pass ref arg
             self.addText(arg.name)
-        elif paramIsRef: 
+        elif paramIsRef:
             # non-ref arg and ref param, or do not pass ref arg
             self.addText("[")
             self.visit(arg)
             self.addText("]")
-        else: # non-ref param, maybe unwrap
+        else:  # non-ref param, maybe unwrap
             self.visit(arg)
 
     def CallExpr(self, node: CallExpr):
@@ -220,7 +221,6 @@ class PythonBackend(Visitor):
             self.addText(node.name + "[0]")
         else:
             self.addText(node.name)
-            
 
     def MemberExpr(self, node: MemberExpr):
         self.visit(node.object)

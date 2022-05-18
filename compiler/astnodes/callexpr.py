@@ -1,14 +1,15 @@
 from .expr import Expr
 from .identifier import Identifier
 
+
 class CallExpr(Expr):
 
-    def __init__(self, location:[int], function:Identifier, args:[Expr]):
+    def __init__(self, location: [int], function: Identifier, args: [Expr]):
         super().__init__(location, "CallExpr")
         self.function = function
         self.args = args
         self.isConstructor = False
-        self.freevars = [] # captured free vars
+        self.freevars = []  # captured free vars
 
     def postorder(self, visitor):
         for a in self.args:
@@ -29,5 +30,3 @@ class CallExpr(Expr):
         d["function"] = self.function.toJSON(dump_location)
         d["args"] = [a.toJSON(dump_location) for a in self.args]
         return d
-
-
