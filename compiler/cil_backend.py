@@ -68,6 +68,41 @@ class CilBackend(CommonVisitor):
         else:
             self.instr(f"ldloc {n.loc}")
 
+    def loadVarAddr(self, node: Identifier):
+        if self.defaultToGlobals or node.varInstance.isGlobal:
+            self.instr(
+                f"ldsflda {node.inferredType.getCILName()} {self.main}::{node.getCILName()}")
+        elif self.isFromRefArg(node):
+            self.load(node.getCILName())
+        else:
+            self.loadAddr(node.getCILName())
+
+    def loadAddr(self, name: str):
+        n = self.locals[-1][name]
+        if n is None:
+            raise Exception(
+                f"Internal compiler error: unknown name {name} for load")
+        if n.isArg:
+            self.instr(f"ldarga {n.loc}")
+        else:
+            self.instr(f"ldloca {n.loc}")
+
+    def loadInd(self, t: ValueType):
+        if t == BoolType():
+            self.instr("ldind.i4")
+        elif t == IntType():
+            self.instr("ldind.i8")
+        else:
+            self.instr("ldind.ref")
+
+    def storeInd(self, t: ValueType):
+        if t == BoolType():
+            self.instr("stind.i4")
+        elif t == IntType():
+            self.instr("stind.i8")
+        else:
+            self.instr("stind.ref")
+
     def arrayStore(self, elementType: ValueType):
         self.instr(f"stelem {elementType.getCILName()}")
 
@@ -236,10 +271,6 @@ class CilBackend(CommonVisitor):
             self.visit(node.value)
             self.instr(
                 f"stfld {node.var.t.getCILName()} {className.getCILName()}::{node.getIdentifier().getCILName()}")
-        elif node.var.varInstance.isNonlocal:
-            elementType = node.var.t
-            self.wrap(node.value, elementType)
-            self.newLocal(varName, ListValueType(elementType))
         else:
             self.visit(node.value)
             self.newLocal(varName, node.var.t)
@@ -253,10 +284,9 @@ class CilBackend(CommonVisitor):
                     f"stsfld {target.inferredType.getCILName()} {self.main}::{target.getCILName()}")
             elif target.varInstance.isNonlocal:
                 temp = self.newLocal(None, target.inferredType)
-                self.load(target.name)
-                self.instr("ldc.i4 0")
+                self.load(target.getCILName())
                 self.load(temp)
-                self.arrayStore(target.inferredType)
+                self.storeInd(target.inferredType)
             else:
                 self.store(target.getCILName())
         elif isinstance(target, IndexExpr):
@@ -539,10 +569,9 @@ class CilBackend(CommonVisitor):
         if self.defaultToGlobals or node.varInstance.isGlobal:
             self.instr(
                 f"ldsfld {node.inferredType.getCILName()} {self.main}::{node.getCILName()}")
-        elif node.varInstance.isNonlocal:
-            self.load(node.name)
-            self.instr("ldc.i4 0")
-            self.arrayLoad(node.inferredType)
+        elif self.isFromRefArg(node):
+            self.load(node.getCILName())
+            self.loadInd(node.inferredType)
         else:
             self.load(node.getCILName())
 
@@ -643,23 +672,41 @@ class CilBackend(CommonVisitor):
             f"call void class [mscorlib]System.Console::WriteLine({arg.inferredType.getCILName()})")
         self.NoneLiteral(None)
 
+    def isFromRefArg(self, arg: Expr):
+        return self.isFromArg(arg) and arg.varInstance.isNonlocal
+
+    def isFromArg(self, arg: Expr):
+        if not isinstance(arg, Identifier):
+            return False
+        if arg.varInstance.isGlobal:
+            return True
+        n = self.locals[-1][arg.name]
+        if n is None:
+            raise Exception(
+                f"Internal compiler error: unknown name {arg.name}")
+        return n.isArg
+
     def visitArg(self, funcType, paramIdx: int, arg: Expr):
-        argIsRef = isinstance(arg, Identifier) and arg.varInstance.isNonlocal
+        argIsRef = self.isFromRefArg(arg)
         paramIsRef = paramIdx in funcType.refParams
         if argIsRef and paramIsRef and arg.varInstance == funcType.refParams[paramIdx]:
-            # ref arg and ref param, pass ref arg
+            # ref -> ref: pass through a ref to a nonlocal
             self.load(arg.name)
-        elif paramIsRef:
-            # non-ref arg and ref param, or do not pass ref arg
-            # unwrap if necessary, re-wrap
-            self.wrap(arg, arg.inferredType)
-        else:  # non-ref param, maybe unwrap
+        elif paramIsRef and argIsRef:
+            # ref -> ref: 
+            # deref, store value in new local, and pass ref to new local
             self.visit(arg)
-
-    def wrap(self, val: Expr, elementType: ValueType):
-        self.instr("ldc.i4 1")
-        self.instr(f"newarr {elementType.getCILName()}")
-        self.instr("dup")
-        self.instr("ldc.i4 0")
-        self.visit(val)
-        self.arrayStore(elementType)
+            temp = self.newLocal(None, arg.inferredType)
+            self.loadAddr(temp)
+        elif paramIsRef:
+            # value -> ref
+            # store in new local, pass ref
+            if isinstance(arg, Identifier) and not self.isFromArg(arg):
+                self.loadVarAddr(arg)
+            else:
+                self.visit(arg)
+                temp = self.newLocal(None, arg.inferredType)
+                self.loadAddr(temp)
+        else: 
+            # value/ref -> value : deref if necessary
+            self.visit(arg)

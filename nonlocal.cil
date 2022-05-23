@@ -1,0 +1,545 @@
+.assembly 'nonlocal'
+{
+}
+.module nonlocal.exe
+.class public auto ansi beforefieldinit nonlocal extends [mscorlib]System.Object
+{
+    .field public static int64 a
+    .field public static class Nonlocals b
+    .method public static hidebysig default void Main (string[] args)  cil managed
+    {
+        .entrypoint
+        .maxstack 500
+        .locals init (
+            [0] int64 __local__0,
+            [1] int64 __local__1,
+            [2] int64 __local__2,
+            [3] int64 __local__3,
+            [4] int64 __local__4
+        )
+        ldc.i8 0
+        stsfld int64 nonlocal::a
+        ldnull
+        stsfld class Nonlocals nonlocal::b
+        ldc.i8 1
+        stloc 0
+        ldloca 0
+        call int64 nonlocal::test(int64&)
+        ldc.i8 2
+        ceq
+        brtrue IL_1
+        ldstr "failed assertion on line 84"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_1: nop
+        ldnull
+        pop
+        call int64 nonlocal::test3()
+        ldc.i8 3
+        ceq
+        brtrue IL_2
+        ldstr "failed assertion on line 86"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_2: nop
+        ldnull
+        pop
+        ldc.i8 0
+        stsfld int64 nonlocal::a
+        ldsfld int64 nonlocal::a
+        stloc 1
+        ldloca 1
+        call void nonlocal::test9(int64&)
+        ldnull
+        pop
+        ldsfld int64 nonlocal::a
+        ldc.i8 0
+        ceq
+        brtrue IL_3
+        ldstr "failed assertion on line 92"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_3: nop
+        ldnull
+        pop
+        call void nonlocal::test7()
+        ldnull
+        pop
+        call void nonlocal::test10()
+        ldnull
+        pop
+        ldc.i8 0
+        stsfld int64 nonlocal::a
+        newobj instance void Nonlocals::.ctor()
+        stsfld class Nonlocals nonlocal::b
+        ldsfld class Nonlocals nonlocal::b
+        ldsfld int64 nonlocal::a
+        stloc 2
+        ldloca 2
+        callvirt instance void Nonlocals::testMethod(int64&)
+        ldnull
+        pop
+        ldsfld class Nonlocals nonlocal::b
+        ldc.i8 0
+        stloc 3
+        ldloca 3
+        callvirt instance void Nonlocals::testMethod(int64&)
+        ldnull
+        pop
+        ldsfld int64 nonlocal::a
+        ldc.i8 0
+        ceq
+        brtrue IL_4
+        ldstr "failed assertion on line 103"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_4: nop
+        ldnull
+        pop
+        ldsfld class Nonlocals nonlocal::b
+        ldc.i8 1
+        stloc 4
+        ldloca 4
+        callvirt instance void Nonlocals::testMethod(int64&)
+        ldnull
+        pop
+        ldsfld class Nonlocals nonlocal::b
+        callvirt instance void Nonlocals::testMethod4()
+        ldnull
+        pop
+        ret
+    }
+    .method public hidebysig static
+    int64 test(int64&) cil managed
+    {
+        .maxstack 500
+        .locals init (
+        )
+        ldarg 0
+        call void nonlocal::test__test2(int64&)
+        ldnull
+        pop
+        ldarg 0
+        ldind.i8
+        ret
+    }
+    .method public hidebysig static
+    int64 test3() cil managed
+    {
+        .maxstack 500
+        .locals init (
+            [0] int64 x
+        )
+        ldc.i8 4
+        stloc 0
+        ldloca 0
+        call void nonlocal::test3__test4(int64&)
+        ldnull
+        pop
+        ldloc 0
+        ret
+    }
+    .method public hidebysig static
+    void test7() cil managed
+    {
+        .maxstack 500
+        .locals init (
+            [0] int64[] x
+        )
+        ldnull
+        stloc 0
+        ldc.i4 3
+        newarr int64
+        dup
+        ldc.i4 0
+        ldc.i8 1
+        stelem int64
+        dup
+        ldc.i4 1
+        ldc.i8 2
+        stelem int64
+        dup
+        ldc.i4 2
+        ldc.i8 3
+        stelem int64
+        stloc 0
+        ldloc 0
+        call void nonlocal::test7__test8(int64[])
+        ldnull
+        pop
+        ldloc 0
+        ldc.i8 0
+        conv.i4
+        ldelem int64
+        ldc.i8 0
+        ceq
+        brtrue IL_5
+        ldstr "failed assertion on line 33"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_5: nop
+        ldnull
+        pop
+        ret
+    }
+    .method public hidebysig static
+    void test9(int64&) cil managed
+    {
+        .maxstack 500
+        .locals init (
+        )
+        ldarg 0
+        call void nonlocal::test9__test9helper(int64&)
+        ldnull
+        pop
+        ret
+    }
+    .method public hidebysig static
+    void test10() cil managed
+    {
+        .maxstack 500
+        .locals init (
+            [0] int64 y
+        )
+        ldc.i8 1
+        stloc 0
+        ldloc 0
+        ldloca 0
+        call int64 nonlocal::test10__test11(int64, int64&)
+        ldc.i8 2
+        ceq
+        brtrue IL_6
+        ldstr "failed assertion on line 52"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_6: nop
+        ldnull
+        pop
+        ldloca 0
+        call int64 nonlocal::test10__test12(int64&)
+        ldc.i8 4
+        ceq
+        brtrue IL_7
+        ldstr "failed assertion on line 53"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_7: nop
+        ldnull
+        pop
+        ldloc 0
+        ldc.i8 2
+        ceq
+        brtrue IL_8
+        ldstr "failed assertion on line 54"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_8: nop
+        ldnull
+        pop
+        ret
+    }
+    .method public hidebysig static
+    void test13(class Nonlocals&) cil managed
+    {
+        .maxstack 500
+        .locals init (
+        )
+        ldarg 0
+        call void nonlocal::test13__test14(class Nonlocals&)
+        ldnull
+        pop
+        ret
+    }
+    .method public hidebysig static
+    void test__test2(int64&) cil managed
+    {
+        .maxstack 500
+        .locals init (
+            [0] int64 __local__0
+        )
+        ldc.i8 2
+        stloc 0
+        ldarg 0
+        ldloc 0
+        stind.i8
+        ret
+    }
+    .method public hidebysig static
+    void test3__test3__test4__test5(int64&) cil managed
+    {
+        .maxstack 500
+        .locals init (
+        )
+        ldarg 0
+        ldind.i8
+        ldc.i8 4
+        ceq
+        brtrue IL_9
+        ldstr "failed assertion on line 15"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_9: nop
+        ldnull
+        pop
+        ret
+    }
+    .method public hidebysig static
+    void test3__test3__test4__test6(int64&) cil managed
+    {
+        .maxstack 500
+        .locals init (
+            [0] int64 __local__0
+        )
+        ldc.i8 3
+        stloc 0
+        ldarg 0
+        ldloc 0
+        stind.i8
+        ret
+    }
+    .method public hidebysig static
+    void test3__test4(int64&) cil managed
+    {
+        .maxstack 500
+        .locals init (
+            [0] int64 __local__0
+        )
+        ldarg 0
+        call void nonlocal::test3__test3__test4__test5(int64&)
+        ldnull
+        pop
+        ldarg 0
+        ldind.i8
+        stloc 0
+        ldloca 0
+        call int64 nonlocal::test(int64&)
+        pop
+        ldarg 0
+        ldind.i8
+        ldc.i8 4
+        ceq
+        brtrue IL_10
+        ldstr "failed assertion on line 21"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_10: nop
+        ldnull
+        pop
+        ldarg 0
+        call void nonlocal::test3__test3__test4__test6(int64&)
+        ldnull
+        pop
+        ldarg 0
+        ldind.i8
+        ldc.i8 3
+        ceq
+        brtrue IL_11
+        ldstr "failed assertion on line 23"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_11: nop
+        ldnull
+        pop
+        ret
+    }
+    .method public hidebysig static
+    void test7__test8(int64[]) cil managed
+    {
+        .maxstack 500
+        .locals init (
+            [0] int64 __local__0
+        )
+        ldc.i8 0
+        stloc 0
+        ldarg 0
+        ldc.i8 0
+        ldloc 0
+        stelem int64
+        ret
+    }
+    .method public hidebysig static
+    void test9__test9helper(int64&) cil managed
+    {
+        .maxstack 500
+        .locals init (
+            [0] int64 __local__0
+        )
+        ldc.i8 0
+        stloc 0
+        ldarg 0
+        ldloc 0
+        stind.i8
+        ret
+    }
+    .method public hidebysig static
+    int64 test10__test11(int64, int64&) cil managed
+    {
+        .maxstack 500
+        .locals init (
+        )
+        ldarg 0
+        ldarg 1
+        ldind.i8
+        add.ovf
+        ret
+    }
+    .method public hidebysig static
+    int64 test10__test10__test12__test13(int64, int64&) cil managed
+    {
+        .maxstack 500
+        .locals init (
+        )
+        ldarg 0
+        ldarg 1
+        ldind.i8
+        add.ovf
+        ret
+    }
+    .method public hidebysig static
+    int64 test10__test12(int64&) cil managed
+    {
+        .maxstack 500
+        .locals init (
+            [0] int64 __local__0
+        )
+        ldarg 0
+        ldind.i8
+        ldarg 0
+        call int64 nonlocal::test10__test10__test12__test13(int64, int64&)
+        stloc 0
+        ldarg 0
+        ldloc 0
+        stind.i8
+        ldarg 0
+        ldind.i8
+        ldc.i8 2
+        ceq
+        brtrue IL_12
+        ldstr "failed assertion on line 50"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_12: nop
+        ldnull
+        pop
+        ldarg 0
+        ldind.i8
+        ldarg 0
+        call int64 nonlocal::test10__test10__test12__test13(int64, int64&)
+        ret
+    }
+    .method public hidebysig static
+    void Nonlocals__testMethod__testMethod2(class Nonlocals, int64&, int64&) cil managed
+    {
+        .maxstack 500
+        .locals init (
+            [0] int64 __local__0,
+            [1] int64 __local__1
+        )
+        ldarg 0
+        callvirt instance void Nonlocals::testMethod3()
+        ldnull
+        pop
+        ldc.i8 3
+        stloc 0
+        ldarg 1
+        ldloc 0
+        stind.i8
+        ldc.i8 3
+        stloc 1
+        ldarg 2
+        ldloc 1
+        stind.i8
+        ret
+    }
+    .method public hidebysig static
+    void test13__test14(class Nonlocals&) cil managed
+    {
+        .maxstack 500
+        .locals init (
+            [0] class Nonlocals __local__0
+        )
+        ldnull
+        stloc 0
+        ldarg 0
+        ldloc 0
+        stind.ref
+        ret
+    }
+}
+.class public auto ansi beforefieldinit Nonlocals extends object
+{
+    .method public hidebysig virtual instance
+    void testMethod3() cil managed
+    {
+        .maxstack 500
+        .locals init (
+        )
+        nop
+        ret
+    }
+    .method public hidebysig virtual instance
+    void testMethod(int64&) cil managed
+    {
+        .maxstack 500
+        .locals init (
+            [0] int64 y
+        )
+        ldc.i8 2
+        stloc 0
+        ldarg 0
+        ldarg 1
+        ldloca 0
+        call void nonlocal::Nonlocals__testMethod__testMethod2(class Nonlocals, int64&, int64&)
+        ldnull
+        pop
+        ldloc 0
+        ldc.i8 3
+        ceq
+        brtrue IL_13
+        ldstr "failed assertion on line 69"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_13: nop
+        ldnull
+        pop
+        ret
+    }
+    .method public hidebysig virtual instance
+    void testMethod4() cil managed
+    {
+        .maxstack 500
+        .locals init (
+            [0] class Nonlocals __local__0
+        )
+        ldarg 0
+        stloc 0
+        ldloca 0
+        call void nonlocal::test13(class Nonlocals&)
+        ldnull
+        pop
+        ldarg 0
+        ldnull
+        ceq
+        ldc.i4.0
+        ceq
+        brtrue IL_14
+        ldstr "failed assertion on line 73"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_14: nop
+        ldnull
+        pop
+        ret
+    }
+    .method public hidebysig specialname rtspecialname instance
+    void .ctor() cil managed
+    {
+        .maxstack 500
+        .locals init (
+        )
+        ldarg.0
+        call instance void object::.ctor()
+        nop
+        ret
+    }
+}

@@ -26,7 +26,7 @@ class FuncType(SymbolType):
         for i in range(len(self.parameters)):
             p = self.parameters[i]
             if i in self.refParams and isinstance(p, ClassValueType):
-                sig = p.getCILSignature() + "[]"
+                sig = p.getCILSignature() + "&"
             else:
                 sig = p.getCILSignature()
             params.append(sig)
