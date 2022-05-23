@@ -1,0 +1,177 @@
+.assembly 'exponent'
+{
+}
+.module exponent.exe
+.class public auto ansi beforefieldinit exponent extends [mscorlib]System.Object
+{
+    .field public static int64 n
+    .field public static int64 i
+    .method public static hidebysig default void Main (string[] args)  cil managed
+    {
+        .entrypoint
+        .maxstack 500
+        .locals init (
+        )
+        ldc.i8 42
+        stsfld int64 exponent::n
+        ldc.i8 0
+        stsfld int64 exponent::i
+    IL_1: nop
+        ldsfld int64 exponent::i
+        ldsfld int64 exponent::n
+        cgt
+        ldc.i4.0
+        ceq
+        brfalse IL_2
+        ldc.i8 2
+        ldsfld int64 exponent::i
+        ldc.i8 31
+        rem
+        call int64 exponent::exp(int64, int64)
+        call void class [mscorlib]System.Console::WriteLine(int64)
+        ldnull
+        pop
+        ldsfld int64 exponent::i
+        ldc.i8 1
+        add.ovf
+        stsfld int64 exponent::i
+        br IL_1
+    IL_2: nop
+        ldc.i8 2
+        ldc.i8 3
+        call int64 exponent::exp(int64, int64)
+        ldc.i8 8
+        ceq
+        brtrue IL_3
+        ldstr "failed assertion on line 27"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_3: nop
+        ldnull
+        pop
+        ldc.i8 3
+        ldc.i8 3
+        call int64 exponent::exp(int64, int64)
+        ldc.i8 27
+        ceq
+        brtrue IL_4
+        ldstr "failed assertion on line 28"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_4: nop
+        ldnull
+        pop
+        ldc.i8 3
+        ldc.i8 4
+        call int64 exponent::exp(int64, int64)
+        ldc.i8 81
+        ceq
+        brtrue IL_5
+        ldstr "failed assertion on line 29"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_5: nop
+        ldnull
+        pop
+        ldc.i8 4
+        ldc.i8 4
+        call int64 exponent::exp(int64, int64)
+        ldc.i8 256
+        ceq
+        brtrue IL_6
+        ldstr "failed assertion on line 30"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_6: nop
+        ldnull
+        pop
+        ldc.i8 5
+        ldc.i8 1
+        call int64 exponent::exp(int64, int64)
+        ldc.i8 5
+        ceq
+        brtrue IL_7
+        ldstr "failed assertion on line 31"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_7: nop
+        ldnull
+        pop
+        ldc.i8 1
+        ldc.i8 99
+        call int64 exponent::exp(int64, int64)
+        ldc.i8 1
+        ceq
+        brtrue IL_8
+        ldstr "failed assertion on line 32"
+        newobj instance void [mscorlib]System.Exception::.ctor(string)
+        throw
+    IL_8: nop
+        ldnull
+        pop
+        ret
+    }
+    .method public hidebysig static
+    int64 exp(int64, int64) cil managed
+    {
+        .maxstack 500
+        .locals init (
+            [0] int64 a
+        )
+        ldc.i8 0
+        stloc 0
+        ldc.i8 1
+        stloc 0
+        ldarg 1
+        ldloca 0
+        ldarg 0
+        call int64 exponent::exp__f(int64, int64&, int64)
+        ret
+    }
+    .method public hidebysig static
+    int64 exp__exp__f__geta(int64&) cil managed
+    {
+        .maxstack 500
+        .locals init (
+        )
+        ldarg 0
+        ldind.i8
+        ret
+    }
+    .method public hidebysig static
+    int64 exp__f(int64, int64&, int64) cil managed
+    {
+        .maxstack 500
+        .locals init (
+            [0] int64 __local__0
+        )
+    IL_9: nop
+        ldarg 0
+        ldc.i8 0
+        cgt
+        ldc.i4.0
+        ceq
+        brfalse IL_10
+        ldarg 1
+        call int64 exponent::exp__exp__f__geta(int64&)
+        ret
+        br IL_11
+    IL_10: nop
+        ldarg 1
+        ldind.i8
+        ldarg 2
+        mul.ovf
+        stloc 0
+        ldarg 1
+        ldloc 0
+        stind.i8
+        ldarg 0
+        ldc.i8 1
+        sub.ovf
+        ldarg 1
+        ldarg 2
+        call int64 exponent::exp__f(int64, int64&, int64)
+        ret
+    IL_11: nop
+    }
+}

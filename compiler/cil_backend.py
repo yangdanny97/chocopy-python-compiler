@@ -73,9 +73,9 @@ class CilBackend(CommonVisitor):
             self.instr(
                 f"ldsflda {node.inferredType.getCILName()} {self.main}::{node.getCILName()}")
         elif self.isFromRefArg(node):
-            self.load(node.getCILName())
+            self.load(node.name)
         else:
-            self.loadAddr(node.getCILName())
+            self.loadAddr(node.name)
 
     def loadAddr(self, name: str):
         n = self.locals[-1][name]
@@ -242,7 +242,7 @@ class CilBackend(CommonVisitor):
         locals = self.builder.newBlock()
         for i in range(len(node.params)):
             self.newLocalEntry(
-                node.params[i].identifier.getCILName(), node.params[i].t, True)
+                node.params[i].identifier.name, node.params[i].t, True)
         for d in node.declarations:
             self.visit(d)
         self.returnType = node.type.returnType
@@ -273,7 +273,7 @@ class CilBackend(CommonVisitor):
                 f"stfld {node.var.t.getCILName()} {className.getCILName()}::{node.getIdentifier().getCILName()}")
         else:
             self.visit(node.value)
-            self.newLocal(varName, node.var.t)
+            self.newLocal(node.getIdentifier().name, node.var.t)
 
     # STATEMENTS
 
@@ -282,13 +282,13 @@ class CilBackend(CommonVisitor):
             if self.defaultToGlobals or target.varInstance.isGlobal:
                 self.instr(
                     f"stsfld {target.inferredType.getCILName()} {self.main}::{target.getCILName()}")
-            elif target.varInstance.isNonlocal:
+            elif self.isFromRefArg(target):
                 temp = self.newLocal(None, target.inferredType)
-                self.load(target.getCILName())
+                self.load(target.name)
                 self.load(temp)
                 self.storeInd(target.inferredType)
             else:
-                self.store(target.getCILName())
+                self.store(target.name)
         elif isinstance(target, IndexExpr):
             temp = self.newLocal(None, target.inferredType)
             self.visit(target.list)
@@ -514,7 +514,7 @@ class CilBackend(CommonVisitor):
             self.instr(
                 f"stsfld {node.identifier.inferredType.getCILName()} {self.main}::{node.identifier.getCILName()}")
         else:
-            self.store(node.identifier.getCILName())
+            self.store(node.identifier.name)
         # body
         self.visitStmtList(node.body)
         # idx = idx + 1
@@ -570,10 +570,10 @@ class CilBackend(CommonVisitor):
             self.instr(
                 f"ldsfld {node.inferredType.getCILName()} {self.main}::{node.getCILName()}")
         elif self.isFromRefArg(node):
-            self.load(node.getCILName())
+            self.load(node.name)
             self.loadInd(node.inferredType)
         else:
-            self.load(node.getCILName())
+            self.load(node.name)
 
     def MemberExpr(self, node: MemberExpr):
         self.visit(node.object)
