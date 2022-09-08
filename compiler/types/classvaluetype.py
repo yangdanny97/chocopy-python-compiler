@@ -92,17 +92,17 @@ class ClassValueType(ValueType):
         if self.className == "bool":
             return "i32"
         elif self.className == "str":
-            raise Exception("unsupported")
+            raise Exception("TODO")
         elif self.className == "object":
-            raise Exception("unsupported")
+            raise Exception("TODO")
         elif self.className == "<None>":
-            raise Exception("unsupported")
+            raise Exception("TODO")
         elif self.className == "<Empty>":
-            raise Exception("unsupported")
+            raise Exception("TODO")
         elif self.className == "int":
             return "i64"
         else:
-            raise Exception("unsupported")
+            raise Exception("TODO")
 
     def __str__(self):
         return self.className

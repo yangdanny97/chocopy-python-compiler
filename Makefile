@@ -7,3 +7,5 @@ clean:
 	rm -f *.ast.typed
 	rm -f *.test.py
 	rm -f *.out.py
+	rm -f *.wasm
+	rm -f *.wat

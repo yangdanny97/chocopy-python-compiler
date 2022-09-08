@@ -36,16 +36,34 @@ class WasmBuilder(Builder):
         self.unindent()
         self.newLine(")")
 
+    def emit(self) -> str:
+        lines = []
+        for l in self.lines:
+            if isinstance(l, str):
+                if " drop" in l and " i64.const 0" in lines[-1]:
+                    lines[-1] = None
+                    continue
+                lines.append(l)
+            else:
+                lines.append(l.emit())
+        lines = [l for l in lines if l is not None]
+        return "\n".join(lines)
+
+    def newBlock(self):
+        child = WasmBuilder(self.name)
+        child.indentation = self.indentation
+        self.lines.append(child)
+        return child
+
 class WasmBackend(CommonVisitor):
     defaultToGlobals = False  # treat all vars as global if this is true
     localCounter = 0
+    locals = None
 
     def __init__(self, main: str, ts: TypeSystem):
         self.builder = WasmBuilder(main)
         self.main = main  # name of main method
         self.ts = ts
-        self.enterScope()
-
 
     def currentBuilder(self):
         return self.classes[self.currentClass]
@@ -68,11 +86,10 @@ class WasmBackend(CommonVisitor):
         return f"local_{self.localCounter}"
 
     def newLocal(self, name: str = None, t: str = "i64")->str:
-        # store the top of stack as a new local
+        # add a new local decl, does not store anything
         if name is None:
             name = self.genLocalName()
-        self.instr(f"(local ${name} {t})")
-        self.store(name)
+        self.locals.newLine(f"(local ${name} {t})")
         return name
 
     def visitStmtList(self, stmts: List[Stmt]):
@@ -86,25 +103,33 @@ class WasmBackend(CommonVisitor):
         func_decls = [d for d in node.declarations if isinstance(d, FuncDef)]
         var_decls = [d for d in node.declarations if isinstance(d, VarDef)]
         self.builder.module()
-        self.instr('(import "console" "log" (func $log_int (param i64)))')
-        self.instr('(import "console" "log" (func $log_bool (param i64)))')
-        self.instr('(import "console" "assert" (func $assert (param i64)))')
+        self.instr('(import "imports" "logInt" (func $log_int (param i64)))')
+        self.instr('(import "imports" "logBool" (func $log_bool (param i32)))')
+        self.instr('(import "imports" "logString" (func $log_str (param i64)))')
+
+        self.instr('(import "imports" "assert" (func $assert (param i32)))')
         for v in var_decls:
-            self.instr(f"(global ${v.var.identifier.name} {v.var.t.getWasmName()}")
-            self.builder.indent()
+            self.instr(f"(global ${v.var.identifier.name} (mut {v.var.t.getWasmName()})")
             self.visit(v.value)
-            self.builder.end()
+            self.instr(f")")
         for d in func_decls:
             self.visit(d)
+        module_builder = self.builder
+        self.builder = module_builder.newBlock()
+
         self.builder.func("main")
         self.defaultToGlobals = True
+        self.locals = self.builder.newBlock()
         self.visitStmtList(node.statements)
         self.defaultToGlobals = False
         self.builder.end()
+
+        self.builder = module_builder
         self.instr(f"(start $main)")
         self.builder.end()
 
     def FuncDef(self, node: FuncDef):
+        self.locals = self.builder.newBlock()
         params = [self.builder.param(p.identifier.name, p.t.getWasmName()) for p in node.params]
         self.returnType = node.type.returnType
         ret = None if self.returnType.isNone() else self.returnType.getWasmName()
@@ -122,7 +147,8 @@ class WasmBackend(CommonVisitor):
             raise Exception("TODO")
         else:
             self.visit(node.value)
-            self.newLocal(varName, node.value.inferredType.getWasmName())
+            n = self.newLocal(varName, node.value.inferredType.getWasmName())
+            self.store(n)
 
     # # STATEMENTS
 
@@ -147,6 +173,7 @@ class WasmBackend(CommonVisitor):
         targets = node.targets[::-1]
         if len(targets) > 1:
             name = self.newLocal(None, node.value.inferredType.getWasmName())
+            self.store(name)
             for t in targets:
                 self.load(name)
                 self.processAssignmentTarget(t)
@@ -213,16 +240,22 @@ class WasmBackend(CommonVisitor):
             self.instr("i64.eqz")
         elif operator == "==":
             # TODO: refs
-            self.instr("i64.eq")
+            if leftType == BoolType():
+                self.instr("i32.eq")
+            else:
+                self.instr("i64.eq")
         elif operator == "!=":
-            self.instr("i64.ne")
+            if leftType == BoolType():
+                self.instr("i32.ne")
+            else:
+                self.instr("i64.ne")
         elif operator == "is":
             raise Exception("TODO")
         # logical operators
         elif operator == "and":
-            self.instr("i64.and")
+            self.instr("i32.and")
         elif operator == "or":
-            self.instr("i64.or")
+            self.instr("i32.or")
         else:
             raise Exception(
                 f"Internal compiler error: unexpected operator {operator}")
@@ -234,7 +267,7 @@ class WasmBackend(CommonVisitor):
             self.instr("i64.sub")
         elif node.operator == "not":
             self.visit(node.operand)
-            self.instr("i64.eqz")
+            self.instr("i32.eqz")
 
     def CallExpr(self, node: CallExpr):
         name = node.function.name
@@ -261,7 +294,7 @@ class WasmBackend(CommonVisitor):
         self.builder.block(block)
         self.builder.loop(loop)
         self.visit(node.condition)
-        self.instr(f"i64.eqz")
+        self.instr(f"i32.eqz")
         self.instr(f"br_if ${block}")
         for s in node.body:
             self.visit(s)
@@ -291,29 +324,34 @@ class WasmBackend(CommonVisitor):
             self.instr(f"local.get ${node.name}")
 
     def IfExpr(self, node: IfExpr):
+        n = self.newLocal(None, node.inferredType.getWasmName())
         self.visit(node.condition)
         self.instr("(if")
         self.builder.indent()
         self.instr("(then")
         self.builder.indent()
         self.visit(node.thenExpr)
+        self.store(n)
         self.builder.end()
         self.instr("(else")
         self.builder.indent()
         self.visit(node.elseExpr)
+        self.store(n)
         self.builder.end()
         self.builder.end()
+        self.load(n)
+
 
     # # LITERALS
 
     def BooleanLiteral(self, node: BooleanLiteral):
         if node.value:
-            self.instr(f"i64.const 1")
+            self.instr(f"i32.const 1")
         else:
-            self.instr(f"i64.const 0")
+            self.instr(f"i32.const 0")
 
     def IntegerLiteral(self, node: IntegerLiteral):
-        self.instr(f"i64.const f{node.value}")
+        self.instr(f"i64.const {node.value}")
 
     def NoneLiteral(self, node: NoneLiteral):
         self.instr(f"i64.const 0")
