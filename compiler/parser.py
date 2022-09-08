@@ -368,6 +368,11 @@ class Parser(NodeVisitor):
         annotation = self.getTypeAnnotation(node.annotation)
         return TypedVar(location, identifier, annotation)
 
+    def visit_Assert(self, node):
+        location = self.getLocation(node)
+        func = Identifier(location, "__assert__")
+        return CallExpr(location, func, [self.visit(node.test)])
+
     # operators
 
     def visit_And(self, node):
@@ -445,9 +450,6 @@ class Parser(NodeVisitor):
         raise ParseError("Unsupported", node)
 
     def visit_Try(self, node):
-        raise ParseError("Unsupported", node)
-
-    def visit_Assert(self, node):
         raise ParseError("Unsupported", node)
 
     def visit_Import(self, node):
