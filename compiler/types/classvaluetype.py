@@ -88,6 +88,22 @@ class ClassValueType(ValueType):
         else:
             return "class "+self.className
 
+    def getWasmName(self):
+        if self.className == "bool":
+            return "i32"
+        elif self.className == "str":
+            raise Exception("unsupported")
+        elif self.className == "object":
+            raise Exception("unsupported")
+        elif self.className == "<None>":
+            raise Exception("unsupported")
+        elif self.className == "<Empty>":
+            raise Exception("unsupported")
+        elif self.className == "int":
+            return "i64"
+        else:
+            raise Exception("unsupported")
+
     def __str__(self):
         return self.className
 

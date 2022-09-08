@@ -54,6 +54,7 @@ The input file should have extension `.py`. If the output file is not provided, 
     - `hoist` - output untyped Python 3 source code w/o nonlocals or nested function definitions
     - `jvm` - output JVM bytecode formatted for the Krakatau assembler
     - `cil` - output CIL bytecode formatted for the Mono ilasm assembler
+    - `wasm` - output WASM as plaintext in WAT format (WIP)
 
 ## Differences from the reference implementation:
 
@@ -105,6 +106,23 @@ The CIL backend for this compiler outputs CIL bytecode in plaintext formatted fo
 The `demo_cil.sh` script is a useful utility to compile and run files with the CIL backend with a single command (provide the path to the input source file as an argument). 
 - To run the same example as above, run `./demo_cil.sh tests/runtime/binary_tree.py`
 
+## WASM Backend Notes:
+
+WIP
+
+Planned features:
+- ints and bools
+- binary operators and assignment
+- control flow
+- print and assert
+
+Not-currently-planned features:
+- classes/objects
+- arrays
+- strings
+- nested functions
+- global/nonlocal
+
 ## FAQ
 
 - What is this for?
@@ -116,4 +134,4 @@ The `demo_cil.sh` script is a useful utility to compile and run files with the C
 - Why implement this in Python?
   - Since Chocopy is a subset of Python, implementing the compiler in Python means I do not have to write my own lexer and parser. This was explicitly something I wanted to experiment with while writing the frontend, and it worked wonderfully. The secondary reason is that writing it in Python means I can prototype new ideas faster. The lack of type safety in the compiler codebase is mitigated by an extensive test suite.
 
-Most of the test cases are taken from test suites included in the release code for CS164, with some additional tests written for more coverage. Tests include both static validation of generated/annotated ASTs, as well as runtime tests that check the correctness of output code. The runtime test suite for the JVM backend were evaluated using Java 8 on my local machine.
+Most of the test cases are taken from test suites included in the release code for CS164, with some additional tests written for more coverage. Tests include both static validation of generated/annotated ASTs, as well as runtime tests that check the correctness of output code. 

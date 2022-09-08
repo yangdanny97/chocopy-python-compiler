@@ -28,4 +28,11 @@ assert a or b
 assert not (b or b)
 assert not (b and b)
 
+x = y
+assert x == y
+assert x == 2
+
+x = y = 3
+assert x == y
+assert x == 3
 

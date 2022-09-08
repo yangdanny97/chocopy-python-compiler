@@ -12,6 +12,7 @@ mode_help = (
     'hoist - output untyped Python 3 source code w/o nonlocals or nested function definitions\n' + 
     'jvm - output JVM bytecode formatted for the Krakatau assembler\n'
     'cil - output CIL bytecode formatted for the Mono ilasm assembler\n'
+    'wasm - output WASM in WAT format\n'
 )
 
 def out_msg(path, verbose):
@@ -20,7 +21,7 @@ def out_msg(path, verbose):
 
 def main():
     parser = argparse.ArgumentParser(description='Chocopy frontend')
-    parser.add_argument('--mode', dest='mode', choices=["parse", "tc", "python", "jvm", "hoist", "cil"], default="python",
+    parser.add_argument('--mode', dest='mode', choices=["parse", "tc", "python", "jvm", "hoist", "cil", "wasm"], default="python",
                         help=mode_help)
     parser.add_argument('--print', dest='should_print', action='store_true',
                         help="output to stdout instead of file")
@@ -122,7 +123,16 @@ def main():
             fname = outdir + cil_emitter.name + ".cil"
             with open(fname, "w") as f:
                 out_msg(fname, args.verbose)
-                f.write(cil_emitter.emit())    
+                f.write(cil_emitter.emit())
+    elif args.mode == "wasm":
+        wat_emitter = compiler.emitWASM(infile_name, tree)
+        if args.should_print:
+            print(wat_emitter.emit())
+        else: 
+            fname = outdir + wat_emitter.name + ".wat"
+            with open(fname, "w") as f:
+                out_msg(fname, args.verbose)
+                f.write(wat_emitter.emit())      
 
 if __name__ == "__main__":
     main()

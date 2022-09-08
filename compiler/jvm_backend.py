@@ -675,8 +675,7 @@ class JvmBackend(CommonVisitor):
             "invokespecial Method java/util/Scanner <init> (Ljava/io/InputStream;)V")
         l = self.newLocal()
         self.instr(f"aload {l}")
-        self.currentBuilder().addLine(
-            "invokevirtual Method java/util/Scanner nextLine ()Ljava/lang/String;")
+        self.instr("invokevirtual Method java/util/Scanner nextLine ()Ljava/lang/String;")
 
     def emit_len(self, arg: Expr):
         t = arg.inferredType
