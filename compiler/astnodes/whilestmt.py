@@ -1,10 +1,11 @@
 from .stmt import Stmt
 from .expr import Expr
+from typing import List
 
 
 class WhileStmt(Stmt):
 
-    def __init__(self, location: [int], condition: Expr, body: [Stmt]):
+    def __init__(self, location: List[int], condition: Expr, body: List[Stmt]):
         super().__init__(location, "WhileStmt")
         self.condition = condition
         self.body = [s for s in body if s is not None]

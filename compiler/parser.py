@@ -1,5 +1,6 @@
 from ast import *
 from .astnodes import *
+from typing import List as Lst
 
 
 class ParseError(Exception):
@@ -19,13 +20,13 @@ class Parser(NodeVisitor):
 
     # reduce a list of >2 expressions separated by a
     # left-associative operator into a BinaryExpr tree
-    def binaryReduce(self, op: str, values: [Expr]) -> Expr:
+    def binaryReduce(self, op: str, values: Lst[Expr]) -> Expr:
         current = BinaryExpr(values[0].location, values[0], op, values[1])
         for v in values[2:]:
             current = BinaryExpr(values[0].location, current, op, v)
         return current
 
-    def getLocation(self, node) -> [int]:
+    def getLocation(self, node) -> Lst[int]:
         # input is Python AST node
         # get 2 item list corresponding to AST node starting location
         # make columns 1-indexed

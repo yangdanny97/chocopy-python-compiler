@@ -1,10 +1,11 @@
 from .expr import Expr
 from .identifier import Identifier
+from typing import List
 
 
 class CallExpr(Expr):
 
-    def __init__(self, location: [int], function: Identifier, args: [Expr]):
+    def __init__(self, location: List[int], function: Identifier, args: List[Expr]):
         super().__init__(location, "CallExpr")
         self.function = function
         self.args = args

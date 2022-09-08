@@ -1,9 +1,10 @@
 from .expr import Expr
+from typing import List
 
 
 class BinaryExpr(Expr):
 
-    def __init__(self, location: [int], left: Expr, operator: str, right: Expr):
+    def __init__(self, location: List[int], left: Expr, operator: str, right: Expr):
         super().__init__(location, "BinaryExpr")
         self.left = left
         self.right = right

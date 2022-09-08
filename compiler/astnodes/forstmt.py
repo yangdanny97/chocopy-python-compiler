@@ -1,11 +1,12 @@
 from .stmt import Stmt
 from .expr import Expr
 from .identifier import Identifier
+from typing import List
 
 
 class ForStmt(Stmt):
 
-    def __init__(self, location: [int], identifier: Identifier, iterable: Expr, body: [Stmt]):
+    def __init__(self, location: List[int], identifier: Identifier, iterable: Expr, body: List[Stmt]):
         super().__init__(location, "ForStmt")
         self.identifier = identifier
         self.iterable = iterable

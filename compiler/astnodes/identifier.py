@@ -1,4 +1,5 @@
 from .expr import Expr
+from typing import List
 
 CIL_KEYWORDS = set(["char", "value", "int32", "int64", "string", "long", "null"] +
                    ["add",
@@ -121,7 +122,7 @@ CIL_KEYWORDS = set(["char", "value", "int32", "int64", "string", "long", "null"]
 
 class Identifier(Expr):
 
-    def __init__(self, location: [int], name: str):
+    def __init__(self, location: List[int], name: str):
         super().__init__(location, "Identifier")
         self.name = name
         self.varInstance = None

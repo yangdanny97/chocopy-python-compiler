@@ -1,10 +1,11 @@
 from compiler.types.classvaluetype import ClassValueType
 from .valuetype import ValueType
 from .symboltype import SymbolType
+from typing import List
 
 
 class FuncType(SymbolType):
-    def __init__(self, parameters: [ValueType], returnType: ValueType):
+    def __init__(self, parameters: List[ValueType], returnType: ValueType):
         self.parameters = parameters
         self.returnType = returnType
         self.refParams = {}

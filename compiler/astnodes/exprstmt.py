@@ -1,10 +1,11 @@
 from .stmt import Stmt
 from .expr import Expr
+from typing import List
 
 
 class ExprStmt(Stmt):
 
-    def __init__(self, location: [int], expr: Expr):
+    def __init__(self, location: List[int], expr: Expr):
         super().__init__(location, "ExprStmt")
         self.expr = expr
 

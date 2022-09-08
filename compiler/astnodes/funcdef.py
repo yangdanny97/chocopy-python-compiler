@@ -3,6 +3,7 @@ from .identifier import Identifier
 from .typedvar import TypedVar
 from .typeannotation import TypeAnnotation
 from .stmt import Stmt
+from typing import List
 
 
 class FuncDef(Declaration):
@@ -12,8 +13,8 @@ class FuncDef(Declaration):
     #         DECLARATIONS
     #         STATEMENTS
 
-    def __init__(self, location: [int], name: Identifier, params: [TypedVar], returnType: TypeAnnotation,
-                 declarations: [Declaration], statements: [Stmt], isMethod: bool = False):
+    def __init__(self, location: List[int], name: Identifier, params: List[TypedVar], returnType: TypeAnnotation,
+                 declarations: List[Declaration], statements: List[Stmt], isMethod: bool = False):
         super().__init__(location, "FuncDef")
         self.name = name
         self.params = params

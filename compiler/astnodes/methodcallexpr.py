@@ -1,10 +1,11 @@
 from .expr import Expr
 from .memberexpr import MemberExpr
+from typing import List
 
 
 class MethodCallExpr(Expr):
 
-    def __init__(self, location: [int], method: MemberExpr, args: [Expr]):
+    def __init__(self, location: List[int], method: MemberExpr, args: List[Expr]):
         super().__init__(location, "MethodCallExpr")
         self.method = method
         self.args = args

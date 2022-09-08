@@ -1,9 +1,10 @@
 from .expr import Expr
+from typing import List
 
 
 class IfExpr(Expr):
 
-    def __init__(self, location: [int], condition: Expr, thenExpr: Expr, elseExpr: Expr):
+    def __init__(self, location: List[int], condition: Expr, thenExpr: Expr, elseExpr: Expr):
         super().__init__(location, "IfExpr")
         self.condition = condition
         self.thenExpr = thenExpr

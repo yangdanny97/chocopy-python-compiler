@@ -1,10 +1,11 @@
 from .stmt import Stmt
 from .expr import Expr
+from typing import List
 
 
 class IfStmt(Stmt):
 
-    def __init__(self, location: [int], condition: Expr, thenBody: [Stmt], elseBody: [Stmt]):
+    def __init__(self, location: List[int], condition: Expr, thenBody: List[Stmt], elseBody: List[Stmt]):
         super().__init__(location, "IfStmt")
         self.condition = condition
         self.thenBody = [s for s in thenBody if s is not None]

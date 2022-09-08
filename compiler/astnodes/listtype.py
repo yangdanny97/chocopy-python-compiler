@@ -1,9 +1,10 @@
 from .typeannotation import TypeAnnotation
+from typing import List
 
 
 class ListType(TypeAnnotation):
 
-    def __init__(self, location: [int], elementType: TypeAnnotation):
+    def __init__(self, location: List[int], elementType: TypeAnnotation):
         super().__init__(location, "ListType")
         self.elementType = elementType
 

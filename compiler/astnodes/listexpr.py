@@ -1,9 +1,10 @@
 from .expr import Expr
+from typing import List
 
 
 class ListExpr(Expr):
 
-    def __init__(self, location: [int], elements: [Expr]):
+    def __init__(self, location: List[int], elements: List[Expr]):
         super().__init__(location, "ListExpr")
         self.elements = elements
         self.emptyListType = None

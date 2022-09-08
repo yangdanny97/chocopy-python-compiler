@@ -1,10 +1,11 @@
 from .node import Node
 from .compilererror import CompilerError
+from typing import List
 
 
 class Errors(Node):
 
-    def __init__(self, location: [int], errors: [CompilerError]):
+    def __init__(self, location: List[int], errors: List[CompilerError]):
         super().__init__(location, "Errors")
         self.errors = errors
 

@@ -1,6 +1,7 @@
 from .astnodes import *
 from .types import *
 from .visitor import Visitor
+from typing import List
 
 # A visitor to refine the types of empty list literals
 
@@ -23,7 +24,7 @@ class EmptyListTyper(Visitor):
             return False
         return True
 
-    def transformMultiAssign(self, node: AssignStmt) -> [AssignStmt]:
+    def transformMultiAssign(self, node: AssignStmt) -> List[AssignStmt]:
         statements = []
         for t in node.targets:
             statements.append(AssignStmt(node.location, [t], node.value))

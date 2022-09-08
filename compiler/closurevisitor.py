@@ -2,6 +2,7 @@ from .astnodes import *
 from .types import *
 from .visitor import Visitor
 from .varcollector import VarCollector
+from typing import List
 
 
 class VarInstance:
@@ -25,7 +26,7 @@ def merge(d1, d2):
     return combined
 
 
-def deduplicate(ids: [Identifier]) -> [Identifier]:
+def deduplicate(ids: List[Identifier]) -> List[Identifier]:
     seen = set()
     res = []
     for i in ids:

@@ -3,7 +3,7 @@ from .types import *
 from .builder import Builder
 from .typesystem import TypeSystem
 from .visitor import CommonVisitor
-from collections import defaultdict
+from typing import List
 import json
 
 
@@ -127,7 +127,7 @@ class CilBackend(CommonVisitor):
         self.locals[-1][name] = CilStackLoc(name, n, t.getCILName(), False)
         return name
 
-    def visitStmtList(self, stmts: [Stmt]):
+    def visitStmtList(self, stmts: List[Stmt]):
         if len(stmts) == 0:
             self.instr("nop")
         else:
@@ -693,7 +693,7 @@ class CilBackend(CommonVisitor):
             # ref -> ref: pass through a ref to a nonlocal
             self.load(arg.name)
         elif paramIsRef and argIsRef:
-            # ref -> ref: 
+            # ref -> ref:
             # deref, store value in new local, and pass ref to new local
             self.visit(arg)
             temp = self.newLocal(None, arg.inferredType)
@@ -707,6 +707,6 @@ class CilBackend(CommonVisitor):
                 self.visit(arg)
                 temp = self.newLocal(None, arg.inferredType)
                 self.loadAddr(temp)
-        else: 
+        else:
             # value/ref -> value : deref if necessary
             self.visit(arg)

@@ -1,10 +1,11 @@
 from .stmt import Stmt
 from .expr import Expr
+from typing import List
 
 
 class ReturnStmt(Stmt):
 
-    def __init__(self, location: [int], value: Expr):
+    def __init__(self, location: List[int], value: Expr):
         super().__init__(location, "ReturnStmt")
         self.value = value
         self.isReturn = True

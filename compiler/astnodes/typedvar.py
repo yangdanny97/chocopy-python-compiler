@@ -1,11 +1,12 @@
 from .node import Node
 from .identifier import Identifier
 from .typeannotation import TypeAnnotation
+from typing import List
 
 
 class TypedVar(Node):
 
-    def __init__(self, location: [int], identifier: Identifier, typ: TypeAnnotation):
+    def __init__(self, location: List[int], identifier: Identifier, typ: TypeAnnotation):
         super().__init__(location, "TypedVar")
         self.identifier = identifier
         self.type = typ

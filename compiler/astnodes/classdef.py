@@ -7,11 +7,12 @@ from .classtype import ClassType
 from ..types.classvaluetype import ClassValueType
 from ..types.functype import FuncType
 from ..types.Types import NoneType
+from typing import List
 
 
 class ClassDef(Declaration):
 
-    def __init__(self, location: [int], name: Identifier, superclass: Identifier, declarations: [Declaration]):
+    def __init__(self, location: List[int], name: Identifier, superclass: Identifier, declarations: List[Declaration]):
         super().__init__(location, "ClassDef")
         self.name = name
         self.superclass = superclass

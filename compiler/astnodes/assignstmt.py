@@ -1,10 +1,11 @@
 from .stmt import Stmt
 from .expr import Expr
+from typing import List
 
 
 class AssignStmt(Stmt):
 
-    def __init__(self, location: [int], targets: [Expr], value: Expr):
+    def __init__(self, location: List[int], targets: List[Expr], value: Expr):
         super().__init__(location, "AssignStmt")
         self.targets = targets
         self.value = value

@@ -3,7 +3,7 @@ from .types import *
 from .builder import Builder
 from .typesystem import TypeSystem
 from .visitor import CommonVisitor
-from collections import defaultdict
+from typing import List
 import json
 
 
@@ -13,7 +13,7 @@ class JvmBackend(CommonVisitor):
     defaultToGlobals = False  # treat all vars as global if this is true
 
     def __init__(self, main: str, ts: TypeSystem):
-        self.classes  = dict()
+        self.classes = dict()
         self.classes[main] = Builder(main)
         self.currentClass = main
         self.main = main  # name of main class
@@ -106,7 +106,7 @@ class JvmBackend(CommonVisitor):
         self.locals[-1][name] = n
         return n
 
-    def visitStmtList(self, stmts: [Stmt]):
+    def visitStmtList(self, stmts: List[Stmt]):
         if len(stmts) == 0:
             self.instr("nop")
         else:

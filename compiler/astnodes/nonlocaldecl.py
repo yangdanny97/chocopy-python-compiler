@@ -1,10 +1,11 @@
 from .declaration import Declaration
 from .identifier import Identifier
+from typing import List
 
 
 class NonLocalDecl(Declaration):
 
-    def __init__(self, location: [int], variable: Identifier):
+    def __init__(self, location: List[int], variable: Identifier):
         super().__init__(location, "NonLocalDecl")
         self.variable = variable
 

@@ -1,9 +1,10 @@
 from .expr import Expr
+from typing import List
 
 
 class UnaryExpr(Expr):
 
-    def __init__(self, location: [int], operator: str, operand: Expr):
+    def __init__(self, location: List[int], operator: str, operand: Expr):
         super().__init__(location, "UnaryExpr")
         self.operand = operand
         self.operator = operator

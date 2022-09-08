@@ -1,9 +1,10 @@
 from .expr import Expr
+from typing import List
 
 
 class Literal(Expr):
 
-    def __init__(self, location: [int], kind: str):
+    def __init__(self, location: List[int], kind: str):
         super().__init__(location, kind)
         self.value = None
 

@@ -1,11 +1,12 @@
 from .declaration import Declaration
 from .expr import Expr
 from .typedvar import TypedVar
+from typing import List
 
 
 class VarDef(Declaration):
 
-    def __init__(self, location: [int], var: TypedVar, value: Expr, isAttr: bool = False, attrOfClass=None):
+    def __init__(self, location: List[int], var: TypedVar, value: Expr, isAttr: bool = False, attrOfClass=None):
         super().__init__(location, "VarDef")
         self.var = var
         self.value = value

@@ -1,10 +1,11 @@
 from .expr import Expr
 from .identifier import Identifier
+from typing import List
 
 
 class MemberExpr(Expr):
 
-    def __init__(self, location: [int], obj: Expr, member: Identifier):
+    def __init__(self, location: List[int], obj: Expr, member: Identifier):
         super().__init__(location, "MemberExpr")
         self.object = obj
         self.member = member

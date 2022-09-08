@@ -2,13 +2,14 @@ from .node import Node
 from .declaration import Declaration
 from .stmt import Stmt
 from .errors import Errors
+from typing import List
 
 # root AST for source file
 
 
 class Program(Node):
 
-    def __init__(self, location: [int], declarations: [Declaration], statements: [Stmt], errors: Errors):
+    def __init__(self, location: List[int], declarations: List[Declaration], statements: List[Stmt], errors: Errors):
         super().__init__(location, "Program")
         self.declarations = [d for d in declarations if d is not None]
         self.statements = [s for s in statements if s is not None]

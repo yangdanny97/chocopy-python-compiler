@@ -1,9 +1,10 @@
 from .typeannotation import TypeAnnotation
+from typing import List
 
 
 class ClassType(TypeAnnotation):
 
-    def __init__(self, location: [int], className: str):
+    def __init__(self, location: List[int], className: str):
         super().__init__(location, "ClassType")
         self.className = className
 
