@@ -9,8 +9,8 @@ def t():
     y = y + y
     __assert__(z == 0)
 
-__assert__(x == 0)
-__assert__(y == "a")
+assert x == 0
+assert y == "a"
 t()
-__assert__(x == 1)
-__assert__(y == "aa")
+assert x == 1
+assert y == "aa"

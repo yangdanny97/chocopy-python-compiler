@@ -24,9 +24,9 @@ while i <= n:
 	print(exp(2, i % 31))
 	i = i + 1
 
-__assert__(exp(2,3) == 8)
-__assert__(exp(3,3) == 27)
-__assert__(exp(3,4) == 81)
-__assert__(exp(4,4) == 256)
-__assert__(exp(5,1) == 5)
-__assert__(exp(1,99) == 1)
+assert exp(2,3) == 8
+assert exp(3,3) == 27
+assert exp(3,4) == 81
+assert exp(4,4) == 256
+assert exp(5,1) == 5
+assert exp(1,99) == 1

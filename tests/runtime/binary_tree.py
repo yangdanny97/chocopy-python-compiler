@@ -76,10 +76,10 @@ while i < n:
 		t.insert(i)
 	i = i + 1
 
-__assert__(t.size == 175)
-__assert__(t.contains(15))
-__assert__(t.contains(23))
-__assert__(t.contains(42))
-__assert__(not t.contains(4))
-__assert__(not t.contains(8))
-__assert__(not t.contains(16))
+assert t.size == 175
+assert t.contains(15)
+assert t.contains(23)
+assert t.contains(42)
+assert not t.contains(4)
+assert not t.contains(8)
+assert not t.contains(16)

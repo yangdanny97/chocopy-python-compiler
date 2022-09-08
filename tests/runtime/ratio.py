@@ -14,15 +14,15 @@ r2 : Rat = None
 r3 : Rat = None
 r1 = Rat().new(4, 5)
 r2 = Rat().new(2, 3)
-__assert__(r1.n == 4)
-__assert__(r1.d == 5)
-__assert__(r2.n == 2)
-__assert__(r2.d == 3)
+assert r1.n == 4
+assert r1.d == 5
+assert r2.n == 2
+assert r2.d == 3
 
 r3 = r1.mul(r2)
-__assert__(r3.n == 8)
-__assert__(r3.d == 15)
+assert r3.n == 8
+assert r3.d == 15
 
 r3 = r3.mul(r2).mul(r2)
-__assert__(r3.n == 32)
-__assert__(r3.d == 135)
+assert r3.n == 32
+assert r3.d == 135

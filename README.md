@@ -61,7 +61,7 @@ The reference implementation represents a node's location as a four item list of
 
 The exact error messages from typechecking do not necessarily match the reference implementation, but the total number of messages (and the nodes that the messages are attached to) will match.
 
-This compiler support an extra standard function, `__assert__`, which takes in a single `bool` argument and functions exactly like Python's `assert` statement. It is used in the test suite to assert values in runtime tests.
+This compiler supports a limited version of Python's `assert` keyword. The `assert` may be followed by a single `bool` expression, which will raise an exception with an unspecified/generic message if the value is false. It is used in the test suite to assert values in runtime tests.
 
 ## JVM Backend Notes:
 

@@ -371,7 +371,7 @@ class Parser(NodeVisitor):
     def visit_Assert(self, node):
         location = self.getLocation(node)
         func = Identifier(location, "__assert__")
-        return CallExpr(location, func, [self.visit(node.test)])
+        return ExprStmt(location, CallExpr(location, func, [self.visit(node.test)]))
 
     # operators
 

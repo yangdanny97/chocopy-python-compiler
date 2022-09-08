@@ -57,55 +57,55 @@ vec = DoublingVector()
 for num in [4, 8, 15, 16, 23, 42]:
     vec.append(num)
 
-__assert__(vec.capacity() == 8)
-__assert__(vec.size == 6)
-__assert__(vec.items[0] == 4)
-__assert__(vec.items[1] == 8)
-__assert__(vec.items[2] == 15)
-__assert__(vec.items[3] == 16)
-__assert__(vec.items[4] == 23)
-__assert__(vec.items[5] == 42)
+assert vec.capacity() == 8
+assert vec.size == 6
+assert vec.items[0] == 4
+assert vec.items[1] == 8
+assert vec.items[2] == 15
+assert vec.items[3] == 16
+assert vec.items[4] == 23
+assert vec.items[5] == 42
 # extras from doubling
-__assert__(vec.items[6] == 15)
-__assert__(vec.items[7] == 16)
+assert vec.items[6] == 15
+assert vec.items[7] == 16
 
 vec = Vector()
 for num in [4, 8, 15, 16, 23, 42]:
     vec.append(num)
 
-__assert__(vec.capacity() == 6)
-__assert__(vec.size == 6)
-__assert__(vec.items[0] == 4)
-__assert__(vec.items[1] == 8)
-__assert__(vec.items[2] == 15)
-__assert__(vec.items[3] == 16)
-__assert__(vec.items[4] == 23)
-__assert__(vec.items[5] == 42)
+assert vec.capacity() == 6
+assert vec.size == 6
+assert vec.items[0] == 4
+assert vec.items[1] == 8
+assert vec.items[2] == 15
+assert vec.items[3] == 16
+assert vec.items[4] == 23
+assert vec.items[5] == 42
 
 vec = vrange(0, 1)
-__assert__(vec.capacity() == 1)
-__assert__(vec.size == 1)
-__assert__(vec.items[0] == 0)
+assert vec.capacity() == 1
+assert vec.size == 1
+assert vec.items[0] == 0
 
 vec = vrange(0, 2)
-__assert__(vec.capacity() == 2)
-__assert__(vec.size == 2)
-__assert__(vec.items[0] == 0)
-__assert__(vec.items[1] == 1)
+assert vec.capacity() == 2
+assert vec.size == 2
+assert vec.items[0] == 0
+assert vec.items[1] == 1
 
 vec = vrange(1, 3)
-__assert__(vec.capacity() == 2)
-__assert__(vec.size == 2)
-__assert__(vec.items[0] == 1)
-__assert__(vec.items[1] == 2)
+assert vec.capacity() == 2
+assert vec.size == 2
+assert vec.items[0] == 1
+assert vec.items[1] == 2
 
 vec = vrange(1, 1)
-__assert__(vec.capacity() == 1)
-__assert__(vec.size == 0)
+assert vec.capacity() == 1
+assert vec.size == 0
 
 vec = vrange(0, -1)
-__assert__(vec.capacity() == 1)
-__assert__(vec.size == 0)
+assert vec.capacity() == 1
+assert vec.size == 0
 
 vec = vrange(1, 100)
-__assert__(vec.size == 99)
+assert vec.size == 99

@@ -25,154 +25,154 @@ z = []
 a = []
 b = []
 
-__assert__(len(x) == 0)
-__assert__(len([]) == 0)
-__assert__(len([1, 2, 3]) == 3)
+assert len(x) == 0
+assert len([]) == 0
+assert len([1, 2, 3]) == 3
 
 x = [1, 2, 3]
-__assert__(len(x) == 3)
-__assert__(x[0] == 1)
-__assert__(x[1] == 2)
-__assert__(x[2] == 3)
+assert len(x) == 3
+assert x[0] == 1
+assert x[1] == 2
+assert x[2] == 3
 
 x = [1, 2, 3]
 x = [0] + x
-__assert__(len(x) == 4)
-__assert__(x[0] == 0)
-__assert__(x[1] == 1)
-__assert__(x[2] == 2)
-__assert__(x[3] == 3)
+assert len(x) == 4
+assert x[0] == 0
+assert x[1] == 1
+assert x[2] == 2
+assert x[3] == 3
 
 x = [1, 2, 3]
 x =  x + [4]
-__assert__(len(x) == 4)
-__assert__(x[0] == 1)
-__assert__(x[1] == 2)
-__assert__(x[2] == 3)
-__assert__(x[3] == 4)
+assert len(x) == 4
+assert x[0] == 1
+assert x[1] == 2
+assert x[2] == 3
+assert x[3] == 4
 
 y = ["1", "2", "3"]
-__assert__(len(y) == 3)
-__assert__(y[0] == "1")
-__assert__(y[1] == "2")
-__assert__(y[2] == "3")
+assert len(y) == 3
+assert y[0] == "1"
+assert y[1] == "2"
+assert y[2] == "3"
 
 z = [None]
-__assert__(len([None]) == 1)
-__assert__([None][0] is None)
+assert len([None]) == 1
+assert [None][0] is None
 
 z = [[]]
-__assert__(len([[]]) == 1)
-__assert__(len([[]][0]) == 0)
+assert len([[]]) == 1
+assert len([[]][0]) == 0
 
 a = [[object()]]
-__assert__(len(a) == 1)
-__assert__(len(a[0]) == 1)
+assert len(a) == 1
+assert len(a[0]) == 1
 
 y = ["1", "2", "3"]
 y = y + y
-__assert__(len(y) == 6)
-__assert__(y[0] == "1")
-__assert__(y[1] == "2")
-__assert__(y[2] == "3")
-__assert__(y[3] == "1")
-__assert__(y[4] == "2")
-__assert__(y[5] == "3")
+assert len(y) == 6
+assert y[0] == "1"
+assert y[1] == "2"
+assert y[2] == "3"
+assert y[3] == "1"
+assert y[4] == "2"
+assert y[5] == "3"
 
 x = [1, 2, 3]
 x = x + x
-__assert__(len(x) == 6)
-__assert__(x[0] == 1)
-__assert__(x[1] == 2)
-__assert__(x[2] == 3)
-__assert__(x[3] == 1)
-__assert__(x[4] == 2)
-__assert__(x[5] == 3)
+assert len(x) == 6
+assert x[0] == 1
+assert x[1] == 2
+assert x[2] == 3
+assert x[3] == 1
+assert x[4] == 2
+assert x[5] == 3
 
 w = [None]
-__assert__(len(w) == 1)
-__assert__(w[0] is None)
+assert len(w) == 1
+assert w[0] is None
 
 w = [object()]
-__assert__(len(w) == 1)
-__assert__(not (w[0] is None))
+assert len(w) == 1
+assert not (w[0] is None)
 
 w = [object()]
 w[0] = None
-__assert__(w[0] is None)
+assert w[0] is None
 w[0] = object()
-__assert__(not (w[0] is None))
+assert not (w[0] is None)
 
 x = [1, 2, 3]
 x[0] = 999
-__assert__(len(x) == 3)
-__assert__(x[0] == 999)
-__assert__(x[1] == 2)
-__assert__(x[2] == 3)
+assert len(x) == 3
+assert x[0] == 999
+assert x[1] == 2
+assert x[2] == 3
 
 x2 = x
 x[1] = 999
-__assert__(x[1] == 999)
-__assert__(x2[1] == 999)
+assert x[1] == 999
+assert x2[1] == 999
 
 x = [0, 1]
 x2[1] = 30
-__assert__(x[1] != 30)
-__assert__(x2[1] == 30)
+assert x[1] != 30
+assert x2[1] == 30
 
 x = x2
 x2 = x
 
 y = ["1", "2", "3"]
 y[2] = "a"
-__assert__(len(y) == 3)
-__assert__(y[0] == "1")
-__assert__(y[1] == "2")
-__assert__(y[2] == "a")
+assert len(y) == 3
+assert y[0] == "1"
+assert y[1] == "2"
+assert y[2] == "a"
 
 y2 = y
 y2[1] = "aa"
-__assert__(y2[1] == "aa")
-__assert__(y2[1] == "aa")
+assert y2[1] == "aa"
+assert y2[1] == "aa"
 
 a = [None, [], [object(), None]]
-__assert__(a[0] is None)
-__assert__(len(a[1]) == 0)
-__assert__(len(a[2]) == 2)
-__assert__(not (a[2][0] is None))
-__assert__(a[2][1] is None)
+assert a[0] is None
+assert len(a[1]) == 0
+assert len(a[2]) == 2
+assert not (a[2][0] is None)
+assert a[2][1] is None
 
 w = []
-__assert__(len(w) == 0)
-__assert__(len(w + w) == 0)
+assert len(w) == 0
+assert len(w + w) == 0
 
 x = []
-__assert__(len(x) == 0)
-__assert__(len(x + x) == 0)
+assert len(x) == 0
+assert len(x + x) == 0
 
 y = []
 y = y + [""]
-__assert__(len(y) == 1)
-__assert__(len(y[0]) == 0)
+assert len(y) == 1
+assert len(y[0]) == 0
 
 x = [1,2,3]
 setIdx(x, 1, 0)
-__assert__(x[1] == 0)
+assert x[1] == 0
 
 b = [[1, 1], [2], [3]]
 setNestedIdx(b, 0, 0, 1)
-__assert__(b[0][0] == 1)
+assert b[0][0] == 1
 
-__assert__(b[1][0] == 2)
+assert b[1][0] == 2
 x = getNestedIdx(b, 1)
-__assert__(x[0] == 2)
+assert x[0] == 2
 x[0] = 1
-__assert__(b[1][0] == 1)
+assert b[1][0] == 1
 
 x = [1, 2, 3]
 x2 = x
 x[0] = 0
-__assert__(x2[0] == 0)
+assert x2[0] == 0
 
 x = [1]
 y = ["1"]

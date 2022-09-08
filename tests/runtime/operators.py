@@ -5,30 +5,30 @@ z:object = None
 a:str = "123"
 b:str = "123"
 c:str = "456"
-__assert__(w == x)
-__assert__(y != x)
-__assert__(b == b)
-__assert__(a == b)
-__assert__(b != c)
-__assert__(y > x)
-__assert__(y >= x)
-__assert__(w >= x)
-__assert__(x < y)
-__assert__(x <= y)
-__assert__(w <= x)
-__assert__(w + x == y)
-__assert__(y - x == w)
-__assert__(w * x == x)
-__assert__(5 // 2 == y)
-__assert__(5 % 2 == x)
-__assert__(z is z)
-__assert__(not False)
-__assert__(not (w != x))
-__assert__(-x == -1)
-__assert__(True and True)
-__assert__(True or False)
-__assert__(False or True)
-__assert__((False or True) and True)
-__assert__(True if x != y else False)
-__assert__(False if x == y else True)
+assert w == x
+assert y != x
+assert b == b
+assert a == b
+assert b != c
+assert y > x
+assert y >= x
+assert w >= x
+assert x < y
+assert x <= y
+assert w <= x
+assert w + x == y
+assert y - x == w
+assert w * x == x
+assert 5 // 2 == y
+assert 5 % 2 == x
+assert z is z
+assert not False
+assert not (w != x)
+assert -x == -1
+assert True and True
+assert True or False
+assert False or True
+assert (False or True) and True
+assert True if x != y else False
+assert False if x == y else True
 

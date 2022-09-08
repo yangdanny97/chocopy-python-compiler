@@ -29,29 +29,29 @@ c3:A = None
 
 # constructors, getters, setters
 c1 = A()
-__assert__(c1.y == 1)
+assert c1.y == 1
 c2 = B()
-__assert__(c2.y == 5)
-__assert__(c2.z == 5)
+assert c2.y == 5
+assert c2.z == 5
 c3 = B()
-__assert__(c3.y == 5)
+assert c3.y == 5
 
 c2.y = 0
-__assert__(c2.y == 0)
+assert c2.y == 0
 
 # methods, dynamic dispatch
 
 c2.setZ(2)
-__assert__(c2.z == 2)
+assert c2.z == 2
 
 x = 0
 c1.t()
-__assert__(x == 1)
+assert x == 1
 
 x = 0
 c2.t()
-__assert__(x == 2)
+assert x == 2
 
 x = 0
 c3.t()
-__assert__(x == 2)
+assert x == 2

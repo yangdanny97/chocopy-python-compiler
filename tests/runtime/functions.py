@@ -30,19 +30,19 @@ x:int = 0
 y:object = None
 
 f1()
-__assert__(f2() == 1)
-__assert__(f3() is None)
-__assert__(f4(1, None) == 2)
-__assert__(f4(f2(), f3()) == 2)
-__assert__(f5() is None)
+assert f2() == 1
+assert f3() is None
+assert f4(1, None) == 2
+assert f4(f2(), f3()) == 2
+assert f5() is None
 x = f4(f2(), f3())
 y = f3()
-__assert__(f4(x, y) == 3)
-__assert__(f6() == 6)
-__assert__(f7() == 5)
-__assert__(f8(0) == 0)
-__assert__(f8(1) == 1)
-__assert__(f8(f7()) == 5)
+assert f4(x, y) == 3
+assert f6() == 6
+assert f7() == 5
+assert f8(0) == 0
+assert f8(1) == 1
+assert f8(f7()) == 5
 
 print(1)
 print(True)

@@ -28,14 +28,14 @@ class LinkedList(object):
 x:LinkedList = None
 
 x = LinkedList()
-__assert__(x.is_empty())
-__assert__(x.length() == 0)
+assert x.is_empty()
+assert x.length() == 0
 x.add(1)
-__assert__(not x.is_empty())
-__assert__(x.length() == 1)
-__assert__(x.head.val == 1)
+assert not x.is_empty()
+assert x.length() == 1
+assert x.head.val == 1
 x.add(100)
-__assert__(not x.is_empty())
-__assert__(x.length() == 2)
-__assert__(x.head.val == 100)
-__assert__(x.head.next.val == 1)
+assert not x.is_empty()
+assert x.length() == 2
+assert x.head.val == 100
+assert x.head.next.val == 1
