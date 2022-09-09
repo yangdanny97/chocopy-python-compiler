@@ -92,13 +92,13 @@ class ClassValueType(ValueType):
         if self.className == "bool":
             return "i32"
         elif self.className == "str":
-            raise Exception("TODO")
+            return "i32"
         elif self.className == "object":
-            raise Exception("TODO")
+            return "i32"
         elif self.className == "<None>":
-            raise Exception("TODO")
+            return "i32"
         elif self.className == "<Empty>":
-            raise Exception("TODO")
+            return "i32"
         elif self.className == "int":
             return "i64"
         else:

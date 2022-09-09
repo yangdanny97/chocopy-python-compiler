@@ -40,7 +40,7 @@ class WasmBuilder(Builder):
         lines = []
         for l in self.lines:
             if isinstance(l, str):
-                if " drop" in l and " i64.const 0" in lines[-1]:
+                if " drop" in l and " i32.const 0" in lines[-1]:
                     lines[-1] = None
                     continue
                 lines.append(l)
@@ -99,18 +99,29 @@ class WasmBackend(CommonVisitor):
             for s in stmts:
                 self.visit(s)
 
+    def loadMemoryCounter(self):
+        self.instr("i32.const 0") # addr 0
+        self.instr("i32.load")
+
+    def incrMemoryCounter(self, n:int):
+        self.instr("i32.const 0") # addr 0
+        self.instr(f"i32.const {n}")
+        self.loadMemoryCounter()
+        self.instr("i32.add")
+        self.instr("i32.store") # alignment: 64 bit
+
     def Program(self, node: Program):
         func_decls = [d for d in node.declarations if isinstance(d, FuncDef)]
         var_decls = [d for d in node.declarations if isinstance(d, VarDef)]
         self.builder.module()
         self.instr('(import "imports" "logInt" (func $log_int (param i64)))')
         self.instr('(import "imports" "logBool" (func $log_bool (param i32)))')
-        self.instr('(import "imports" "logString" (func $log_str (param i64)))')
-
+        self.instr('(import "imports" "logString" (func $log_str (param i32)))')
         self.instr('(import "imports" "assert" (func $assert (param i32)))')
+        self.instr('(memory (import "js" "mem") 1)')
         for v in var_decls:
             self.instr(f"(global ${v.var.identifier.name} (mut {v.var.t.getWasmName()})")
-            self.visit(v.value)
+            self.instr(f"{v.var.t.getWasmName()}.const 0")
             self.instr(f")")
         for d in func_decls:
             self.visit(d)
@@ -120,6 +131,12 @@ class WasmBackend(CommonVisitor):
         self.builder.func("main")
         self.defaultToGlobals = True
         self.locals = self.builder.newBlock()
+        self.instr("i32.const 0") # addr 0
+        self.instr("i32.const 8") # store value 8
+        self.instr("i32.store")
+        for v in var_decls:
+            self.visit(v.value)
+            self.instr(f"global.set ${v.getIdentifier().name}")
         self.visitStmtList(node.statements)
         self.defaultToGlobals = False
         self.builder.end()
@@ -276,7 +293,7 @@ class WasmBackend(CommonVisitor):
         if name == "print":
             self.emit_print(node.args[0])
         elif name == "len":
-            raise Exception("TODO")
+            self.emit_len(node.args[0])
         elif name == "input":
             raise Exception("TODO")
         elif name == "__assert__":
@@ -341,7 +358,6 @@ class WasmBackend(CommonVisitor):
         self.builder.end()
         self.load(n)
 
-
     # # LITERALS
 
     def BooleanLiteral(self, node: BooleanLiteral):
@@ -354,20 +370,48 @@ class WasmBackend(CommonVisitor):
         self.instr(f"i64.const {node.value}")
 
     def NoneLiteral(self, node: NoneLiteral):
-        self.instr(f"i64.const 0")
+        self.instr(f"i32.const 0")
+
+    def StringLiteral(self, node: StringLiteral):
+        length = len(node.value)
+        # store the length
+        self.loadMemoryCounter() # addr: mem
+        addr = self.newLocal(None, "i32")
+        self.instr(f"local.tee ${addr}") # store memory counter
+        self.instr(f"i32.const {length}") # value
+        self.instr(f"i32.store") # alignment: 32-bit
+        for i in range(length):
+            offset = i + 4
+            val = ord(node.value[i])
+            # addr: mem + 4 + idx
+            self.loadMemoryCounter()
+            self.instr(f"i32.const {offset}")
+            self.instr("i32.add")
+            self.instr(f"i32.const {val}")
+            self.instr("i32.store8")
+        memory = length + 4
+        increase = 8 + (8 * (memory // 8))
+        self.incrMemoryCounter(increase)
+        # load the address the string was stored at to the stack
+        self.load(addr)
 
     # # BUILT-INS - note: these are in-lined
     def emit_assert(self, arg: Expr):
         self.visit(arg)
         self.instr("call $assert")
-        self.instr("i64.const 0")
+        self.NoneLiteral(None)
 
     def emit_print(self, arg: Expr):
         if isinstance(arg.inferredType, ListValueType) or arg.inferredType.className not in {"bool", "int", "str"}:
             raise Exception(f"Built-in function print is unsupported for values of type {arg.inferredType.classname}")
         self.visit(arg)
         self.instr(f"call $log_{arg.inferredType.className}")
-        self.instr("i64.const 0")
+        self.NoneLiteral(None)
+
+    def emit_len(self, arg: Expr):
+        self.visit(arg)
+        self.instr("i32.load")
+        self.instr("i64.extend_i32_u")
 
 
 

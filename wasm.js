@@ -1,9 +1,8 @@
 const wasm_path = process.argv[2];
 
 function logString(offset) {
-    const length = 0;
-    // TODO: get length from buffer
-    const bytes = new Uint8Array(memory.buffer, offset, length);
+    const length = new Uint32Array(memory.buffer, offset, 1)[0];
+    const bytes = new Uint8Array(memory.buffer, offset + 4, Number(length));
     const string = new TextDecoder('utf8').decode(bytes);
     console.log(string);
 }
@@ -16,13 +15,16 @@ function logBool(val) {
     console.log(val !== 0);
 }
 
+const memory = new WebAssembly.Memory({ initial: 2, maximum: 100 });
+
 const importObject = {
     imports: {
         logString: x => logString(x),
         logInt: x => logInt(x),
         logBool: x => logBool(x),
         assert: x => console.assert(x)
-    }
+    },
+    js: { mem: memory },
 };
 
 const fs = require('fs');
