@@ -30,6 +30,8 @@ The test suite includes both static validation of generated/annotated ASTs, as w
 - CIL Backend Requirements:
   - [Mono](https://www.mono-project.com/)
   - Tested with Mono 6.12
+- WASM Backend Requirements:
+  - [WebAssembly Binary Toolkit (wabt)](https://github.com/WebAssembly/wabt)
 
 ## Usage
 
@@ -108,20 +110,28 @@ The `demo_cil.sh` script is a useful utility to compile and run files with the C
 
 ## WASM Backend Notes:
 
-WIP
+This is very much WIP.
 
-Planned features:
-- ints and bools
-- binary operators and assignment
+Supported:
+- int
+- bool
+- string (partial)
+- most operators
+- assignment
 - control flow
-- print and assert
+- print, len, and assert
+- globals
 
-Not-currently-planned features:
-- classes/objects
-- arrays
-- strings
+Unsupported:
+- class/object
+- array
+- nonlocal
+- string equality, concatenation
+- input
+
+Unclear/Untested:
+- `None`
 - nested functions
-- global/nonlocal
 
 ## FAQ
 
