@@ -11,6 +11,35 @@ from compiler.compiler import Compiler
 dump_location = True
 error_flags = {"error", "Error", "Exception", "exception", "Expected", "expected"}
 
+disabled_wasm_tests = [
+    "assignment.py",
+    "functions.py",
+    "nested_list.py",
+    "binary_tree.py",
+    "globals.py",
+    "nonlocal.py",
+    "classes.py",
+    # "hello_world.py",
+    "nonlocal_builtins.py",
+    "contains.py",
+    "incrementing_counter.py",
+    "operators.py",
+    "control_flow.py",
+    # "int_and_bool.py",
+    "ratio.py",
+    # "control_flow_2.py",
+    # "int_and_bool_control_flow.py",
+    # "simple_string.py",
+    "doubling_vector.py",
+    # "int_and_bool_funcs.py",
+    "strings.py",
+    "exponent.py",
+    "linked_list.py",
+    # "var_decl.py",
+    # "expr_stmt.py",
+    "lists.py"
+]
+
 def run_all_tests():
     run_parse_tests()
     run_typecheck_tests()
@@ -18,6 +47,7 @@ def run_all_tests():
     run_closure_tests()
     run_jvm_tests()
     run_cil_tests()
+    run_wasm_tests()
 
 def run_parse_tests():
     print("Running parser tests...\n")
@@ -148,6 +178,34 @@ def run_python_backend_tests():
     else:
         print("\nNot all test cases passed. Please run `make clean` after inspecting the output")
     print("\nPassed {:d} out of {:d} Python backend runtime test cases\n".format(n_passed, total))
+
+def run_wasm_tests():
+    print("Running WASM backend tests...\n")
+    total = 0
+    n_passed = 0
+    wasm_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
+    for test in wasm_tests_dir.glob('*.py'):
+        skip = False
+        for disabled in disabled_wasm_tests:
+            if disabled in str(test):
+                skip = True
+                break
+        if skip:
+            print("Skipping: " + str(test) + "\n")
+            continue 
+        passed = run_wasm_test(test)
+        total += 1
+        if not passed:
+            print("Failed: "+ str(test) + "\n")
+        else:
+            n_passed += 1
+    if total == n_passed:
+        subprocess.run("cd {} && rm -f *.wat && rm -f *.wasm".format(
+            str(Path(__file__).parent.resolve())
+        ), shell=True)
+    else:
+        print("\nNot all test cases passed. Please run `make clean` after inspecting the output")
+    print("\nPassed {:d} out of {:d} WASM backend test cases\n".format(n_passed, total))
 
 def run_jvm_tests():
     print("Running JVM backend tests...\n")
@@ -298,7 +356,6 @@ def run_closure_runtime_test(test)->bool:
         return False
 
 def run_python_emit_test(test)->bool:
-    infile_name = str(test)[:-3].split("/")[-1]
     try:
         compiler = Compiler()
         astparser = compiler.parser
@@ -395,8 +452,9 @@ def run_jvm_test(test)->bool:
 
 def run_cil_test(test)->bool:
     passed = True
+    name = str(test.name[:-3])
     try:
-        infile_name = str(test)[:-3].split("/")[-1]
+        infile_name = name.split("/")[-1]
         outdir = "./"
         compiler = Compiler()
         astparser = compiler.parser
@@ -418,12 +476,51 @@ def run_cil_test(test)->bool:
         print(track)
         return False
     try:
-        assembler_commands = ["ilasm {}.cil".format(str(test.name[:-3]))]
+        assembler_commands = [f"ilasm {name}.cil"]
         output = subprocess.check_output("cd {} && {} && mono {}.exe".format(
             str(Path(__file__).parent.resolve()),
             " && ".join(assembler_commands),
-            str(test.name[:-3])
+            name
         ), shell=True)
+        lines = output.decode().split("\n")
+        for l in lines:
+            for e in error_flags:
+                if e in l:
+                    passed = False
+                    print(l)
+                    break
+    except Exception as e:
+        print(e)
+        return False
+    return passed
+
+def run_wasm_test(test)->bool:
+    passed = True
+    name = str(test.name[:-3])
+    try:
+        infile_name = name.split("/")[-1]
+        outdir = "./"
+        compiler = Compiler()
+        astparser = compiler.parser
+        ast = compiler.parse(test)
+        if len(astparser.errors) > 0:
+            return False
+        compiler.typecheck(ast)
+        if len(ast.errors.errors) > 0:
+            print(ast.errors.toJSON(False))
+            return False
+        wasm_emitter = compiler.emitWASM(infile_name, ast)
+        fname = outdir + name + ".wat"
+        with open(fname, "w") as f:
+            f.write(wasm_emitter.emit()) 
+    except Exception as e:
+        print("Internal compiler error:", test)
+        track = traceback.format_exc()
+        print(e)
+        print(track)
+        return False
+    try:
+        output = subprocess.check_output(f"wat2wasm {name}.wat -o {name}.wasm && node wasm.js {name}.wasm", shell=True)
         lines = output.decode().split("\n")
         for l in lines:
             for e in error_flags:

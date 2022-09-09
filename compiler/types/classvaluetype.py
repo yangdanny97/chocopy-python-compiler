@@ -89,6 +89,8 @@ class ClassValueType(ValueType):
             return "class "+self.className
 
     def getWasmName(self):
+        # bools are i32, ints are i64
+        # all others are pointers/refs, which are i32
         if self.className == "bool":
             return "i32"
         elif self.className == "str":

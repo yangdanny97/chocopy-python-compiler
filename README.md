@@ -115,7 +115,7 @@ This is very much WIP.
 Supported:
 - int
 - bool
-- string (partial)
+- string (literals, len)
 - most operators
 - assignment
 - control flow
@@ -123,10 +123,11 @@ Supported:
 - globals
 
 Unsupported:
+- for-loops
 - class/object
-- array
+- list
 - nonlocal
-- string equality, concatenation
+- string equality, concatenation, iteration
 - input
 
 Unclear/Untested:

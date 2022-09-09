@@ -21,3 +21,6 @@ class TypedVar(Node):
         d["identifier"] = self.identifier.toJSON(dump_location)
         d["type"] = self.type.toJSON(dump_location)
         return d
+
+    def getWasmParam(self):
+        return f"(param ${self.identifier.name} {self.t.getWasmName()})"

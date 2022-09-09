@@ -21,8 +21,17 @@ class WasmBuilder(Builder):
         self.newLine(f"(loop ${name}")
         self.indent()
 
-    def param(self, name:str, type: str)->str:
-        return f"(param ${name} {type})"
+    def _if(self):
+        self.newLine(f"(if")
+        self.indent()
+
+    def _then(self):
+        self.newLine(f"(then")
+        self.indent()
+
+    def _else(self):
+        self.newLine(f"(else")
+        self.indent()
 
     def func(self, name:str, params: List[str]=[], resType=None):
         params = " ".join(params)
@@ -75,10 +84,13 @@ class WasmBackend(CommonVisitor):
     def instr(self, instr: str):
         self.builder.newLine(instr)
 
-    def store(self, name: str):
+    def setLocal(self, name: str):
         self.instr(f"local.set ${name}")
 
-    def load(self, name: str):
+    def teeLocal(self, name: str):
+        self.instr(f"local.tee ${name}")
+
+    def loadLocal(self, name: str):
         self.instr(f"local.get ${name}")
 
     def genLocalName(self) -> str:
@@ -150,7 +162,7 @@ class WasmBackend(CommonVisitor):
 
     def FuncDef(self, node: FuncDef):
         self.locals = self.builder.newBlock()
-        params = [self.builder.param(p.identifier.name, p.t.getWasmName()) for p in node.params]
+        params = [p.getWasmParam() for p in node.params]
         self.returnType = node.type.returnType
         ret = None if self.returnType.isNone() else self.returnType.getWasmName()
         self.builder.func(node.name.name, params, ret)
@@ -168,20 +180,32 @@ class WasmBackend(CommonVisitor):
         else:
             self.visit(node.value)
             n = self.newLocal(varName, node.value.inferredType.getWasmName())
-            self.store(n)
+            self.setLocal(n)
 
     # # STATEMENTS
 
-    def processAssignmentTarget(self, target: Expr):
+    def processAssignmentTarget(self, target: Expr, name: str):
+        # name is the name of the local that the value is stored in
         if isinstance(target, Identifier):
+            self.loadLocal(name)
             if self.defaultToGlobals or target.varInstance.isGlobal:
                 self.instr(f"global.set ${target.name}")
             elif target.varInstance.isNonlocal:
                 raise Exception("TODO")
             else:
-                self.store(target.name)
+                self.setLocal(target.name)
         elif isinstance(target, IndexExpr):
-            raise Exception("TODO")
+            lst, idx = self.validateIdx(target)
+            # 8 * idx + 4 + list addr
+            self.loadLocal(idx)
+            self.instr("i32.const 8")
+            self.instr("i32.mul")
+            self.instr("i32.const 4")
+            self.instr("i32.add")
+            self.loadLocal(lst)
+            self.instr("i32.add")
+            self.loadLocal(name)
+            self.instr("i32.store")
         elif isinstance(target, MemberExpr):
             raise Exception("TODO")
         else:
@@ -191,25 +215,18 @@ class WasmBackend(CommonVisitor):
     def AssignStmt(self, node: AssignStmt):
         self.visit(node.value)
         targets = node.targets[::-1]
-        if len(targets) > 1:
-            name = self.newLocal(None, node.value.inferredType.getWasmName())
-            self.store(name)
-            for t in targets:
-                self.load(name)
-                self.processAssignmentTarget(t)
-        else:
-            self.processAssignmentTarget(targets[0])
+        name = self.newLocal(None, node.value.inferredType.getWasmName())
+        self.setLocal(name)
+        for t in targets:
+            self.processAssignmentTarget(t, name)
 
     def IfStmt(self, node: IfStmt):
         self.visit(node.condition)
-        self.instr("(if")
-        self.builder.indent()
-        self.instr("(then")
-        self.builder.indent()
+        self.builder._if()
+        self.builder._then()
         self.visitStmtList(node.thenBody)
         self.builder.end()
-        self.instr("(else")
-        self.builder.indent()
+        self.builder._else()
         self.visitStmtList(node.elseBody)
         self.builder.end()
         self.builder.end()
@@ -262,11 +279,15 @@ class WasmBackend(CommonVisitor):
             # TODO: refs, string
             if leftType == IntType():
                 self.instr("i64.eq")
+            elif leftType == StrType():
+                raise Exception("TODO")
             else:
                 self.instr("i32.eq")
         elif operator == "!=":
             if leftType == IntType():
                 self.instr("i64.ne")
+            elif leftType == StrType():
+                raise Exception("TODO")
             else:
                 self.instr("i32.ne")
         elif operator == "is":
@@ -347,20 +368,121 @@ class WasmBackend(CommonVisitor):
     def IfExpr(self, node: IfExpr):
         n = self.newLocal(None, node.inferredType.getWasmName())
         self.visit(node.condition)
-        self.instr("(if")
-        self.builder.indent()
-        self.instr("(then")
-        self.builder.indent()
+        self.builder._if()
+        self.builder._then()
         self.visit(node.thenExpr)
-        self.store(n)
+        self.setLocal(n)
         self.builder.end()
-        self.instr("(else")
-        self.builder.indent()
+        self.builder._else()
         self.visit(node.elseExpr)
-        self.store(n)
+        self.setLocal(n)
         self.builder.end()
         self.builder.end()
-        self.load(n)
+        self.loadLocal(n)
+
+    def ListExpr(self, node: ListExpr):
+        length = len(node.elements)
+        t = node.inferredType
+        elementType = None
+        if isinstance(t, ClassValueType):
+            if node.emptyListType:
+                elementType = node.emptyListType
+            else:
+                elementType = ClassValueType("object")
+        else:
+            elementType = t.elementType
+        # store the length
+        self.loadMemoryCounter() # addr: mem
+        addr = self.newLocal(None, "i32")
+        self.teeLocal(addr) # store memory counter
+        self.instr(f"i32.const {length}") # value
+        self.instr(f"i32.store") # alignment: 32-bit
+        # unlike strings, each item in the list gets 64 bits instead of 8
+        for i in range(length):
+            offset = i * 8 + 4
+            # addr: mem + 4 + idx * 8
+            self.loadMemoryCounter()
+            self.instr(f"i32.const {offset}")
+            self.instr("i32.add")
+            self.visit(node.elements[i])
+            self.instr(f"{elementType.getWasmName()}.store")
+        memory = length * 8 + 4
+        increase = 8 + (8 * (memory // 8))
+        self.incrMemoryCounter(increase)
+        # load the address the list was stored at to the stack
+        self.loadLocal(addr)
+
+    def validateIdx(self, node: IndexExpr):
+        self.visit(node.list)
+        lst = self.newLocal(None, "i32")
+        self.teeLocal(lst)
+        self.instr("i32.load")
+
+        self.visit(node.index)
+        self.instr("i32.wrap_i64")
+        idx = self.newLocal(None, "i32")
+        self.teeLocal(idx)
+
+        # make sure idx < length
+        self.instr("i32.gt_s")
+        self.instr("i32.eqz")
+        self.builder._if()
+        self.builder._then()
+        self.visit(node.thenExpr)
+        self.instr("unreachable")
+        self.builder.end()
+        self.builder.end()
+
+        # make sure idx >= 0
+        self.instr('i32.const 0')
+        self.loadLocal(idx)
+        self.instr('i32.gt_s')
+        self.builder._if()
+        self.builder._then()
+        self.visit(node.thenExpr)
+        self.instr("unreachable")
+        self.builder.end()
+        self.builder.end()
+        return lst, idx
+
+    def IndexExpr(self, node: IndexExpr):
+        lst, idx = self.validateIdx(node)
+
+        if node.list.inferredType.isListType():
+            # 8 * idx + 4 + list addr
+            self.loadLocal(idx)
+            self.instr("i32.const 8")
+            self.instr("i32.mul")
+            self.instr("i32.const 4")
+            self.instr("i32.add")
+            self.loadLocal(lst)
+            self.instr("i32.add")
+            self.instr("i32.load")
+        else:
+            # store the length
+            self.loadMemoryCounter() # addr: mem
+            addr = self.newLocal(None, "i32")
+            self.teeLocal(addr) # store memory counter
+            self.instr(f"i32.const 1") # value
+            self.instr(f"i32.store")
+
+            # addr of single char
+            self.loadMemoryCounter()
+            self.instr(f"i32.const 4")
+            self.instr("i32.add")
+
+            # idx + 4 + list addr
+            self.loadLocal(idx)
+            self.instr("i32.const 4")
+            self.instr("i32.add")
+            self.loadLocal(lst)
+            self.instr("i32.add")
+            self.instr("i32.load8_u")
+
+            self.instr("i32.store8")
+            self.incrMemoryCounter(8)
+            # load the address the string was stored at to the stack
+            self.loadLocal(addr)
 
     # # LITERALS
 
@@ -381,9 +503,9 @@ class WasmBackend(CommonVisitor):
         # store the length
         self.loadMemoryCounter() # addr: mem
         addr = self.newLocal(None, "i32")
-        self.instr(f"local.tee ${addr}") # store memory counter
+        self.teeLocal(addr) # store memory counter
         self.instr(f"i32.const {length}") # value
-        self.instr(f"i32.store") # alignment: 32-bit
+        self.instr(f"i32.store")
         for i in range(length):
             offset = i + 4
             val = ord(node.value[i])
@@ -397,9 +519,9 @@ class WasmBackend(CommonVisitor):
         increase = 8 + (8 * (memory // 8))
         self.incrMemoryCounter(increase)
         # load the address the string was stored at to the stack
-        self.load(addr)
+        self.loadLocal(addr)
 
-    # # BUILT-INS - note: these are in-lined
+    # # BUILT-INS
     def emit_assert(self, arg: Expr):
         self.visit(arg)
         self.instr("call $assert")
@@ -413,6 +535,7 @@ class WasmBackend(CommonVisitor):
         self.NoneLiteral(None)
 
     def emit_len(self, arg: Expr):
+        # the length of a string or array is always in the first 4 bytes
         self.visit(arg)
         self.instr("i32.load")
         self.instr("i64.extend_i32_u")
