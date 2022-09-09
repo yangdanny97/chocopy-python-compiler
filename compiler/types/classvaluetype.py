@@ -102,7 +102,7 @@ class ClassValueType(ValueType):
         elif self.className == "int":
             return "i64"
         else:
-            raise Exception("TODO")
+            return "i32"
 
     def __str__(self):
         return self.className

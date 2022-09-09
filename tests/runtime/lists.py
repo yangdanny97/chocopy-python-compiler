@@ -25,6 +25,10 @@ z = []
 a = []
 b = []
 
+assert b is b
+assert not (a is b)
+assert not (a is None)
+
 assert len(x) == 0
 assert len([]) == 0
 assert len([1, 2, 3]) == 3

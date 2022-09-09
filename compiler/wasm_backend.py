@@ -119,6 +119,7 @@ class WasmBackend(CommonVisitor):
         self.instr('(import "imports" "logString" (func $log_str (param i32)))')
         self.instr('(import "imports" "assert" (func $assert (param i32)))')
         self.instr('(memory (import "js" "mem") 1)')
+        # initialize all globals to 0 for now, since we don't statically allocate strings or arrays
         for v in var_decls:
             self.instr(f"(global ${v.var.identifier.name} (mut {v.var.t.getWasmName()})")
             self.instr(f"{v.var.t.getWasmName()}.const 0")
@@ -131,9 +132,11 @@ class WasmBackend(CommonVisitor):
         self.builder.func("main")
         self.defaultToGlobals = True
         self.locals = self.builder.newBlock()
+        # initialize memory counter
         self.instr("i32.const 0") # addr 0
         self.instr("i32.const 8") # store value 8
         self.instr("i32.store")
+        # initialize globals
         for v in var_decls:
             self.visit(v.value)
             self.instr(f"global.set ${v.getIdentifier().name}")
@@ -256,18 +259,19 @@ class WasmBackend(CommonVisitor):
             self.instr("i64.lt_s")
             self.instr("i64.eqz")
         elif operator == "==":
-            # TODO: refs
-            if leftType == BoolType():
-                self.instr("i32.eq")
-            else:
+            # TODO: refs, string
+            if leftType == IntType():
                 self.instr("i64.eq")
-        elif operator == "!=":
-            if leftType == BoolType():
-                self.instr("i32.ne")
             else:
+                self.instr("i32.eq")
+        elif operator == "!=":
+            if leftType == IntType():
                 self.instr("i64.ne")
+            else:
+                self.instr("i32.ne")
         elif operator == "is":
-            raise Exception("TODO")
+            # pointer comparisons
+            self.instr("i32.eq")
         # logical operators
         elif operator == "and":
             self.instr("i32.and")

@@ -21,7 +21,6 @@ assert y - x == w
 assert w * x == x
 assert 5 // 2 == y
 assert 5 % 2 == x
-assert z is z
 assert not False
 assert not (w != x)
 assert -x == -1
@@ -31,4 +30,11 @@ assert False or True
 assert (False or True) and True
 assert True if x != y else False
 assert False if x == y else True
+
+assert z is z
+assert None is None
+assert not (object() is object())
+assert z is None
+z = object()
+assert z is z
 
