@@ -66,9 +66,6 @@ The exact error messages from typechecking do not necessarily match the referenc
 
 This compiler supports a limited version of Python's `assert` keyword. The `assert` may be followed by a single `bool` expression, which will raise an exception with an unspecified/generic message if the value is false. It is used in the test suite to assert values in runtime tests.
 
-### Known Bugs:
-- for-loops do not work with nonlocal
-
 ## JVM Backend Notes:
 
 The JVM backend for this compiler outputs JVM bytecode in plaintext formatted for the Krakatau assembler. Here's how you can compile and run a file using this backend:
@@ -120,20 +117,13 @@ Features:
 - most operators
 - assignment
 - control flow
-- print, len, and assert
+- stdlib: print, len, and assert
 - globals
-- bounds checking for string and list indexing, null-safety for list length/indexing
 
 Unsupported/TODO:
 - class/object
-- nonlocal
-- input
-- string literal interning
-- nicer exception messages
-
-Unclear/Untested:
-- `None`
-- nested functions
+- nonlocal (partial)
+- stdlib: input
 
 Memory format:
 
@@ -144,6 +134,8 @@ Memory format:
 - None - 0 (i32)
 
 Strings and lists are stored in the heap, aligned to 8 bytes. Note that memory does not get freed/garbage collected, so memory will run out for long-running programs. This is especially a problem with string iteration and string/list concatenation, since indexing a string in Chocopy requires a new string to be allocated.
+
+To provide memory safety, string/list indexing have bounds checking and list operations have a null-check, which crashes the program with a generic "unreachable" instruction.
 
 ## FAQ
 
