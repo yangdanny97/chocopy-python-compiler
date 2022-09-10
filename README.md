@@ -110,29 +110,37 @@ The `demo_cil.sh` script is a useful utility to compile and run files with the C
 
 ## WASM Backend Notes:
 
-This is very much WIP.
+This is WIP, not all features are supported. 
 
-Supported:
-- int
-- bool
-- string (literals, len)
+Features:
+- int, bool, string, list
 - most operators
 - assignment
 - control flow
 - print, len, and assert
 - globals
+- bounds checking for string and list indexing, null-safety for list length/indexing
 
-Unsupported:
-- for-loops
+Unsupported/TODO:
 - class/object
-- list
 - nonlocal
-- string equality, concatenation, iteration
 - input
+- string literal interning
+- nicer exception messages
 
 Unclear/Untested:
 - `None`
 - nested functions
+
+Memory format:
+
+- strings (utf-8) - first 4 bytes for length, followed by 1 byte for each character
+- lists - first 4 bytes for length, followed by 8 bytes for each element
+- ints - i64
+- pointers (objects, strings, lists) - i32
+- None - 0 (i32)
+
+Strings and lists are stored in the heap, aligned to 8 bytes. Note that memory does not get freed/garbage collected, so memory will run out for long-running programs. This is especially a problem with string iteration and string/list concatenation, since indexing a string in Chocopy requires a new string to be allocated.
 
 ## FAQ
 

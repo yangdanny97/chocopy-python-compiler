@@ -12,15 +12,15 @@ def test3()->int:
     def test4():
         nonlocal x
         def test5():
-            __assert__(x == 4)
+            assert x == 4
         def test6():
             nonlocal x
             x = 3
         test5()
         test(x)
-        __assert__(x == 4)
+        assert x == 4
         test6()
-        __assert__(x == 3)
+        assert x == 3
     test4()
     return x
 
@@ -30,7 +30,7 @@ def test7():
         x[0] = 0
     x = [1, 2, 3]
     test8()
-    __assert__(x[0] == 0)
+    assert x[0] == 0
 
 def test9(x:int):
     def test9helper():
@@ -47,11 +47,11 @@ def test10():
         def test13(m:int)->int:
             return m + y
         y = test13(y)
-        __assert__(y == 2)
+        assert y == 2
         return test13(y)
-    __assert__(test11(y) == 2)
-    __assert__(test12() == 4)
-    __assert__(y == 2)
+    assert test11(y) == 2
+    assert test12() == 4
+    assert y == 2
 
 class Nonlocals:
     def testMethod3(self:"Nonlocals"):
@@ -66,11 +66,11 @@ class Nonlocals:
             x = 3
             y = 3
         testMethod2()
-        __assert__(y == 3)
+        assert y == 3
 
     def testMethod4(self:"Nonlocals"):
         test13(self)
-        __assert__(not (self is None))
+        assert not (self is None)
 
 def test13(x:"Nonlocals"):
     def test14():

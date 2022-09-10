@@ -45,7 +45,7 @@ assert not a
 a = True
 d = [True, True, True]
 for a in d:
-    __assert__(a)
+    assert a
     print(a)
 
 e = None

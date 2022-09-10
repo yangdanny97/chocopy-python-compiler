@@ -5,10 +5,11 @@ from .typesystem import TypeSystem
 from .visitor import CommonVisitor
 from typing import List
 
+
 class WasmBuilder(Builder):
     def __init__(self, name: str):
         super(WasmBuilder, self).__init__(name)
-    
+
     def module(self):
         self.newLine("(module")
         self.indent()
@@ -33,7 +34,7 @@ class WasmBuilder(Builder):
         self.newLine(f"(else")
         self.indent()
 
-    def func(self, name:str, params: List[str]=[], resType=None):
+    def func(self, name: str, params: List[str] = [], resType=None):
         params = " ".join(params)
         result = ""
         if resType is not None:
@@ -64,6 +65,7 @@ class WasmBuilder(Builder):
         self.lines.append(child)
         return child
 
+
 class WasmBackend(CommonVisitor):
     defaultToGlobals = False  # treat all vars as global if this is true
     localCounter = 0
@@ -90,14 +92,14 @@ class WasmBackend(CommonVisitor):
     def teeLocal(self, name: str):
         self.instr(f"local.tee ${name}")
 
-    def loadLocal(self, name: str):
+    def getLocal(self, name: str):
         self.instr(f"local.get ${name}")
 
     def genLocalName(self) -> str:
-        self.localCounter+=1
+        self.localCounter += 1
         return f"local_{self.localCounter}"
 
-    def newLocal(self, name: str = None, t: str = "i64")->str:
+    def newLocal(self, name: str = None, t: str = "i32") -> str:
         # add a new local decl, does not store anything
         if name is None:
             name = self.genLocalName()
@@ -111,16 +113,283 @@ class WasmBackend(CommonVisitor):
             for s in stmts:
                 self.visit(s)
 
-    def loadMemoryCounter(self):
-        self.instr("i32.const 0") # addr 0
-        self.instr("i32.load")
+    def stdlib(self)->str:
+        return """
+    ;; allocate and return addr of memory
+    ;; based on https://github.com/ucsd-cse231-s22/chocopy-wasm-compiler-A/blob/2022/stdlib/memory.wat
+    (func $alloc (param $bytes i32) (result i32)
+        (local $addr i32)
+        global.get $heap
+        local.set $addr
+        local.get $bytes
+        global.get $heap
+        i32.add
+        global.set $heap
+        local.get $addr
+    )
+    ;; copy $size bytes from $src to $dest
+    ;; this just blindly copies memory and does not do any sort of validation/checks
+    (func $mem_cpy (param $src i32) (param $dest i32) (param $size i32)
+        (local $idx i32)
+        (local $temp i32)
+        i32.const 0
+        local.set $idx
+        (block $block
+            (loop $loop
+                local.get $idx
+                local.get $size
+                i32.lt_s
+                i32.eqz
+                br_if $block
+                ;; read byte from $src + offset
+                local.get $idx
+                local.get $src
+                i32.add
+                i32.load8_u
+                local.set $temp
+                ;; write byte to $dest + offset
+                local.get $idx
+                local.get $dest
+                i32.add
+                local.get $temp
+                i32.store8
+                ;; increment offset
+                local.get $idx
+                i32.const 1
+                i32.add
+                local.set $idx
+                br $loop
+            )
+        )
+    )
+    ;; return the length of a string or list as i32
+    (func $len (param $addr i32) (result i32)
+        local.get $addr
+        call $nullthrow
+        i32.load
+    )
+    ;; throw if $addr is null, otherwise return $addr
+    (func $nullthrow (param $addr i32) (result i32)
+        local.get $addr
+        i32.eqz
+        (if
+            (then
+                unreachable
+            )
+        )
+        local.get $addr
+    )
+    ;; check the bounds of a string or list access, throwing if illegal
+    (func $check_bounds (param $addr i32) (param $idx i32)
+        local.get $addr
+        call $len
+        local.get $idx
+        i32.gt_s
+        i32.eqz
+        (if
+            (then
+                unreachable
+            )
+        )
+        i32.const 0
+        local.get $idx
+        i32.gt_s
+        (if
+            (then
+                unreachable
+            )
+        )
+    )
+    ;; index a string, returning the character as an i32
+    (func $get_char (param $addr i32) (param $idx i32) (result i32)
+        local.get $addr
+        i32.const 4
+        i32.add
+        local.get $idx
+        i32.add
+        i32.load8_u
+    )
+    ;; index a string, allocating a new string for the single character and returning the address
+    (func $str_idx (param $addr i32) (param $idx i32) (result i32)
+        (local $new i32)
+        i32.const 8
+        call $alloc
+        local.set $new
+        local.get $new
+        i32.const 1
+        i32.store
+        local.get $new
+        i32.const 4
+        i32.add
+        local.get $addr
+        local.get $idx
+        call $get_char
+        i32.store8
+        local.get $new
+    )
+    ;; concatenate two strings, returning the address of the new string
+    (func $str_concat (param $s1 i32) (param $s2 i32) (result i32)
+        (local $len1 i32)
+        (local $len2 i32)
+        (local $addr i32)
+        ;; allocate memory
+        local.get $s1
+        call $len
+        local.tee $len1
+        local.get $s2
+        call $len
+        local.tee $len2
+        i32.add
+        i32.const 4
+        i32.add
+        i32.const 8
+        i32.div_u
+        i32.const 8
+        i32.add
+        call $alloc
+        local.tee $addr
+        ;; store length
+        local.get $len1
+        local.get $len2
+        i32.add
+        i32.store
+        ;; copy string 1
+        local.get $s1
+        i32.const 4
+        i32.add
+        local.get $addr
+        i32.const 4
+        i32.add
+        local.get $len1
+        call $mem_cpy
+        ;; copy string 2
+        local.get $s2
+        i32.const 4
+        i32.add
+        local.get $addr
+        i32.const 4
+        i32.add
+        local.get $len1
+        i32.add
+        local.get $len2
+        call $mem_cpy
+        local.get $addr
+    )
+    ;; compare two strings, returning true if the two strings have the same contents
+    (func $str_cmp (param $left i32) (param $right i32) (result i32)
+        (local $result i32)
+        (local $length i32)
+        (local $idx i32)
+        i32.const 1
+        local.set $result
+        local.get $left
+        i32.load
+        local.tee $length
+        local.get $right
+        i32.load
+        i32.eq
+        (if
+            (then
+                i32.const 0
+                local.set $idx
+                (block $block
+                    (loop $loop
+                        local.get $idx
+                        local.get $length
+                        i32.lt_s
+                        i32.eqz
+                        br_if $block
+                        local.get $left
+                        local.get $idx
+                        call $get_char
+                        local.get $right
+                        local.get $idx
+                        call $get_char
+                        i32.eq
+                        local.get $result
+                        i32.and
+                        local.set $result
+                        local.get $result
+                        i32.eqz
+                        br_if $block
+                        local.get $idx
+                        i32.const 1
+                        i32.add
+                        local.set $idx
+                        br $loop
+                    )
+                )
+            )
+            (else
+                i32.const 0
+                local.set $result
+            )
+        )
+        local.get $result
+    )
+    ;; concatenate two lists, returning the address of the new list
+    (func $list_concat (param $l1 i32) (param $l2 i32) (result i32)
+        (local $len1 i32)
+        (local $len2 i32)
+        (local $addr i32)
+        ;; allocate 8 * (len1 + len2 + 1) bytes
+        local.get $l1
+        call $len
+        local.tee $len1
+        local.get $l2
+        call $len
+        local.tee $len2
+        i32.add
+        i32.const 1
+        i32.add
+        i32.const 8
+        i32.mul
+        call $alloc
+        local.tee $addr
+        ;; store length
+        local.get $len1
+        local.get $len2
+        i32.add
+        i32.store
+        ;; copy list 1
+        local.get $l1
+        i32.const 4
+        i32.add
+        local.get $addr
+        i32.const 4
+        i32.add
+        local.get $len1
+        i32.const 8
+        i32.mul
+        call $mem_cpy
+        ;; copy list 2
+        local.get $l2
+        i32.const 4
+        i32.add
+        local.get $addr
+        i32.const 4
+        i32.add
+        local.get $len1
+        i32.const 8
+        i32.mul
+        i32.add
+        local.get $len2
+        i32.const 8
+        i32.mul
+        call $mem_cpy
+        local.get $addr
+    )
+        """
 
-    def incrMemoryCounter(self, n:int):
-        self.instr("i32.const 0") # addr 0
-        self.instr(f"i32.const {n}")
-        self.loadMemoryCounter()
-        self.instr("i32.add")
-        self.instr("i32.store") # alignment: 64 bit
+    def alloc(self, local = None):
+        # consume i32 from top of stack, allocate that many bytes
+        self.instr("call $alloc")
+        if local is not None:
+            self.setLocal(local)
+            
+    def nullthrow(self):
+        # throw if top of stack is 0, otherwise returns top of stack
+        self.instr("call $nullthrow")
 
     def Program(self, node: Program):
         func_decls = [d for d in node.declarations if isinstance(d, FuncDef)]
@@ -131,11 +400,11 @@ class WasmBackend(CommonVisitor):
         self.instr('(import "imports" "logString" (func $log_str (param i32)))')
         self.instr('(import "imports" "assert" (func $assert (param i32)))')
         self.instr('(memory (import "js" "mem") 1)')
+        self.instr(f"(global $heap (mut i32) (i32.const 4))")
         # initialize all globals to 0 for now, since we don't statically allocate strings or arrays
         for v in var_decls:
-            self.instr(f"(global ${v.var.identifier.name} (mut {v.var.t.getWasmName()})")
-            self.instr(f"{v.var.t.getWasmName()}.const 0")
-            self.instr(f")")
+            self.instr(
+                f"(global ${v.var.identifier.name} (mut {v.var.t.getWasmName()}) ({v.var.t.getWasmName()}.const 0))")
         for d in func_decls:
             self.visit(d)
         module_builder = self.builder
@@ -145,8 +414,8 @@ class WasmBackend(CommonVisitor):
         self.defaultToGlobals = True
         self.locals = self.builder.newBlock()
         # initialize memory counter
-        self.instr("i32.const 0") # addr 0
-        self.instr("i32.const 8") # store value 8
+        self.instr("i32.const 0")  # addr 0
+        self.instr("i32.const 8")  # store value 8
         self.instr("i32.store")
         # initialize globals
         for v in var_decls:
@@ -157,6 +426,7 @@ class WasmBackend(CommonVisitor):
         self.builder.end()
 
         self.builder = module_builder
+        self.instr(self.stdlib())
         self.instr(f"(start $main)")
         self.builder.end()
 
@@ -184,28 +454,35 @@ class WasmBackend(CommonVisitor):
 
     # # STATEMENTS
 
+    def setIdentifier(self, target: Identifier):
+        # consume top of stack
+        if self.defaultToGlobals or target.varInstance.isGlobal:
+            self.instr(f"global.set ${target.name}")
+        elif target.varInstance.isNonlocal:
+            raise Exception("TODO")
+        else:
+            self.setLocal(target.name)
+
     def processAssignmentTarget(self, target: Expr, name: str):
         # name is the name of the local that the value is stored in
         if isinstance(target, Identifier):
-            self.loadLocal(name)
-            if self.defaultToGlobals or target.varInstance.isGlobal:
-                self.instr(f"global.set ${target.name}")
-            elif target.varInstance.isNonlocal:
-                raise Exception("TODO")
-            else:
-                self.setLocal(target.name)
+            self.getLocal(name)
+            self.setIdentifier(target)
         elif isinstance(target, IndexExpr):
-            lst, idx = self.validateIdx(target)
+            self.visit(target.list)
+            iterable = self.newLocal()
+            self.setLocal(iterable)
+            idx = self.validateIdx(iterable, target)
             # 8 * idx + 4 + list addr
-            self.loadLocal(idx)
+            self.getLocal(idx)
             self.instr("i32.const 8")
             self.instr("i32.mul")
             self.instr("i32.const 4")
             self.instr("i32.add")
-            self.loadLocal(lst)
+            self.getLocal(iterable)
             self.instr("i32.add")
-            self.loadLocal(name)
-            self.instr("i32.store")
+            self.getLocal(name)
+            self.instr(f"{target.inferredType.getWasmName()}.store")
         elif isinstance(target, MemberExpr):
             raise Exception("TODO")
         else:
@@ -238,6 +515,20 @@ class WasmBackend(CommonVisitor):
     def isListConcat(self, operator: str, leftType: ValueType, rightType: ValueType) -> bool:
         return leftType.isListType() and rightType.isListType() and operator == "+"
 
+    def loadChar(self, string: str, idx: str):
+        self.getLocal(string)
+        self.getLocal(idx)
+        self.instr("call $get_char")
+
+    def strCompare(self):
+        self.instr("call $str_cmp")
+
+    def strConcat(self):
+        self.instr("call $str_concat")
+
+    def listConcat(self):
+        self.instr("call $list_concat")
+
     def BinaryExpr(self, node: BinaryExpr):
         operator = node.operator
         leftType = node.left.inferredType
@@ -247,9 +538,9 @@ class WasmBackend(CommonVisitor):
         # concatenation and addition
         if operator == "+":
             if self.isListConcat(operator, leftType, rightType):
-                raise Exception("TODO")
+                self.listConcat()
             elif leftType == StrType():
-                raise Exception("TODO")
+                self.strConcat()
             elif leftType == IntType():
                 self.instr("i64.add")
             else:
@@ -276,18 +567,18 @@ class WasmBackend(CommonVisitor):
             self.instr("i64.lt_s")
             self.instr("i64.eqz")
         elif operator == "==":
-            # TODO: refs, string
             if leftType == IntType():
                 self.instr("i64.eq")
             elif leftType == StrType():
-                raise Exception("TODO")
+                self.strCompare()
             else:
                 self.instr("i32.eq")
         elif operator == "!=":
             if leftType == IntType():
                 self.instr("i64.ne")
             elif leftType == StrType():
-                raise Exception("TODO")
+                self.strCompare()
+                self.instr("i32.eqz")
             else:
                 self.instr("i32.ne")
         elif operator == "is":
@@ -344,6 +635,54 @@ class WasmBackend(CommonVisitor):
         self.builder.end()
         self.builder.end()
 
+    def ForStmt(self, node: ForStmt):
+        block = self.newLabelName()
+        loop = self.newLabelName()
+
+        iterable = self.newLocal()
+        idx = self.newLocal()
+        length = self.newLocal()
+
+        self.visit(node.iterable)
+        self.teeLocal(iterable)
+        self.nullthrow()
+
+        self.instr("i32.load")
+        self.setLocal(length)
+
+        # idx = 0
+        self.instr("i32.const 0")
+        self.setLocal(idx)
+
+        self.builder.block(block)
+        self.builder.loop(loop)
+
+        # exit loop if idx >= length
+        self.getLocal(idx)
+        self.getLocal(length)
+        self.instr("i32.lt_s")
+        self.instr(f"i32.eqz")
+
+        self.instr(f"br_if ${block}")
+
+        isList = node.iterable.inferredType.isListType()
+        contentsType = node.identifier.inferredType.getWasmName()
+        self.idxHelper(iterable, idx, isList, contentsType)
+        self.setIdentifier(node.identifier)
+
+        for s in node.body:
+            self.visit(s)
+
+        # idx += 1
+        self.getLocal(idx)
+        self.instr("i32.const 1")
+        self.instr("i32.add")
+        self.setLocal(idx)
+
+        self.instr(f"br ${loop}")
+        self.builder.end()
+        self.builder.end()
+
     def buildReturn(self, value: Expr):
         if self.returnType.isNone():
             self.instr("return")
@@ -378,7 +717,7 @@ class WasmBackend(CommonVisitor):
         self.setLocal(n)
         self.builder.end()
         self.builder.end()
-        self.loadLocal(n)
+        self.getLocal(n)
 
     def ListExpr(self, node: ListExpr):
         length = len(node.elements)
@@ -391,98 +730,66 @@ class WasmBackend(CommonVisitor):
                 elementType = ClassValueType("object")
         else:
             elementType = t.elementType
+
+        # 8 bytes per element + 4 for the length, rounded up to nearest 8
+        increase = (length + 1) * 8
+        self.instr(f"i32.const {increase}")
+
+        addr = self.newLocal()
+        self.alloc(addr)
+
         # store the length
-        self.loadMemoryCounter() # addr: mem
-        addr = self.newLocal(None, "i32")
-        self.teeLocal(addr) # store memory counter
-        self.instr(f"i32.const {length}") # value
-        self.instr(f"i32.store") # alignment: 32-bit
+        self.getLocal(addr)
+        self.instr(f"i32.const {length}")  # value
+        self.instr(f"i32.store")  # alignment: 32-bit
         # unlike strings, each item in the list gets 64 bits instead of 8
         for i in range(length):
             offset = i * 8 + 4
             # addr: mem + 4 + idx * 8
-            self.loadMemoryCounter()
+            self.getLocal(addr)
             self.instr(f"i32.const {offset}")
             self.instr("i32.add")
             self.visit(node.elements[i])
             self.instr(f"{elementType.getWasmName()}.store")
-        memory = length * 8 + 4
-        increase = 8 + (8 * (memory // 8))
-        self.incrMemoryCounter(increase)
-        # load the address the list was stored at to the stack
-        self.loadLocal(addr)
 
-    def validateIdx(self, node: IndexExpr):
-        self.visit(node.list)
-        lst = self.newLocal(None, "i32")
-        self.teeLocal(lst)
-        self.instr("i32.load")
+        # load the address the list was stored at to the stack
+        self.getLocal(addr)
+
+    def validateIdx(self, iterable: str, node: IndexExpr):
+        idx = self.newLocal()
 
         self.visit(node.index)
         self.instr("i32.wrap_i64")
-        idx = self.newLocal(None, "i32")
-        self.teeLocal(idx)
+        self.setLocal(idx)
 
-        # make sure idx < length
-        self.instr("i32.gt_s")
-        self.instr("i32.eqz")
-        self.builder._if()
-        self.builder._then()
-        self.visit(node.thenExpr)
-        self.instr("unreachable")
-        self.builder.end()
-        self.builder.end()
+        self.getLocal(iterable)
+        self.getLocal(idx)
+        self.instr("call $check_bounds")
+        return idx
 
-        # make sure idx >= 0
-        self.instr('i32.const 0')
-        self.loadLocal(idx)
-        self.instr('i32.gt_s')
-        self.builder._if()
-        self.builder._then()
-        self.visit(node.thenExpr)
-        self.instr("unreachable")
-        self.builder.end()
-        self.builder.end()
-        return lst, idx
-
-    def IndexExpr(self, node: IndexExpr):
-        lst, idx = self.validateIdx(node)
-
-        if node.list.inferredType.isListType():
+    def idxHelper(self, iterable: str, idx: str, isList: bool, contentsType: str):
+        if isList:
             # 8 * idx + 4 + list addr
-            self.loadLocal(idx)
+            self.getLocal(idx)
             self.instr("i32.const 8")
             self.instr("i32.mul")
             self.instr("i32.const 4")
             self.instr("i32.add")
-            self.loadLocal(lst)
+            self.getLocal(iterable)
             self.instr("i32.add")
-            self.instr("i32.load")
-        else:
-            # store the length
-            self.loadMemoryCounter() # addr: mem
-            addr = self.newLocal(None, "i32")
-            self.teeLocal(addr) # store memory counter
-            self.instr(f"i32.const 1") # value
-            self.instr(f"i32.store")
+            self.instr(f"{contentsType}.load")
+        else:  # must be a string, need to alloc a new string
+            self.getLocal(iterable)
+            self.getLocal(idx)
+            self.instr("call $str_idx")
 
-            # addr of single char
-            self.loadMemoryCounter()
-            self.instr(f"i32.const 4")
-            self.instr("i32.add")
-
-            # idx + 4 + list addr
-            self.loadLocal(idx)
-            self.instr("i32.const 4")
-            self.instr("i32.add")
-            self.loadLocal(lst)
-            self.instr("i32.add")
-            self.instr("i32.load8_u")
-
-            self.instr("i32.store8")
-            self.incrMemoryCounter(8)
-            # load the address the string was stored at to the stack
-            self.loadLocal(addr)
+    def IndexExpr(self, node: IndexExpr):
+        self.visit(node.list)
+        iterable = self.newLocal()
+        self.setLocal(iterable)
+        idx = self.validateIdx(iterable, node)
+        self.idxHelper(iterable, idx, node.list.inferredType.isListType(),
+                       node.inferredType.getWasmName())
 
     # # LITERALS
 
@@ -500,28 +807,32 @@ class WasmBackend(CommonVisitor):
 
     def StringLiteral(self, node: StringLiteral):
         length = len(node.value)
+        memory = length + 4
+        # 1 byte per char + 4 for length, rounded to nearest 8
+        increase = 8 + (8 * (memory // 8))
+        self.instr(f"i32.const {increase}")
+
+        addr = self.newLocal()
+        self.alloc(addr)
+
         # store the length
-        self.loadMemoryCounter() # addr: mem
-        addr = self.newLocal(None, "i32")
-        self.teeLocal(addr) # store memory counter
-        self.instr(f"i32.const {length}") # value
+        self.getLocal(addr)
+        self.instr(f"i32.const {length}")  # value
         self.instr(f"i32.store")
         for i in range(length):
             offset = i + 4
             val = ord(node.value[i])
             # addr: mem + 4 + idx
-            self.loadMemoryCounter()
+            self.getLocal(addr)
             self.instr(f"i32.const {offset}")
             self.instr("i32.add")
             self.instr(f"i32.const {val}")
             self.instr("i32.store8")
-        memory = length + 4
-        increase = 8 + (8 * (memory // 8))
-        self.incrMemoryCounter(increase)
-        # load the address the string was stored at to the stack
-        self.loadLocal(addr)
 
-    # # BUILT-INS
+        # load the address the string was stored at to the stack
+        self.getLocal(addr)
+
+    # BUILT-INS
     def emit_assert(self, arg: Expr):
         self.visit(arg)
         self.instr("call $assert")
@@ -529,7 +840,8 @@ class WasmBackend(CommonVisitor):
 
     def emit_print(self, arg: Expr):
         if isinstance(arg.inferredType, ListValueType) or arg.inferredType.className not in {"bool", "int", "str"}:
-            raise Exception(f"Built-in function print is unsupported for values of type {arg.inferredType.classname}")
+            raise Exception(
+                f"Built-in function print is unsupported for values of type {arg.inferredType.classname}")
         self.visit(arg)
         self.instr(f"call $log_{arg.inferredType.className}")
         self.NoneLiteral(None)
@@ -537,9 +849,5 @@ class WasmBackend(CommonVisitor):
     def emit_len(self, arg: Expr):
         # the length of a string or array is always in the first 4 bytes
         self.visit(arg)
-        self.instr("i32.load")
+        self.instr("call $len")
         self.instr("i64.extend_i32_u")
-
-
-
-

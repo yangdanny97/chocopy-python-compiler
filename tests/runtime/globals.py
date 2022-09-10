@@ -7,7 +7,7 @@ def t():
     global y
     x = x + 1
     y = y + y
-    __assert__(z == 0)
+    assert z == 0
 
 assert x == 0
 assert y == "a"

@@ -11,7 +11,7 @@ from compiler.compiler import Compiler
 dump_location = True
 error_flags = {"error", "Error", "Exception", "exception", "Expected", "expected"}
 
-disabled_wasm_tests = [
+disabled_wasm_tests = {
     "assignment.py",
     "functions.py",
     "nested_list.py",
@@ -37,8 +37,9 @@ disabled_wasm_tests = [
     "linked_list.py",
     # "var_decl.py",
     # "expr_stmt.py",
+    "simple_list.py",
     "lists.py"
-]
+}
 
 def run_all_tests():
     run_parse_tests()

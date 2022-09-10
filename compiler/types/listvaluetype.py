@@ -40,3 +40,6 @@ class ListValueType(ValueType):
             "kind": "ListValueType",
             "elementType": self.elementType.toJSON(dump_location)
         }
+
+    def getWasmName(self):
+        return "i32"

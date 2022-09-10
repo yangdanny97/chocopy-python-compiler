@@ -5,10 +5,10 @@ d:int = 0
 
 # TODO - check if these are legal
 # a = []
-# __assert__(len(a) == 0)
+# assert len(a) == 0
 # a = [[]]
-# __assert__(len(a) == 1)
-# __assert__(len(a[0]) == 0)
+# assert len(a) == 1
+# assert len(a[0]) == 0
 
 a = [[1]]
 assert len(a) == 1

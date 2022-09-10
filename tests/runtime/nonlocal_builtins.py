@@ -7,6 +7,6 @@ def f():
         nonlocal x
         nonlocal y
         print(y)
-        __assert__(x)
+        assert x
     g()
 f()
