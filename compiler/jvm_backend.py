@@ -523,11 +523,7 @@ class JvmBackend(CommonVisitor):
             self.instr("iadd")
             self.instr(
                 "invokevirtual Method java/lang/String substring (II)Ljava/lang/String;")
-        if self.defaultToGlobals or node.identifier.varInstance.isGlobal:
-            self.instr(
-                f"putstatic Field {self.main} {node.identifier.name} {node.identifier.inferredType.getJavaSignature()}")
-        else:
-            self.store(node.identifier.name, node.identifier.inferredType)
+        self.processAssignmentTarget(node.identifier)
         # body
         self.visitStmtList(node.body)
         # idx = idx + 1

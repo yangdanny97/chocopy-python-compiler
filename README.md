@@ -66,6 +66,9 @@ The exact error messages from typechecking do not necessarily match the referenc
 
 This compiler supports a limited version of Python's `assert` keyword. The `assert` may be followed by a single `bool` expression, which will raise an exception with an unspecified/generic message if the value is false. It is used in the test suite to assert values in runtime tests.
 
+### Known Bugs:
+- for-loops do not work with nonlocal
+
 ## JVM Backend Notes:
 
 The JVM backend for this compiler outputs JVM bytecode in plaintext formatted for the Krakatau assembler. Here's how you can compile and run a file using this backend:

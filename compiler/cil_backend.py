@@ -263,7 +263,6 @@ class CilBackend(CommonVisitor):
         self.unindent()
 
     def VarDef(self, node: VarDef):
-        varName = node.getIdentifier().getCILName()
         if node.isAttr:
             # codegen for initialization in constructors
             className = ClassValueType(node.attrOfClass)
@@ -510,11 +509,7 @@ class CilBackend(CommonVisitor):
             self.instr("ldc.i4.1")
             self.instr(
                 "newobj instance void [mscorlib]System.String::.ctor(char, int32)")
-        if self.defaultToGlobals or node.identifier.varInstance.isGlobal:
-            self.instr(
-                f"stsfld {node.identifier.inferredType.getCILName()} {self.main}::{node.identifier.getCILName()}")
-        else:
-            self.store(node.identifier.name)
+        self.processAssignmentTarget(node.identifier)
         # body
         self.visitStmtList(node.body)
         # idx = idx + 1

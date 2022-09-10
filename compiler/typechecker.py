@@ -445,6 +445,10 @@ class TypeChecker(Visitor):
     def ForStmt(self, node: ForStmt):
         # set isReturn=True if any statement in body has isReturn=True
         iterType = node.iterable.inferredType
+        if not self.defInCurrentScope(node.identifier.name):
+            self.addError(
+                node.identifier, F"Identifier not mutable in current scope: {node.identifier.name}")
+            return
         if isinstance(iterType, ListValueType):
             if not self.ts.canAssign(iterType.elementType, node.identifier.inferredType):
                 self.addError(

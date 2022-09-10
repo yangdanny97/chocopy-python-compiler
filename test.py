@@ -12,32 +12,15 @@ dump_location = True
 error_flags = {"error", "Error", "Exception", "exception", "Expected", "expected"}
 
 disabled_wasm_tests = {
-    "assignment.py",
-    "functions.py",
-    "nested_list.py",
     "binary_tree.py",
-    "globals.py",
     "nonlocal.py",
     "classes.py",
-    # "hello_world.py",
-    "nonlocal_builtins.py",
-    "contains.py",
     "incrementing_counter.py",
     "operators.py",
     "control_flow.py",
-    # "int_and_bool.py",
     "ratio.py",
-    # "control_flow_2.py",
-    # "int_and_bool_control_flow.py",
-    # "simple_string.py",
     "doubling_vector.py",
-    # "int_and_bool_funcs.py",
-    "strings.py",
-    "exponent.py",
     "linked_list.py",
-    # "var_decl.py",
-    # "expr_stmt.py",
-    "simple_list.py",
     "lists.py"
 }
 
