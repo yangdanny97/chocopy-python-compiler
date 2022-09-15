@@ -1,6 +1,18 @@
-const wasm_path = process.argv[2];
+/**
+ * Runtime support for running WASM compiled from Chocopy
+ * 
+ * This is a very minimal runtime since the goal was to implement as much as 
+ * possible directly in WASM. 
+ * 
+ * The only imports from JS to WASM are for `console.log` and `console.assert`,
+ * and the latter isn't even strictly necessary.
+ * 
+ * The memory buffer is instantiated by JS, but after that it's never written 
+ * to and only used to print strings. 
+ */
 
-// utils for pretty-printing ints, bools, strings
+
+const wasm_path = process.argv[2];
 
 function logString(offset) {
     // first 4 bytes is the length
@@ -22,7 +34,10 @@ function logBool(val) {
     console.log(val !== 0);
 }
 
-const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
+const memory = new WebAssembly.Memory({
+    initial: 10,
+    maximum: 100
+});
 
 const importObject = {
     imports: {
@@ -31,7 +46,9 @@ const importObject = {
         logBool: x => logBool(x),
         assert: x => console.assert(x)
     },
-    js: { mem: memory },
+    js: {
+        mem: memory
+    },
 };
 
 const fs = require('fs');

@@ -681,6 +681,7 @@ class WasmBackend(CommonVisitor):
     (func $nullthrow (param $addr i32) (result i32)
         local.get $addr
         i32.eqz
+        ;; throw if $addr == 0
         (if
             (then
                 unreachable
@@ -695,6 +696,7 @@ class WasmBackend(CommonVisitor):
         local.get $idx
         i32.gt_s
         i32.eqz
+        ;; throw if !($len > $idx)
         (if
             (then
                 unreachable
@@ -703,6 +705,7 @@ class WasmBackend(CommonVisitor):
         i32.const 0
         local.get $idx
         i32.gt_s
+        ;; throw if 0 > $idx
         (if
             (then
                 unreachable
@@ -794,9 +797,11 @@ class WasmBackend(CommonVisitor):
         local.get $left
         i32.load
         local.tee $length
+        ;; compare $length with len of $right
         local.get $right
         i32.load
         i32.eq
+        ;; only compare contents if lengths are equal
         (if
             (then
                 i32.const 0
@@ -807,17 +812,21 @@ class WasmBackend(CommonVisitor):
                         local.get $length
                         i32.lt_s
                         i32.eqz
+                        ;; get left char
                         br_if $block
                         local.get $left
                         local.get $idx
                         call $get_char
+                        ;; get right char
                         local.get $right
                         local.get $idx
                         call $get_char
+                        ;; $result = $result && left char == right char
                         i32.eq
                         local.get $result
                         i32.and
                         local.set $result
+                        ;; if !$result then break
                         local.get $result
                         i32.eqz
                         br_if $block

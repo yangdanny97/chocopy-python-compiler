@@ -31,7 +31,7 @@ The test suite includes both static validation of generated/annotated ASTs, as w
   - [Mono](https://www.mono-project.com/)
   - Tested with Mono 6.12
 - WASM Backend Requirements:
-  - [WebAssembly Binary Toolkit (wabt)](https://github.com/WebAssembly/wabt)
+  - [WebAssembly Binary Toolkit (wabt)](https://github.com/WebAssembly/wabt), specifically the `wat2wasm` tool
 
 ## Usage
 
@@ -94,7 +94,7 @@ Note that in the above example commands & the `demo_jvm.sh` script all expect th
 
 ## CIL Backend Notes:
 
-The CIL backend for this compiler outputs CIL bytecode in plaintext formatted for the Mono ilsam assembler:
+The CIL backend for this compiler outputs CIL bytecode in plaintext formatted for the Mono `ilasm` assembler:
 1. Use this compiler to generate plaintext bytecode 
     - Format:  `python3 main.py --mode cil <input file> <output dir>`
     - Example: `python3 main.py --mode cil tests/runtime/binary_tree.py .`
@@ -110,9 +110,23 @@ The `demo_cil.sh` script is a useful utility to compile and run files with the C
 
 ## WASM Backend Notes:
 
-This is WIP, not all features are supported. 
+This is WIP, not all features are supported (the binary tree example itself actually does not work, but you can try another one). 
 
-Features:
+The WASM backend for this compiler outputs WASM in plaintext `.wat` format which can be converted to `.wasm` using `wat2wasm`:
+1. Use this compiler to generate plaintext WebAssembly
+    - Format:  `python3 main.py --mode wasm <input file> <output dir>`
+    - Example: `python3 main.py --mode wasm tests/runtime/binary_tree.py .`
+2. Run `wat2wasm` assembler to generate `.wasm` files
+    - Format:  `wat2wasm <.wat file> -o <.wasm file>`
+    - Example: `wat2wasm binary_tree.wat -o binary_tree.wasm`
+3. Run the `.wasm` files using a minimal JS runtime
+    - Example: `node wasm.js <.wasm file>`
+    - Example: `node wasm.js binary_tree.wasm`
+
+The `demo_wasm.sh` script is a useful utility to compile and run files with the WASM backend with a single command (provide the path to the input source file as an argument). 
+- To run the same example as above, run `./demo_wasm.sh tests/runtime/binary_tree.py`
+
+### WASM Backend - Supported Features:
 - int, bool, string, list
 - most operators
 - assignment
@@ -120,22 +134,19 @@ Features:
 - stdlib: print, len, and assert
 - globals
 
-Unsupported/TODO:
+### WASM Backend - Unsupported Features:
 - class/object
 - nonlocal (partial)
-- stdlib: input
+- stdlib: input (node.js does not have synchronous I/O out of the box so this is difficult)
 
-Memory format:
+### WASM Backend - Memory Format, Safety, and Management:
 
 - strings (utf-8) - first 4 bytes for length, followed by 1 byte for each character
 - lists - first 4 bytes for length, followed by 8 bytes for each element
 - ints - i64
-- pointers (objects, strings, lists) - i32
-- None - 0 (i32)
+- pointers (objects, strings, lists) - i32, where `None` is 0
 
-Strings and lists are stored in the heap, aligned to 8 bytes. Note that memory does not get freed/garbage collected, so memory will run out for long-running programs. This is especially a problem with string iteration and string/list concatenation, since indexing a string in Chocopy requires a new string to be allocated.
-
-To provide memory safety, string/list indexing have bounds checking and list operations have a null-check, which crashes the program with a generic "unreachable" instruction.
+Strings, lists, objects, and refs holding nonlocals are stored in the heap, aligned to 8 bytes. Right now, memory does not get freed/garbage collected once it is allocated. To provide memory safety, string/list indexing have bounds checking and list operations have a null-check, which crashes the program with a generic "unreachable" instruction.
 
 ## FAQ
 
