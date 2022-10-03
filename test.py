@@ -12,12 +12,12 @@ dump_location = True
 error_flags = {"error", "Error", "Exception", "exception", "Expected", "expected", "failed"}
 
 def run_all_tests():
-    # run_parse_tests()
-    # run_typecheck_tests()
-    # run_python_backend_tests()
-    # run_closure_tests()
-    # run_jvm_tests()
-    # run_cil_tests()
+    run_parse_tests()
+    run_typecheck_tests()
+    run_python_backend_tests()
+    run_closure_tests()
+    run_jvm_tests()
+    run_cil_tests()
     run_wasm_tests()
 
 def run_parse_tests():

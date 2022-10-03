@@ -21,8 +21,3 @@ class TypedVar(Node):
         d["identifier"] = self.identifier.toJSON(dump_location)
         d["type"] = self.type.toJSON(dump_location)
         return d
-
-    def getWasmParam(self, paramIdx, funcType):
-        isRef = paramIdx in funcType.refParams
-        t = "i32" if isRef else self.t.getWasmName()
-        return f"(param ${self.identifier.name} {t})"

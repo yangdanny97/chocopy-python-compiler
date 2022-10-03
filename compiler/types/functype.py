@@ -50,6 +50,20 @@ class FuncType(SymbolType):
             params.append(sig)
         return "({}){}".format("".join(params), r)
 
+    def getWasmSignature(self, names=None) -> str:
+        params = []
+        for i in range(len(self.parameters)):
+            p = self.parameters[i]
+            paramName = ("$" + names[i]) if names else ""
+            if i in self.refParams and isinstance(p, ClassValueType):
+                sig = f"(param {paramName} i32)"
+            else:
+                sig = f"(param {paramName} {p.getWasmName()})"
+            params.append(sig)
+        params = " ".join(params)
+        result = "" if self.returnType.isNone() else f" (result {self.returnType.getWasmName()})"
+        return params + result
+
     def methodEquals(self, other):
         if isinstance(other, FuncType) and len(self.parameters) > 0 and len(other.parameters) > 0:
             return self.parameters[1:] == other.parameters[1:] and self.returnType == other.returnType

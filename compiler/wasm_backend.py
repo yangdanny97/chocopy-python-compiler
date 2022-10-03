@@ -34,13 +34,9 @@ class WasmBuilder(Builder):
         self.newLine(f"(else")
         self.indent()
 
-    def func(self, name: str, params: List[str] = [], resType=None) -> Builder:
+    def func(self, name: str, sig: str="") -> Builder:
         # return new block for declaring extra locals
-        params = " ".join(params)
-        result = ""
-        if resType is not None:
-            result = f" (result {resType})"
-        self.newLine(f"(func ${name} {params}{result}")
+        self.newLine(f"(func ${name} {sig}")
         self.indent()
         return self.newBlock()
 
@@ -231,18 +227,16 @@ class WasmBackend(CommonVisitor):
         self.funcDefHelper(node, node.name.name)
 
     def funcDefHelper(self, node: FuncDef, name: str):
-        params = []
-        for i in range(len(node.params)):
-            params.append(node.params[i].getWasmParam(i, node.type))
         self.returnType = node.type.returnType
         ret = None if self.returnType.isNone() else self.returnType.getWasmName()
-        self.locals = self.builder.func(name, params, ret)
+        paramNames = [x.identifier.name for x in node.params]
+        self.locals = self.builder.func(name, node.type.getWasmSignature(paramNames))
         for d in node.declarations:
             self.visit(d)
         self.visitStmtList(node.statements)
         # implicitly return None if possible
         if ret is not None and not isinstance(node.statements[-1], ReturnStmt):
-            if self.returnType.getWasmName() == "i32":
+            if self.returnType.getWasmName() == "i32" and not self.returnType.isSpecialType():
                 self.instr("i32.const 0")
             else:
                 self.instr("unreachable")
@@ -532,9 +526,7 @@ class WasmBackend(CommonVisitor):
         self.instr("call $log_int")
         self.getLocal(temp)
 
-        params = " ".join([f"(param {t.getWasmName()})" for t in funcType.parameters])
-        result = "" if funcType.returnType.isNone() else f"(result {funcType.returnType.getWasmName()})"
-        self.instr(f"call_indirect {params} {result}")
+        self.instr(f"call_indirect {funcType.getWasmSignature()}")
 
         if funcType.returnType.isNone():
             self.NoneLiteral(None)  # push null for void return
