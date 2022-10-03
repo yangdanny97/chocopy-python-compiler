@@ -152,22 +152,38 @@ class TypeSystem:
         # this really shouldn't be returned
         return ObjectType()
 
-    def getAllMethods(self, className: str):
-        # return map of method names to tuples of
-        # (signature, classname of their definition)
-        methods = {}
+    def getOrderedMethods(self, className: str):
+        # (name, signature, defined in class)
+        methods = []
         if self.classes[className].superclass is not None:
-            methods = self.getAllMethods(self.classes[className].superclass)
+            methods = self.getOrderedMethods(self.classes[className].superclass)
         for name in self.classes[className].methods:
-            methods[name] = (self.classes[className].methods[name], className)
+            hasExisting = False
+            for i in range(len(methods)):
+                if methods[i][0] == name:
+                    methods[i] = (name, self.classes[className].methods[name], className)
+                    hasExisting = True
+                    break
+            if not hasExisting:
+                methods.append((name, self.classes[className].methods[name], className))
         return methods
+
+    def getMappedMethods(self, className: str):
+        # map of name -> signature, defined in class
+        ordered = self.getOrderedMethods(className)
+        return { x: (y, z) for x, y, z in ordered }
 
     def getOrderedAttrs(self, className: str):
         # return list of (name, type, init value) triples
         attrs = []
         if self.classes[className].superclass is not None:
-            attr = self.getOrderedAttrs(self.classes[className].superclass)
+            attrs = self.getOrderedAttrs(self.classes[className].superclass)
         for attr in self.classes[className].orderedAttrs:
             attrType, attrInit = self.classes[className].attrs[attr]
             attrs.append((attr, attrType, attrInit))
         return attrs
+
+    def getMappedAttrs(self, className: str):
+        # map of name -> type, init value tuples
+        ordered = self.getOrderedAttrs(className)
+        return { x: (y, z) for x, y, z in ordered }

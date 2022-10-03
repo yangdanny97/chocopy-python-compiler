@@ -135,8 +135,7 @@ The `demo_wasm.sh` script is a useful utility to compile and run files with the 
 - globals
 
 ### WASM Backend - Unsupported Features:
-- class/object
-- nonlocal (partial)
+- nonlocal referencing function param
 - stdlib: input (node.js does not have synchronous I/O out of the box so this is difficult)
 
 ### WASM Backend - Memory Format, Safety, and Management:

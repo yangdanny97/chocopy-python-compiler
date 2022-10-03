@@ -34,6 +34,12 @@ function logBool(val) {
     console.log(val !== 0);
 }
 
+function assert(val, line) {
+    if (!val) {
+        throw new Error("Assertion failed on line " + line.toString());
+    }
+}
+
 const memory = new WebAssembly.Memory({
     initial: 10,
     maximum: 100
@@ -44,7 +50,7 @@ const importObject = {
         logString: x => logString(x),
         logInt: x => logInt(x),
         logBool: x => logBool(x),
-        assert: x => console.assert(x)
+        assert: (x, y) => assert(x, y)
     },
     js: {
         mem: memory

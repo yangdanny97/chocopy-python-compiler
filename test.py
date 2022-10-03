@@ -9,28 +9,15 @@ from compiler.typesystem import TypeSystem
 from compiler.compiler import Compiler
 
 dump_location = True
-error_flags = {"error", "Error", "Exception", "exception", "Expected", "expected"}
-
-disabled_wasm_tests = {
-    "binary_tree.py",
-    "nonlocal.py",
-    "classes.py",
-    "incrementing_counter.py",
-    "operators.py",
-    "control_flow.py",
-    "ratio.py",
-    "doubling_vector.py",
-    "linked_list.py",
-    "lists.py"
-}
+error_flags = {"error", "Error", "Exception", "exception", "Expected", "expected", "failed"}
 
 def run_all_tests():
-    run_parse_tests()
-    run_typecheck_tests()
-    run_python_backend_tests()
-    run_closure_tests()
-    run_jvm_tests()
-    run_cil_tests()
+    # run_parse_tests()
+    # run_typecheck_tests()
+    # run_python_backend_tests()
+    # run_closure_tests()
+    # run_jvm_tests()
+    # run_cil_tests()
     run_wasm_tests()
 
 def run_parse_tests():
@@ -162,6 +149,8 @@ def run_python_backend_tests():
     else:
         print("\nNot all test cases passed. Please run `make clean` after inspecting the output")
     print("\nPassed {:d} out of {:d} Python backend runtime test cases\n".format(n_passed, total))
+
+disabled_wasm_tests = []
 
 def run_wasm_tests():
     print("Running WASM backend tests...\n")

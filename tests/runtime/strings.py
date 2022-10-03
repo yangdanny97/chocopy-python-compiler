@@ -59,4 +59,9 @@ assert y == "123"
 assert len(x) == 1
 assert len(y) == 3
 
+assert "1" + "2" + "3" + "4" + "5" == "12345"
+
+x = "123123"
+assert x[0] + x[1] + x[2] == x[3] + x[4] + x[5]
+
 

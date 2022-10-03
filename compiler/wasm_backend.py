@@ -69,14 +69,44 @@ class WasmBuilder(Builder):
 
 
 class WasmBackend(CommonVisitor):
-    defaultToGlobals = False  # treat all vars as global if this is true
-    localCounter = 0
-    locals = None
-
     def __init__(self, main: str, ts: TypeSystem):
         self.builder = WasmBuilder(main)
         self.main = main  # name of main method
         self.ts = ts
+        self.defaultToGlobals = False  # treat all vars as global if this is true
+        self.localCounter = 0
+        self.locals = None
+
+        # (class name, attr name) -> class offset
+        self.attrOffsets = dict()
+        # (class name, method name) -> (class offset, table offset, inherited)
+        self.methodOffsets = dict()
+
+        self.typeDefs = None
+        self.declaredTypes = set()
+        self.undeclaredFuncs = set()
+
+    def initializeOffsets(self):
+        tblOffset = 0
+        methodTableOffsets = dict()
+        # assign positions in the global method table
+        classes = [c for c in self.ts.classes if c != "<None>" and c != "<Empty>"]
+        for cls in classes:
+            for methName, _, defCls  in self.ts.getOrderedMethods(cls):
+                if cls == defCls:
+                    methodTableOffsets[(cls, methName)] = tblOffset
+                    tblOffset += 1
+        # calculate info for each class
+        for cls in classes:
+            attrs = self.ts.getOrderedAttrs(cls)
+            for idx, attrInfo in enumerate(attrs):
+                self.attrOffsets[(cls, attrInfo[0])] = idx
+            methods = self.ts.getOrderedMethods(cls)
+            for idx, methInfo in enumerate(methods):
+                name, _, defCls = methInfo
+                # get offset in global table
+                t = methodTableOffsets[(defCls, name)]
+                self.methodOffsets[(cls, name)] = (idx, t, defCls != cls)
 
     def currentBuilder(self):
         return self.classes[self.currentClass]
@@ -127,14 +157,32 @@ class WasmBackend(CommonVisitor):
         self.instr("call $nullthrow")
 
     def Program(self, node: Program):
+        self.initializeOffsets()
+        cls_decls = [d for d in node.declarations if isinstance(d, ClassDef)]
         func_decls = [d for d in node.declarations if isinstance(d, FuncDef)]
         var_decls = [d for d in node.declarations if isinstance(d, VarDef)]
+
         self.builder.module()
         self.instr('(import "imports" "logInt" (func $log_int (param i64)))')
         self.instr('(import "imports" "logBool" (func $log_bool (param i32)))')
         self.instr('(import "imports" "logString" (func $log_str (param i32)))')
-        self.instr('(import "imports" "assert" (func $assert (param i32)))')
+        self.instr('(import "imports" "assert" (func $assert (param i32) (param i32)))')
         self.instr('(memory (import "js" "mem") 1)')
+
+        # initialize method table
+        self.instr(f"(table {len(self.methodOffsets)} funcref)")
+        funcNames = [(f"${k[0]}${k[1]}", v[1]) for k, v in self.methodOffsets.items() if not v[2]]
+        funcNames = sorted(funcNames, key=lambda x: x[1])
+
+        self.undeclaredFuncs = set([x[0] for x in funcNames])
+        funcNames = " ".join([x[0] for x in funcNames])
+        self.instr(f"(elem (i32.const 0) {funcNames})")
+
+        # initialize typedefs
+        self.typeDefs = self.builder.newBlock()
+        self.typeDefs.newLine(f"(type $i32__ (func (param i32)))")
+        self.declaredTypes.add("$i32__")
+
         self.instr(f"(global $heap (mut i32) (i32.const 4))")
         # initialize all globals to 0 for now, since we don't statically allocate strings or arrays
         for v in var_decls:
@@ -142,6 +190,13 @@ class WasmBackend(CommonVisitor):
                 f"(global ${v.var.identifier.name} (mut {v.var.t.getWasmName()}) ({v.var.t.getWasmName()}.const 0))")
         for d in func_decls:
             self.visit(d)
+        for c in cls_decls:
+            self.visit(c)
+
+        # add stubs for any undeclared functions (no-op __init__)
+        for func in sorted(self.undeclaredFuncs):
+            self.instr(f"(func {func} (param $self i32))")
+
         module_builder = self.builder
         self.builder = module_builder.newBlock()
 
@@ -164,22 +219,39 @@ class WasmBackend(CommonVisitor):
         self.instr(f"(start $main)")
         self.builder.end()
 
+    def ClassDef(self, node: ClassDef):
+        self.currentClass = node.name.name
+        func_decls = [d for d in node.declarations if isinstance(d, FuncDef)]
+        for func in func_decls:
+            name = f"{node.name.name}${func.name.name}"
+            self.undeclaredFuncs.remove("$" + name)
+            self.funcDefHelper(func, name)
+
     def FuncDef(self, node: FuncDef):
+        self.funcDefHelper(node, node.name.name)
+
+    def funcDefHelper(self, node: FuncDef, name: str):
         params = []
         for i in range(len(node.params)):
             params.append(node.params[i].getWasmParam(i, node.type))
         self.returnType = node.type.returnType
         ret = None if self.returnType.isNone() else self.returnType.getWasmName()
-        self.locals = self.builder.func(node.name.name, params, ret)
+        self.locals = self.builder.func(name, params, ret)
         for d in node.declarations:
             self.visit(d)
         self.visitStmtList(node.statements)
+        # implicitly return None if possible
+        if ret is not None and not isinstance(node.statements[-1], ReturnStmt):
+            if self.returnType.getWasmName() == "i32":
+                self.instr("i32.const 0")
+            else:
+                self.instr("unreachable")
         self.builder.end()
 
     def VarDef(self, node: VarDef):
         varName = node.var.identifier.name
         if node.isAttr:
-            raise Exception("TODO")
+            raise Exception("this should be handled elsewhere")
         elif node.var.varInstance.isNonlocal:
             self.instr("i32.const 8")
             self.instr("call $alloc")
@@ -227,10 +299,26 @@ class WasmBackend(CommonVisitor):
             self.getLocal(val)
             self.instr(f"{target.inferredType.getWasmName()}.store")
         elif isinstance(target, MemberExpr):
-            raise Exception("TODO")
+            cls = target.object.inferredType.className
+            attr = target.member.name
+            offset = self.attrOffsets[(cls, attr)]
+            self.visit(target.object)
+            self.instr(f"i32.const {offset * 8 + 8}")
+            self.instr("i32.add")
+            self.getLocal(val)
+            self.instr(f"{target.inferredType.getWasmName()}.store")
         else:
             raise Exception(
                 "Internal compiler error: unsupported assignment target")
+
+    def MemberExpr(self, node: MemberExpr):
+        cls = node.object.inferredType.className
+        attr = node.member.name
+        offset = self.attrOffsets[(cls, attr)]
+        self.visit(node.object)
+        self.instr(f"i32.const {offset * 8 + 8}")
+        self.instr("i32.add")
+        self.instr(f"{node.inferredType.getWasmName()}.load")
 
     def AssignStmt(self, node: AssignStmt):
         self.visit(node.value)
@@ -304,12 +392,12 @@ class WasmBackend(CommonVisitor):
             self.instr("i64.lt_s")
         elif operator == "<=":
             self.instr("i64.gt_s")
-            self.instr("i64.eqz")
+            self.instr("i32.eqz")
         elif operator == ">":
             self.instr("i64.gt_s")
         elif operator == ">=":
             self.instr("i64.lt_s")
-            self.instr("i64.eqz")
+            self.instr("i32.eqz")
         elif operator == "==":
             if leftType == IntType():
                 self.instr("i64.eq")
@@ -346,24 +434,110 @@ class WasmBackend(CommonVisitor):
             self.visit(node.operand)
             self.instr("i32.eqz")
 
+    def constructor(self, node: CallExpr):
+        cls = node.function.name
+        attrs = self.ts.getMappedAttrs(cls)
+        meths = self.ts.getMappedMethods(cls)
+        size = len(attrs) + len(meths) + 1
+        increase = size * 8
+        self.instr(f"i32.const {increase}")
+        addr = self.newLocal(self.genLocalName("addr"))
+        self.alloc(addr)
+
+        # store starting position of vtable
+        self.getLocal(addr)
+        self.instr(f"i32.const {len(attrs) * 8 + 8}")
+        self.instr(f"i32.store")  # alignment: 32-bit
+        
+        # initialize attrs
+        for name, t, v in self.ts.getOrderedAttrs(cls):
+            offset = self.attrOffsets[(cls, name)]
+            self.getLocal(addr)
+            self.instr(f"i32.const {offset * 8 + 8}")
+            self.instr(f"i32.add")
+            self.visit(v)
+            self.instr(f"{t.getWasmName()}.store")
+
+        # initialize vtable
+        for name, _, _ in self.ts.getOrderedMethods(cls):
+            clsOffset, globalOffset, _ = self.methodOffsets[(cls, name)]
+            self.getLocal(addr)
+            self.instr(f"i32.const {len(attrs) * 8 + clsOffset * 8 + 8}")
+            self.instr(f"i32.add")
+            self.instr(f"i32.const {globalOffset}")
+            self.instr(f"i32.store")
+
+        # call __init__, should always be index 0
+        self.getLocal(addr)
+        self.getLocal(addr)
+        self.getLocal(addr)
+        self.instr("i32.load")
+        self.instr("i32.add") # addr + start of vtable offset
+        self.instr("i32.load") # load global table offset from vtable
+        self.instr(f"call_indirect (type $i32__)")
+        self.getLocal(addr)
+
     def CallExpr(self, node: CallExpr):
         name = node.function.name
         if node.isConstructor:
-            raise Exception("TODO")
-        if name == "print":
+            self.constructor(node)
+        elif name == "print":
             self.emit_print(node.args[0])
         elif name == "len":
             self.emit_len(node.args[0])
         elif name == "input":
-            raise Exception("TODO")
+            raise Exception("user input is unimplemented")
         elif name == "__assert__":
-            self.emit_assert(node.args[0])
+            self.emit_assert(node.args[0], node.location[0])
         else:
             for i in range(len(node.args)):
                 self.visitArg(node.function.inferredType, i, node.args[i])
             self.instr(f"call ${name}")
             if node.function.inferredType.returnType.isNone():
                 self.NoneLiteral(None)  # push null for void return
+
+    def MethodCallExpr(self, node: MethodCallExpr):
+        funcType = node.method.inferredType
+        className = node.method.object.inferredType.className
+        methodName = node.method.member.name
+        if methodName == "__init__" and className in {"int", "bool"}:
+            return
+
+        self.visit(node.method.object)
+        obj = self.newLocal(self.genLocalName("obj"))
+        self.setLocal(obj)
+
+        self.getLocal(obj)
+        for i in range(len(node.args)):
+            self.visitArg(funcType, i + 1, node.args[i])
+
+        # load indirect index
+        self.getLocal(obj)
+        self.getLocal(obj)
+        self.instr("i32.load")
+        methOffset, _, _ = self.methodOffsets[(className, methodName)]
+        self.instr(f"i32.const {methOffset * 8}")
+        self.instr("i32.add")
+        self.instr("i32.add")
+        self.instr("i32.load")
+
+        # call indirect
+        self.instr(f";; call method {methodName}")
+
+        # debug
+        temp = self.newLocal(self.genLocalName("idx"))
+        self.setLocal(temp)
+        self.getLocal(temp)
+        self.instr("i64.extend_i32_u")
+        self.instr("call $log_int")
+        self.getLocal(temp)
+
+        params = " ".join([f"(param {t.getWasmName()})" for t in funcType.parameters])
+        result = "" if funcType.returnType.isNone() else f"(result {funcType.returnType.getWasmName()})"
+        self.instr(f"call_indirect {params} {result}")
+
+        if funcType.returnType.isNone():
+            self.NoneLiteral(None)  # push null for void return
 
     def WhileStmt(self, node: WhileStmt):
         block = self.newLabelName()
@@ -603,8 +777,9 @@ class WasmBackend(CommonVisitor):
             self.visit(arg)
 
     # BUILT-INS
-    def emit_assert(self, arg: Expr):
+    def emit_assert(self, arg: Expr, line: int):
         self.visit(arg)
+        self.instr(f"i32.const {line}")
         self.instr("call $assert")
         self.NoneLiteral(None)
 
@@ -756,6 +931,8 @@ class WasmBackend(CommonVisitor):
         i32.add
         i32.const 8
         i32.div_u
+        i32.const 8
+        i32.mul
         i32.const 8
         i32.add
         call $alloc

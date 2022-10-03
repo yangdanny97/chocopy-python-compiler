@@ -1,3 +1,5 @@
+# this is the same as linked_list.py except LinkedList.__init__ is inherited
+
 class Link(object):
     val: int = 0
     next: "Link" = None
@@ -14,7 +16,7 @@ class Link(object):
 class LinkedList(object):
     head: Link = None
 
-    def __init__(self: "LinkedList"):
+    def __init(self: "LinkedList"):
         pass
 
     def is_empty(self: "LinkedList") -> bool:
