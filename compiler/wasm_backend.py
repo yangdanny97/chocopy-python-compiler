@@ -297,7 +297,7 @@ class WasmBackend(CommonVisitor):
             attr = target.member.name
             offset = self.attrOffsets[(cls, attr)]
             self.visit(target.object)
-            self.instr(f"i32.const {offset * 8 + 8}")
+            self.instr(f"i32.const {offset * 8 + 4}")
             self.instr("i32.add")
             self.getLocal(val)
             self.instr(f"{target.inferredType.getWasmName()}.store")
@@ -310,7 +310,7 @@ class WasmBackend(CommonVisitor):
         attr = node.member.name
         offset = self.attrOffsets[(cls, attr)]
         self.visit(node.object)
-        self.instr(f"i32.const {offset * 8 + 8}")
+        self.instr(f"i32.const {offset * 8 + 4}")
         self.instr("i32.add")
         self.instr(f"{node.inferredType.getWasmName()}.load")
 
@@ -432,22 +432,22 @@ class WasmBackend(CommonVisitor):
         cls = node.function.name
         attrs = self.ts.getMappedAttrs(cls)
         meths = self.ts.getMappedMethods(cls)
-        size = len(attrs) + len(meths) + 1
-        increase = size * 8
+        size = len(attrs) * 8 + len(meths) * 4 + 4
+        increase = size if size % 8 == 0 else size + 4
         self.instr(f"i32.const {increase}")
         addr = self.newLocal(self.genLocalName("addr"))
         self.alloc(addr)
 
         # store starting position of vtable
         self.getLocal(addr)
-        self.instr(f"i32.const {len(attrs) * 8 + 8}")
+        self.instr(f"i32.const {len(attrs) * 8 + 4}")
         self.instr(f"i32.store")  # alignment: 32-bit
         
         # initialize attrs
         for name, t, v in self.ts.getOrderedAttrs(cls):
             offset = self.attrOffsets[(cls, name)]
             self.getLocal(addr)
-            self.instr(f"i32.const {offset * 8 + 8}")
+            self.instr(f"i32.const {offset * 8 + 4}")
             self.instr(f"i32.add")
             self.visit(v)
             self.instr(f"{t.getWasmName()}.store")
@@ -456,7 +456,7 @@ class WasmBackend(CommonVisitor):
         for name, _, _ in self.ts.getOrderedMethods(cls):
             clsOffset, globalOffset, _ = self.methodOffsets[(cls, name)]
             self.getLocal(addr)
-            self.instr(f"i32.const {len(attrs) * 8 + clsOffset * 8 + 8}")
+            self.instr(f"i32.const {len(attrs) * 8 + clsOffset * 4 + 4}")
             self.instr(f"i32.add")
             self.instr(f"i32.const {globalOffset}")
             self.instr(f"i32.store")
@@ -510,7 +510,7 @@ class WasmBackend(CommonVisitor):
         self.getLocal(obj)
         self.instr("i32.load")
         methOffset, _, _ = self.methodOffsets[(className, methodName)]
-        self.instr(f"i32.const {methOffset * 8}")
+        self.instr(f"i32.const {methOffset * 4}")
         self.instr("i32.add")
         self.instr("i32.add")
         self.instr("i32.load")

@@ -137,7 +137,7 @@ The `wasm.js` file contains all the runtime support needed to run the WASM gener
 - lists - first 4 bytes for length, followed by 8 bytes for each element
 - ints - i64
 - pointers (objects, strings, lists) - i32, where `None` is 0
-- objects - first 8 bytes for vtable offset, followed by 8 bytes for each attribute, followed by 8 bytes for each method index. inherited attribute/method positions are same as parent.
+- objects - first 4 bytes for vtable offset, followed by 8 bytes for each attribute, followed by 4 bytes for each method index. inherited attribute/method positions are same as parent.
 
 Strings, lists, objects, and refs holding nonlocals are stored in the heap, aligned to 8 bytes. Right now, memory does not get freed/garbage collected once it is allocated, so large programs may run out of memory.
 
