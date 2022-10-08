@@ -77,9 +77,8 @@ class WasmBackend(CommonVisitor):
         self.attrOffsets = dict()
         # (class name, method name) -> (class offset, table offset, inherited)
         self.methodOffsets = dict()
-
-        self.typeDefs = None
-        self.declaredTypes = set()
+        # class -> offset of start of vtable
+        self.vtables = dict()
         self.undeclaredFuncs = set()
 
     def initializeOffsets(self):
@@ -93,16 +92,20 @@ class WasmBackend(CommonVisitor):
                     methodTableOffsets[(cls, methName)] = tblOffset
                     tblOffset += 1
         # calculate info for each class
+        memOffset = 0
         for cls in classes:
             attrs = self.ts.getOrderedAttrs(cls)
             for idx, attrInfo in enumerate(attrs):
                 self.attrOffsets[(cls, attrInfo[0])] = idx
             methods = self.ts.getOrderedMethods(cls)
+            self.vtables[cls] = []
             for idx, methInfo in enumerate(methods):
                 name, _, defCls = methInfo
                 # get offset in global table
                 t = methodTableOffsets[(defCls, name)]
                 self.methodOffsets[(cls, name)] = (idx, t, defCls != cls)
+                self.vtables[cls].append((memOffset + idx * 4, t))
+            memOffset += (len(methods) * 4)
 
     def currentBuilder(self):
         return self.classes[self.currentClass]
@@ -174,12 +177,11 @@ class WasmBackend(CommonVisitor):
         funcNames = " ".join([x[0] for x in funcNames])
         self.instr(f"(elem (i32.const 0) {funcNames})")
 
-        # initialize typedefs
-        self.typeDefs = self.builder.newBlock()
-        self.typeDefs.newLine(f"(type $i32__ (func (param i32)))")
-        self.declaredTypes.add("$i32__")
+        # calculate first index of unallocated memory after vtables
+        fst = sum([len(t) * 4 for _, t in self.vtables.items()])
+        fst = fst if fst % 8 == 0 else fst + 4
+        self.instr(f"(global $heap (mut i32) (i32.const {fst}))")
 
-        self.instr(f"(global $heap (mut i32) (i32.const 4))")
         # initialize all globals to 0 for now, since we don't statically allocate strings or arrays
         for v in var_decls:
             self.instr(
@@ -198,10 +200,7 @@ class WasmBackend(CommonVisitor):
 
         self.locals = self.builder.func("main")
         self.defaultToGlobals = True
-        # initialize memory counter
-        self.instr("i32.const 0")  # addr 0
-        self.instr("i32.const 8")  # store value 8
-        self.instr("i32.store")
+        self.initializeVtables()
         # initialize globals
         for v in var_decls:
             self.visit(v.value)
@@ -214,6 +213,13 @@ class WasmBackend(CommonVisitor):
         self.instr(self.stdlib())
         self.instr(f"(start $main)")
         self.builder.end()
+    
+    def initializeVtables(self):
+        for _, t in self.vtables.items():
+            for memOffset, funcOffset in t:
+                self.instr(f"i32.const {memOffset}")
+                self.instr(f"i32.const {funcOffset}")
+                self.instr("i32.store")
 
     def ClassDef(self, node: ClassDef):
         self.currentClass = node.name.name
@@ -430,9 +436,9 @@ class WasmBackend(CommonVisitor):
 
     def constructor(self, node: CallExpr):
         cls = node.function.name
+        self.instr(f";; construct {cls}")
         attrs = self.ts.getMappedAttrs(cls)
-        meths = self.ts.getMappedMethods(cls)
-        size = len(attrs) * 8 + len(meths) * 4 + 4
+        size = len(attrs) * 8 + 4
         increase = size if size % 8 == 0 else size + 4
         self.instr(f"i32.const {increase}")
         addr = self.newLocal(self.genLocalName("addr"))
@@ -440,7 +446,7 @@ class WasmBackend(CommonVisitor):
 
         # store starting position of vtable
         self.getLocal(addr)
-        self.instr(f"i32.const {len(attrs) * 8 + 4}")
+        self.instr(f"i32.const {self.vtables[cls][0][0]}")
         self.instr(f"i32.store")  # alignment: 32-bit
         
         # initialize attrs
@@ -452,23 +458,12 @@ class WasmBackend(CommonVisitor):
             self.visit(v)
             self.instr(f"{t.getWasmName()}.store")
 
-        # initialize vtable
-        for name, _, _ in self.ts.getOrderedMethods(cls):
-            clsOffset, globalOffset, _ = self.methodOffsets[(cls, name)]
-            self.getLocal(addr)
-            self.instr(f"i32.const {len(attrs) * 8 + clsOffset * 4 + 4}")
-            self.instr(f"i32.add")
-            self.instr(f"i32.const {globalOffset}")
-            self.instr(f"i32.store")
-
         # call __init__, should always be index 0
-        self.getLocal(addr)
-        self.getLocal(addr)
-        self.getLocal(addr)
-        self.instr("i32.load")
-        self.instr("i32.add") # addr + start of vtable offset
-        self.instr("i32.load") # load global table offset from vtable
-        self.instr(f"call_indirect (type $i32__)")
+        self.getLocal(addr) # self argument
+        self.instr(f"i32.const {self.vtables[cls][0][1]}")
+        self.instr(f"call_indirect (param  i32)")
+
+        # return pointer to self
         self.getLocal(addr)
 
     def CallExpr(self, node: CallExpr):
@@ -501,35 +496,34 @@ class WasmBackend(CommonVisitor):
         obj = self.newLocal(self.genLocalName("obj"))
         self.setLocal(obj)
 
+        # args
         self.getLocal(obj)
         for i in range(len(node.args)):
             self.visitArg(funcType, i + 1, node.args[i])
 
         # load indirect index
         self.getLocal(obj)
-        self.getLocal(obj)
-        self.instr("i32.load")
+        self.instr("i32.load") # load start of vtable
+
         methOffset, _, _ = self.methodOffsets[(className, methodName)]
         self.instr(f"i32.const {methOffset * 4}")
         self.instr("i32.add")
-        self.instr("i32.add")
-        self.instr("i32.load")
+        self.instr("i32.load") # load table index of method
 
-        # call indirect
         self.instr(f";; call method {methodName}")
+        self.instr(f"call_indirect {funcType.getWasmSignature()}")
 
-        # debug
+        if funcType.returnType.isNone():
+            self.NoneLiteral(None)  # push null for void return
+
+    # helper for debugging pointers, unused normally
+    def debug(self):
         temp = self.newLocal(self.genLocalName("idx"))
         self.setLocal(temp)
         self.getLocal(temp)
         self.instr("i64.extend_i32_u")
         self.instr("call $log_int")
         self.getLocal(temp)
-
-        self.instr(f"call_indirect {funcType.getWasmSignature()}")
-
-        if funcType.returnType.isNone():
-            self.NoneLiteral(None)  # push null for void return
 
     def WhileStmt(self, node: WhileStmt):
         block = self.newLabelName()
@@ -770,6 +764,7 @@ class WasmBackend(CommonVisitor):
 
     # BUILT-INS
     def emit_assert(self, arg: Expr, line: int):
+        self.instr(f";; assert line {line}")
         self.visit(arg)
         self.instr(f"i32.const {line}")
         self.instr("call $assert")
