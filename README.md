@@ -8,6 +8,7 @@ Progress is documented on my [blog](https://yangdanny97.github.io/blog/):
 - [Part 1: Frontend/Typechecker](https://yangdanny97.github.io/blog/2020/05/29/chocopy-typechecker)
 - [Part 2: JVM backend](https://yangdanny97.github.io/blog/2021/08/26/chocopy-jvm-backend)
 - [Part 3: CIL backend](https://yangdanny97.github.io/blog/2022/05/22/chocopy-cil-backend)
+- [Part 4: WASM backend](https://yangdanny97.github.io/blog/2022/10/11/chocopy-wasm-backend)
 
 ## Features
 
