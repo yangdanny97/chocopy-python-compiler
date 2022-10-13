@@ -34,6 +34,7 @@ The test suite includes both static validation of generated/annotated ASTs, as w
   - Tested with Mono 6.12
 - WASM Backend Requirements:
   - [WebAssembly Binary Toolkit (wabt)](https://github.com/WebAssembly/wabt), specifically the `wat2wasm` tool
+  - NodeJS for the runtime
 
 ## Usage
 
