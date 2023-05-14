@@ -86,7 +86,7 @@ class ClassValueType(ValueType):
         elif self.className == "int":
             return "int64"
         else:
-            return "class "+self.className
+            return "class " + self.className
 
     def getWasmName(self):
         # bools are i32, ints are i64

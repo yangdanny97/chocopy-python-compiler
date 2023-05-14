@@ -23,18 +23,18 @@ class WasmBuilder(Builder):
         self.indent()
 
     def _if(self):
-        self.newLine(f"(if")
+        self.newLine("(if")
         self.indent()
 
     def _then(self):
-        self.newLine(f"(then")
+        self.newLine("(then")
         self.indent()
 
     def _else(self):
-        self.newLine(f"(else")
+        self.newLine("(else")
         self.indent()
 
-    def func(self, name: str, sig: str="") -> Builder:
+    def func(self, name: str, sig: str = "") -> Builder:
         # return new block for declaring extra locals
         self.newLine(f"(func ${name} {sig}")
         self.indent()
@@ -85,9 +85,10 @@ class WasmBackend(CommonVisitor):
         tblOffset = 0
         methodTableOffsets = dict()
         # assign positions in the global method table
-        classes = [c for c in self.ts.classes if c != "<None>" and c != "<Empty>"]
+        classes = [c for c in self.ts.classes if c !=
+                   "<None>" and c != "<Empty>"]
         for cls in classes:
-            for methName, _, defCls  in self.ts.getOrderedMethods(cls):
+            for methName, _, defCls in self.ts.getOrderedMethods(cls):
                 if cls == defCls:
                     methodTableOffsets[(cls, methName)] = tblOffset
                     tblOffset += 1
@@ -112,7 +113,7 @@ class WasmBackend(CommonVisitor):
 
     def newLabelName(self) -> str:
         self.counter += 1
-        return "label_"+str(self.counter)
+        return "label_" + str(self.counter)
 
     def instr(self, instr: str):
         self.builder.newLine(instr)
@@ -165,12 +166,14 @@ class WasmBackend(CommonVisitor):
         self.instr('(import "imports" "logInt" (func $log_int (param i64)))')
         self.instr('(import "imports" "logBool" (func $log_bool (param i32)))')
         self.instr('(import "imports" "logString" (func $log_str (param i32)))')
-        self.instr('(import "imports" "assert" (func $assert (param i32) (param i32)))')
+        self.instr(
+            '(import "imports" "assert" (func $assert (param i32) (param i32)))')
         self.instr('(memory (import "js" "mem") 1)')
 
         # initialize method table
         self.instr(f"(table {len(self.methodOffsets)} funcref)")
-        funcNames = [(f"${k[0]}${k[1]}", v[1]) for k, v in self.methodOffsets.items() if not v[2]]
+        funcNames = [(f"${k[0]}${k[1]}", v[1])
+                     for k, v in self.methodOffsets.items() if not v[2]]
         funcNames = sorted(funcNames, key=lambda x: x[1])
 
         self.undeclaredFuncs = set([x[0] for x in funcNames])
@@ -211,9 +214,9 @@ class WasmBackend(CommonVisitor):
 
         self.builder = module_builder
         self.instr(self.stdlib())
-        self.instr(f"(start $main)")
+        self.instr("(start $main)")
         self.builder.end()
-    
+
     def initializeVtables(self):
         for _, t in self.vtables.items():
             for memOffset, funcOffset in t:
@@ -236,7 +239,8 @@ class WasmBackend(CommonVisitor):
         self.returnType = node.type.returnType
         ret = None if self.returnType.isNone() else self.returnType.getWasmName()
         paramNames = [x.identifier.name for x in node.params]
-        self.locals = self.builder.func(name, node.type.getWasmSignature(paramNames))
+        self.locals = self.builder.func(
+            name, node.type.getWasmSignature(paramNames))
         for d in node.declarations:
             self.visit(d)
         self.visitStmtList(node.statements)
@@ -447,21 +451,21 @@ class WasmBackend(CommonVisitor):
         # store starting position of vtable
         self.getLocal(addr)
         self.instr(f"i32.const {self.vtables[cls][0][0]}")
-        self.instr(f"i32.store")  # alignment: 32-bit
-        
+        self.instr("i32.store")  # alignment: 32-bit
+
         # initialize attrs
         for name, t, v in self.ts.getOrderedAttrs(cls):
             offset = self.attrOffsets[(cls, name)]
             self.getLocal(addr)
             self.instr(f"i32.const {offset * 8 + 4}")
-            self.instr(f"i32.add")
+            self.instr("i32.add")
             self.visit(v)
             self.instr(f"{t.getWasmName()}.store")
 
         # call __init__, should always be index 0
-        self.getLocal(addr) # self argument
+        self.getLocal(addr)  # self argument
         self.instr(f"i32.const {self.vtables[cls][0][1]}")
-        self.instr(f"call_indirect (param  i32)")
+        self.instr("call_indirect (param  i32)")
 
         # return pointer to self
         self.getLocal(addr)
@@ -503,12 +507,12 @@ class WasmBackend(CommonVisitor):
 
         # load indirect index
         self.getLocal(obj)
-        self.instr("i32.load") # load start of vtable
+        self.instr("i32.load")  # load start of vtable
 
         methOffset, _, _ = self.methodOffsets[(className, methodName)]
         self.instr(f"i32.const {methOffset * 4}")
         self.instr("i32.add")
-        self.instr("i32.load") # load table index of method
+        self.instr("i32.load")  # load table index of method
 
         self.instr(f";; call method {methodName}")
         self.instr(f"call_indirect {funcType.getWasmSignature()}")
@@ -531,7 +535,7 @@ class WasmBackend(CommonVisitor):
         self.builder.block(block)
         self.builder.loop(loop)
         self.visit(node.condition)
-        self.instr(f"i32.eqz")
+        self.instr("i32.eqz")
         self.instr(f"br_if ${block}")
         for s in node.body:
             self.visit(s)
@@ -568,7 +572,7 @@ class WasmBackend(CommonVisitor):
         self.getLocal(idx)
         self.getLocal(length)
         self.instr("i32.lt_s")
-        self.instr(f"i32.eqz")
+        self.instr("i32.eqz")
 
         self.instr(f"br_if ${block}")
 
@@ -651,7 +655,7 @@ class WasmBackend(CommonVisitor):
         # store the length
         self.getLocal(addr)
         self.instr(f"i32.const {length}")  # value
-        self.instr(f"i32.store")  # alignment: 32-bit
+        self.instr("i32.store")  # alignment: 32-bit
         # unlike strings, each item in the list gets 64 bits instead of 8
         for i in range(length):
             offset = i * 8 + 4
@@ -705,15 +709,15 @@ class WasmBackend(CommonVisitor):
 
     def BooleanLiteral(self, node: BooleanLiteral):
         if node.value:
-            self.instr(f"i32.const 1")
+            self.instr("i32.const 1")
         else:
-            self.instr(f"i32.const 0")
+            self.instr("i32.const 0")
 
     def IntegerLiteral(self, node: IntegerLiteral):
         self.instr(f"i64.const {node.value}")
 
     def NoneLiteral(self, node: NoneLiteral):
-        self.instr(f"i32.const 0")
+        self.instr("i32.const 0")
 
     def StringLiteral(self, node: StringLiteral):
         length = len(node.value)
@@ -728,7 +732,7 @@ class WasmBackend(CommonVisitor):
         # store the length
         self.getLocal(addr)
         self.instr(f"i32.const {length}")  # value
-        self.instr(f"i32.store")
+        self.instr("i32.store")
         for i in range(length):
             offset = i + 4
             val = ord(node.value[i])

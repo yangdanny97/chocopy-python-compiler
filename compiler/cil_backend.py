@@ -41,11 +41,11 @@ class CilBackend(CommonVisitor):
 
     def newLabelName(self) -> str:
         self.counter += 1
-        return "IL_"+str(self.counter)
+        return "IL_" + str(self.counter)
 
     def label(self, name: str) -> str:
         self.builder.unindent()
-        self.instr(name+": nop")
+        self.instr(name + ": nop")
         self.builder.indent()
 
     def store(self, name: str):
@@ -212,7 +212,7 @@ class CilBackend(CommonVisitor):
                 # method
                 d.type = d.type.dropFirstParam()
                 self.FuncDef(d, "virtual instance")
-        if constructor_def == None:
+        if constructor_def is None:
             # give a default constructor if none exists
             funcDef = node.getDefaultConstructor()
             constructor(superclass, funcDef)

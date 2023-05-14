@@ -12,10 +12,10 @@ class ListValueType(ValueType):
         return False
 
     def getJavaSignature(self, _=False):
-        return "["+self.elementType.getJavaSignature(True)
+        return "[" + self.elementType.getJavaSignature(True)
 
     def getJavaName(self, _=False):
-        return "["+self.elementType.getJavaSignature(True)
+        return "[" + self.elementType.getJavaSignature(True)
 
     def getCILName(self, _=False):
         return self.elementType.getCILName() + "[]"

@@ -82,3 +82,6 @@ class Compiler:
         wasm_backend = WasmBackend(main, self.transformer.ts)
         wasm_backend.visit(ast)
         return wasm_backend.builder
+
+    def emitLLVM(self, main: str, ast: Node):
+        pass

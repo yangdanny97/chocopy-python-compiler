@@ -25,11 +25,11 @@ class JvmBackend(CommonVisitor):
 
     def newLabelName(self) -> str:
         self.counter += 1
-        return "L"+str(self.counter)
+        return "L" + str(self.counter)
 
     def label(self, name: str) -> str:
         self.currentBuilder().unindent()
-        self.instr(name+":")
+        self.instr(name + ":")
         self.currentBuilder().indent()
 
     def returnInstr(self, exprType: ValueType):
@@ -186,7 +186,7 @@ class JvmBackend(CommonVisitor):
                 self.constructor(superclass, d)
             else:
                 self.method(d)
-        if constructor_def == None:
+        if constructor_def is None:
             funcDef = node.getDefaultConstructor()
             self.constructor(superclass, funcDef)
         self.instr(".end class")
@@ -671,7 +671,8 @@ class JvmBackend(CommonVisitor):
             "invokespecial Method java/util/Scanner <init> (Ljava/io/InputStream;)V")
         l = self.newLocal()
         self.instr(f"aload {l}")
-        self.instr("invokevirtual Method java/util/Scanner nextLine ()Ljava/lang/String;")
+        self.instr(
+            "invokevirtual Method java/util/Scanner nextLine ()Ljava/lang/String;")
 
     def emit_len(self, arg: Expr):
         t = arg.inferredType

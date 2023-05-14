@@ -74,7 +74,7 @@ class Parser(NodeVisitor):
                 if (isinstance(body[i], GlobalDecl) or isinstance(body[i], NonLocalDecl)):
                     raise ParseError(
                         "Expected function, class, or variable declaration", node.body[i])
-                if decl == False:
+                if not decl:
                     raise ParseError(
                         "All declarations must come before statements", node.body[i])
                 declarations.append(b)
@@ -105,7 +105,7 @@ class Parser(NodeVisitor):
                 if isinstance(b, ClassDef):
                     raise ParseError(
                         "Inner classes are unsupported", node.body[i])
-                if decl == False:
+                if not decl:
                     raise ParseError(
                         "All declarations must come before statements", node.body[i])
                 declarations.append(b)
@@ -143,7 +143,7 @@ class Parser(NodeVisitor):
                              node.decorator_list[0])
         body = [self.visit(b) for b in node.body]
         # allow class bodies that only contain a single pass
-        if len(body) == 1 and body[0] == None:
+        if len(body) == 1 and body[0] is None:
             body = []
         else:
             for i in range(len(body)):
@@ -156,7 +156,7 @@ class Parser(NodeVisitor):
 
     def visit_Return(self, node):
         location = self.getLocation(node)
-        if node.value == None:
+        if node.value is None:
             return ReturnStmt(location, None)
         else:
             return ReturnStmt(location, self.visit(node.value))
@@ -288,7 +288,7 @@ class Parser(NodeVisitor):
             return BooleanLiteral(location, node.value)
         elif isinstance(node.value, int):
             return IntegerLiteral(location, node.value)
-        elif isinstance(node.value, str) and node.kind == None:
+        elif isinstance(node.value, str) and node.kind is None:
             return StringLiteral(location, node.value)
         elif node.value is None:
             return NoneLiteral(location)
@@ -335,7 +335,7 @@ class Parser(NodeVisitor):
 
     def visit_NameConstant(self, node):
         location = self.getLocation(node)
-        if node.value == None:
+        if node.value is None:
             return NoneLiteral(location)
         elif isinstance(node.value, bool):
             return BooleanLiteral(location, node.value)

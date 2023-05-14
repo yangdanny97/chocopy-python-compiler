@@ -8,20 +8,26 @@ mode_help = (
     'Modes:\n' +
     'parse - output AST in JSON format\n' +
     'tc - output typechecked AST in JSON format\n' +
-    'python - output untyped Python 3 source code\n' + 
-    'hoist - output untyped Python 3 source code w/o nonlocals or nested function definitions\n' + 
-    'jvm - output JVM bytecode formatted for the Krakatau assembler\n'
-    'cil - output CIL bytecode formatted for the Mono ilasm assembler\n'
-    'wasm - output WASM in WAT format\n'
+    'python - output untyped Python 3 source code\n' +
+    'hoist - output untyped Python 3 source code w/o nonlocals or nested function definitions\n' +
+    'jvm - output JVM bytecode formatted for the Krakatau assembler\n' +
+    'cil - output CIL bytecode formatted for the Mono ilasm assembler\n' +
+    'wasm - output WASM in WAT format\n' +
+    'llvm - output LLVM\n'
 )
+
 
 def out_msg(path, verbose):
     if verbose:
         print("Output to {}".format(path))
 
+
 def main():
     parser = argparse.ArgumentParser(description='Chocopy frontend')
-    parser.add_argument('--mode', dest='mode', choices=["parse", "tc", "python", "jvm", "hoist", "cil", "wasm"], default="python",
+    parser.add_argument('--mode',
+                        dest='mode',
+                        choices=["parse", "tc", "python", "jvm", "hoist", "cil", "wasm", "llvm"],
+                        default="python",
                         help=mode_help)
     parser.add_argument('--print', dest='should_print', action='store_true',
                         help="output to stdout instead of file")
@@ -39,7 +45,7 @@ def main():
 
     infile = args.infile
     outdir = args.outdir
-    if args.infile == None:
+    if args.infile is None:
         parser.print_help()
         raise Exception("Error: must specify input file")
 
@@ -52,7 +58,7 @@ def main():
         outdir = "./"
     elif outdir[-1] != "/":
         outdir = outdir + "/"
-    
+
     outfile = None
     if args.mode == "tc":
         outfile = outdir + infile_name + ".ast.typed"
@@ -62,6 +68,8 @@ def main():
         outfile = outdir + infile_name + ".out.py"
     elif args.mode == "jvm":
         outfile = outdir + infile_name + ".j"
+    elif args.mode == "llvm":
+        outfile = outdir + infile_name + ".ll"
 
     compiler = Compiler()
     astparser = compiler.parser
@@ -81,7 +89,7 @@ def main():
 
     if args.mode in {"parse", "tc"}:
         ast_json = tree.toJSON(False)
-        if args.should_print: 
+        if args.should_print:
             print(json.dumps(ast_json, indent=2))
         else:
             with open(outfile, "w") as f:
@@ -91,7 +99,7 @@ def main():
         builder = compiler.emitPython(tree)
         if args.should_print:
             print(builder.emit())
-        else: 
+        else:
             with open(outfile, "w") as f:
                 out_msg(outfile, args.verbose)
                 f.write(builder.emit())
@@ -100,7 +108,7 @@ def main():
         builder = compiler.emitPython(tree)
         if args.should_print:
             print(builder.emit())
-        else: 
+        else:
             with open(outfile, "w") as f:
                 out_msg(outfile, args.verbose)
                 f.write(builder.emit())
@@ -110,16 +118,16 @@ def main():
             jvm_emitter = jvm_emitters[cls]
             if args.should_print:
                 print(jvm_emitter.emit())
-            else: 
+            else:
                 fname = outdir + cls + ".j"
                 with open(fname, "w") as f:
                     out_msg(fname, args.verbose)
-                    f.write(jvm_emitter.emit())      
+                    f.write(jvm_emitter.emit())
     elif args.mode == "cil":
         cil_emitter = compiler.emitCIL(infile_name, tree)
         if args.should_print:
             print(cil_emitter.emit())
-        else: 
+        else:
             fname = outdir + cil_emitter.name + ".cil"
             with open(fname, "w") as f:
                 out_msg(fname, args.verbose)
@@ -128,11 +136,21 @@ def main():
         wat_emitter = compiler.emitWASM(infile_name, tree)
         if args.should_print:
             print(wat_emitter.emit())
-        else: 
+        else:
             fname = outdir + wat_emitter.name + ".wat"
             with open(fname, "w") as f:
                 out_msg(fname, args.verbose)
-                f.write(wat_emitter.emit())      
+                f.write(wat_emitter.emit())
+    elif args.mode == "llvm":
+        llvm_emitter = compiler.emitLLVM(infile_name, tree)
+        if args.should_print:
+            print(llvm_emitter.emit())
+        else:
+            fname = outdir + llvm_emitter.name + ".ll"
+            with open(fname, "w") as f:
+                out_msg(fname, args.verbose)
+                f.write(llvm_emitter.emit())
+
 
 if __name__ == "__main__":
     main()

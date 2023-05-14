@@ -61,7 +61,8 @@ class FuncType(SymbolType):
                 sig = f"(param {paramName} {p.getWasmName()})"
             params.append(sig)
         params = " ".join(params)
-        result = "" if self.returnType.isNone() else f" (result {self.returnType.getWasmName()})"
+        result = "" if self.returnType.isNone(
+        ) else f" (result {self.returnType.getWasmName()})"
         return params + result
 
     def methodEquals(self, other):

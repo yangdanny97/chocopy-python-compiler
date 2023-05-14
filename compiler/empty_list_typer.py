@@ -59,7 +59,7 @@ class EmptyListTyper(Visitor):
         self.expectedType = node.targets[0].inferredType
 
     def ListExpr(self, node: ListExpr):
-        if self.expectedType == None:
+        if self.expectedType is None:
             return
         expType = self.expectedType
         if isinstance(self.expectedType, ListValueType) and len(node.elements) == 0:

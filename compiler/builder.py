@@ -5,7 +5,7 @@ class Builder:
         self.indentation = 0
 
     def newLine(self, line=""):
-        self.lines.append((self.indentation*"    ") + line)
+        self.lines.append((self.indentation * "    ") + line)
         return self
 
     # returns a reference to the child builder

@@ -9,7 +9,9 @@ from compiler.typesystem import TypeSystem
 from compiler.compiler import Compiler
 
 dump_location = True
-error_flags = {"error", "Error", "Exception", "exception", "Expected", "expected", "failed"}
+error_flags = {"error", "Error", "Exception",
+               "exception", "Expected", "expected", "failed"}
+
 
 def run_all_tests():
     run_parse_tests()
@@ -19,6 +21,7 @@ def run_all_tests():
     run_jvm_tests()
     run_cil_tests()
     run_wasm_tests()
+
 
 def run_parse_tests():
     print("Running parser tests...\n")
@@ -30,7 +33,7 @@ def run_parse_tests():
         passed = run_parse_test(test)
         total += 1
         if not passed:
-            print("Failed: "+ str(test))
+            print("Failed: " + str(test))
         else:
             n_passed += 1
     # typechecker tests should all successfully parse
@@ -39,7 +42,7 @@ def run_parse_tests():
         passed = run_parse_test(test, False)
         total += 1
         if not passed:
-            print("Failed: "+ str(test))
+            print("Failed: " + str(test))
         else:
             n_passed += 1
     # runtime tests should all successfully parse
@@ -48,10 +51,12 @@ def run_parse_tests():
         passed = run_typecheck_test(test, False)
         total += 1
         if not passed:
-            print("Failed: "+ str(test))
+            print("Failed: " + str(test))
         else:
             n_passed += 1
-    print("\nPassed {:d} out of {:d} parser test cases\n".format(n_passed, total))
+    print("\nPassed {:d} out of {:d} parser test cases\n".format(
+        n_passed, total))
+
 
 def run_typecheck_tests():
     print("Running typecheck tests...\n")
@@ -62,7 +67,7 @@ def run_typecheck_tests():
         passed = run_typecheck_test(test)
         total += 1
         if not passed:
-            print("Failed: "+ str(test))
+            print("Failed: " + str(test))
         else:
             n_passed += 1
     tc_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
@@ -70,10 +75,12 @@ def run_typecheck_tests():
         passed = run_typecheck_test(test, False)
         total += 1
         if not passed:
-            print("Failed: "+ str(test))
+            print("Failed: " + str(test))
         else:
             n_passed += 1
-    print("\nPassed {:d} out of {:d} typechecker test cases\n".format(n_passed, total))
+    print("\nPassed {:d} out of {:d} typechecker test cases\n".format(
+        n_passed, total))
+
 
 def run_closure_tests():
     print("Running closure transformation tests...\n")
@@ -85,7 +92,7 @@ def run_closure_tests():
             passed = run_closure_test(test)
             total += 1
             if not passed:
-                print("Failed: "+ str(test))
+                print("Failed: " + str(test))
             else:
                 n_passed += 1
     tc_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
@@ -93,10 +100,11 @@ def run_closure_tests():
         passed = run_closure_test(test)
         total += 1
         if not passed:
-            print("Failed: "+ str(test))
+            print("Failed: " + str(test))
         else:
             n_passed += 1
-    print("\nPassed {:d} out of {:d} closure transformation test cases\n".format(n_passed, total))
+    print("\nPassed {:d} out of {:d} closure transformation test cases\n".format(
+        n_passed, total))
     if total == n_passed:
         subprocess.run("cd {} && rm -f *.test.py".format(
             str(Path(__file__).parent.resolve())
@@ -109,14 +117,16 @@ def run_closure_tests():
         passed = run_closure_runtime_test(test)
         total += 1
         if not passed:
-            print("Failed: "+ str(test))
+            print("Failed: " + str(test))
         else:
             n_passed += 1
-    print("\nPassed {:d} out of {:d} closure transformation runtime test cases\n".format(n_passed, total))
+    print("\nPassed {:d} out of {:d} closure transformation runtime test cases\n".format(
+        n_passed, total))
     if total == n_passed:
         subprocess.run("cd {} && rm -f *.test.py".format(
             str(Path(__file__).parent.resolve())
         ), shell=True)
+
 
 def run_python_backend_tests():
     print("Running Python backend tests...\n")
@@ -128,10 +138,11 @@ def run_python_backend_tests():
             passed = run_python_emit_test(test)
             total += 1
             if not passed:
-                print("Failed: "+ str(test))
+                print("Failed: " + str(test))
             else:
                 n_passed += 1
-    print("\nPassed {:d} out of {:d} Python backend emit test cases\n".format(n_passed, total))
+    print("\nPassed {:d} out of {:d} Python backend emit test cases\n".format(
+        n_passed, total))
     total = 0
     n_passed = 0
     tc_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
@@ -139,7 +150,7 @@ def run_python_backend_tests():
         passed = run_python_runtime_test(test)
         total += 1
         if not passed:
-            print("Failed: "+ str(test))
+            print("Failed: " + str(test))
         else:
             n_passed += 1
     if total == n_passed:
@@ -148,9 +159,12 @@ def run_python_backend_tests():
         ), shell=True)
     else:
         print("\nNot all test cases passed. Please run `make clean` after inspecting the output")
-    print("\nPassed {:d} out of {:d} Python backend runtime test cases\n".format(n_passed, total))
+    print("\nPassed {:d} out of {:d} Python backend runtime test cases\n".format(
+        n_passed, total))
+
 
 disabled_wasm_tests = []
+
 
 def run_wasm_tests():
     print("Running WASM backend tests...\n")
@@ -165,11 +179,11 @@ def run_wasm_tests():
                 break
         if skip:
             print("Skipping: " + str(test) + "\n")
-            continue 
+            continue
         passed = run_wasm_test(test)
         total += 1
         if not passed:
-            print("Failed: "+ str(test) + "\n")
+            print("Failed: " + str(test) + "\n")
         else:
             n_passed += 1
     if total == n_passed:
@@ -178,7 +192,9 @@ def run_wasm_tests():
         ), shell=True)
     else:
         print("\nNot all test cases passed. Please run `make clean` after inspecting the output")
-    print("\nPassed {:d} out of {:d} WASM backend test cases\n".format(n_passed, total))
+    print("\nPassed {:d} out of {:d} WASM backend test cases\n".format(
+        n_passed, total))
+
 
 def run_jvm_tests():
     print("Running JVM backend tests...\n")
@@ -189,7 +205,7 @@ def run_jvm_tests():
         passed = run_jvm_test(test)
         total += 1
         if not passed:
-            print("Failed: "+ str(test) + "\n")
+            print("Failed: " + str(test) + "\n")
         else:
             n_passed += 1
     if total == n_passed:
@@ -198,7 +214,9 @@ def run_jvm_tests():
         ), shell=True)
     else:
         print("\nNot all test cases passed. Please run `make clean` after inspecting the output")
-    print("\nPassed {:d} out of {:d} JVM backend test cases\n".format(n_passed, total))
+    print("\nPassed {:d} out of {:d} JVM backend test cases\n".format(
+        n_passed, total))
+
 
 def run_cil_tests():
     print("Running CIL backend tests...\n")
@@ -209,7 +227,7 @@ def run_cil_tests():
         passed = run_cil_test(test)
         total += 1
         if not passed:
-            print("Failed: "+ str(test) + "\n")
+            print("Failed: " + str(test) + "\n")
         else:
             n_passed += 1
     if total == n_passed:
@@ -218,9 +236,11 @@ def run_cil_tests():
         ), shell=True)
     else:
         print("\nNot all test cases passed. Please run `make clean` after inspecting the output")
-    print("\nPassed {:d} out of {:d} CIL backend test cases\n".format(n_passed, total))
+    print("\nPassed {:d} out of {:d} CIL backend test cases\n".format(
+        n_passed, total))
 
-def run_parse_test(test, bad=True)->bool:
+
+def run_parse_test(test, bad=True) -> bool:
     # if bad=True, then test cases prefixed with bad are expected to fail
     compiler = Compiler()
     astparser = compiler.parser
@@ -240,7 +260,8 @@ def run_parse_test(test, bad=True)->bool:
             correct_json = json.load(f)
             return ast_equals(correct_json, ast_json)
 
-def run_typecheck_test(test, checkAst = True)->bool:
+
+def run_typecheck_test(test, checkAst=True) -> bool:
     try:
         compiler = Compiler()
         astparser = compiler.parser
@@ -267,7 +288,8 @@ def run_typecheck_test(test, checkAst = True)->bool:
         print(track)
         return False
 
-def run_closure_test(test)->bool:
+
+def run_closure_test(test) -> bool:
     # check that typechecking passes with the transformed AST
     # for valid cases only
     try:
@@ -295,7 +317,8 @@ def run_closure_test(test)->bool:
         print(track)
         return False
 
-def run_closure_runtime_test(test)->bool:
+
+def run_closure_runtime_test(test) -> bool:
     infile_name = str(test)[:-3].split("/")[-1]
     try:
         compiler = Compiler()
@@ -328,7 +351,8 @@ def run_closure_runtime_test(test)->bool:
         print(track)
         return False
 
-def run_python_emit_test(test)->bool:
+
+def run_python_emit_test(test) -> bool:
     try:
         compiler = Compiler()
         astparser = compiler.parser
@@ -346,7 +370,8 @@ def run_python_emit_test(test)->bool:
         print(track)
         return False
 
-def run_python_runtime_test(test)->bool:
+
+def run_python_runtime_test(test) -> bool:
     infile_name = str(test)[:-3].split("/")[-1]
     try:
         compiler = Compiler()
@@ -378,7 +403,8 @@ def run_python_runtime_test(test)->bool:
         print(track)
         return False
 
-def run_jvm_test(test)->bool:
+
+def run_jvm_test(test) -> bool:
     passed = True
     try:
         infile_name = str(test)[:-3].split("/")[-1]
@@ -397,7 +423,7 @@ def run_jvm_test(test)->bool:
             jvm_emitter = jvm_emitters[cls]
             fname = outdir + cls + ".j"
             with open(fname, "w") as f:
-                f.write(jvm_emitter.emit()) 
+                f.write(jvm_emitter.emit())
     except Exception as e:
         print("Internal compiler error:", test)
         track = traceback.format_exc()
@@ -405,7 +431,8 @@ def run_jvm_test(test)->bool:
         print(track)
         return False
     try:
-        assembler_commands = ["python3 ../Krakatau/assemble.py -q ./{}.j".format(cls) for cls in jvm_emitters]
+        assembler_commands = [
+            "python3 ../Krakatau/assemble.py -q ./{}.j".format(cls) for cls in jvm_emitters]
         output = subprocess.check_output("cd {} && {} && java -cp . {}".format(
             str(Path(__file__).parent.resolve()),
             " && ".join(assembler_commands),
@@ -423,7 +450,8 @@ def run_jvm_test(test)->bool:
         return False
     return passed
 
-def run_cil_test(test)->bool:
+
+def run_cil_test(test) -> bool:
     passed = True
     name = str(test.name[:-3])
     try:
@@ -441,7 +469,7 @@ def run_cil_test(test)->bool:
         cil_emitter = compiler.emitCIL(infile_name, ast)
         fname = outdir + cil_emitter.name + ".cil"
         with open(fname, "w") as f:
-            f.write(cil_emitter.emit()) 
+            f.write(cil_emitter.emit())
     except Exception as e:
         print("Internal compiler error:", test)
         track = traceback.format_exc()
@@ -467,7 +495,8 @@ def run_cil_test(test)->bool:
         return False
     return passed
 
-def run_wasm_test(test)->bool:
+
+def run_wasm_test(test) -> bool:
     passed = True
     name = str(test.name[:-3])
     try:
@@ -485,7 +514,7 @@ def run_wasm_test(test)->bool:
         wasm_emitter = compiler.emitWASM(infile_name, ast)
         fname = outdir + name + ".wat"
         with open(fname, "w") as f:
-            f.write(wasm_emitter.emit()) 
+            f.write(wasm_emitter.emit())
     except Exception as e:
         print("Internal compiler error:", test)
         track = traceback.format_exc()
@@ -493,7 +522,8 @@ def run_wasm_test(test)->bool:
         print(track)
         return False
     try:
-        output = subprocess.check_output(f"wat2wasm {name}.wat -o {name}.wasm && node wasm.js {name}.wasm", shell=True)
+        output = subprocess.check_output(
+            f"wat2wasm {name}.wat -o {name}.wasm && node wasm.js {name}.wasm", shell=True)
         lines = output.decode().split("\n")
         for l in lines:
             for e in error_flags:
@@ -506,26 +536,29 @@ def run_wasm_test(test)->bool:
         return False
     return passed
 
-def ast_equals(d1, d2)->bool:
+
+def ast_equals(d1, d2) -> bool:
     # precondition: the input dict must represent a well-formed AST
     # d1 is the correct AST, d2 is the AST output by this compiler
     if isinstance(d1, dict) and isinstance(d2, dict):
         for k, v in d1.items():
             if k not in d2 and k != "inferredType":
-                print("Expected field: "+k)
+                print("Expected field: " + k)
                 return False
             # only check starting line of node
             if k == "location":
                 if d1[k][0] != d2[k][0]:
-                    print("Expected starting line {:d}, got {:d}".format(d1[k][0], d2[k][0]))
+                    print("Expected starting line {:d}, got {:d}".format(
+                        d1[k][0], d2[k][0]))
                     return False
             # check number of errors, not the messages
             elif k == "errors":
                 if len(d1[k]["errors"]) != len(d2[k]["errors"]):
-                    print("Expected {:d} errors, got {:d}".format(len(d1[k]["errors"]), len(d2[k]["errors"])))
+                    print("Expected {:d} errors, got {:d}".format(
+                        len(d1[k]["errors"]), len(d2[k]["errors"])))
                     return False
             elif k == "errorMsg":
-                pass # only check presence of message, not content
+                pass  # only check presence of message, not content
             elif k == "inferredType":
                 if k in d2 and not ast_equals(v, d2[k]):
                     return False
@@ -533,12 +566,13 @@ def ast_equals(d1, d2)->bool:
                 return False
         for k in d2.keys():
             if k not in d1 and k != "inferredType":
-                print("Unxpected field: "+k)
+                print("Unxpected field: " + k)
                 return False
         return True
     if isinstance(d1, list) and isinstance(d2, list):
         if len(d1) != len(d2):
-            print("Expected list of length {:s}, got {:s}".format(len(d1), len(d2)))
+            print("Expected list of length {:s}, got {:s}".format(
+                len(d1), len(d2)))
             return False
         for i in range(len(d1)):
             if not ast_equals(d1[i], d2[i]):

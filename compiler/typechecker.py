@@ -283,7 +283,7 @@ class TypeChecker(Visitor):
         else:
             for t in node.targets:
                 if isinstance(t, IndexExpr) and t.list.inferredType == StrType():
-                    self.addError(t, F"Cannot assign to index of string")
+                    self.addError(t, "Cannot assign to index of string")
                     return
                 if isinstance(t, Identifier) and not self.defInCurrentScope(t.name):
                     self.addError(
