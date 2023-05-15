@@ -11,11 +11,14 @@ class ValueType(SymbolType):
     def toJSON(self, dump_location=True):
         raise Exception("unsupported")
 
-    def getJavaSignature(self) -> str:
+    def getJavaSignature(self):
         raise Exception("unsupported")
 
-    def isJavaRef(self) -> bool:
+    def isJavaRef(self):
         raise Exception("unsupported")
 
     def isListType(self):
+        raise Exception("unsupported")
+
+    def getLLVMType(self):
         raise Exception("unsupported")

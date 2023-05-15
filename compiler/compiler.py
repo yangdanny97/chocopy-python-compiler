@@ -11,6 +11,7 @@ from .jvm_backend import JvmBackend
 from .cil_backend import CilBackend
 from .python_backend import PythonBackend
 from .wasm_backend import WasmBackend
+from .llvm_backend import LlvmBackend
 import ast
 from pathlib import Path
 
@@ -84,4 +85,8 @@ class Compiler:
         return wasm_backend.builder
 
     def emitLLVM(self, main: str, ast: Node):
-        pass
+        self.closurepass(ast)
+        EmptyListTyper().visit(ast)
+        llvm_backend = LlvmBackend(main, self.transformer.ts)
+        llvm_backend.visit(ast)
+        return llvm_backend.builder

@@ -1,4 +1,5 @@
 from .valuetype import ValueType
+from llvmlite import ir
 
 
 class ListValueType(ValueType):
@@ -11,22 +12,22 @@ class ListValueType(ValueType):
             return self.elementType == other.elementType
         return False
 
-    def getJavaSignature(self, _=False):
+    def getJavaSignature(self, _=False) -> str:
         return "[" + self.elementType.getJavaSignature(True)
 
-    def getJavaName(self, _=False):
+    def getJavaName(self, _=False) -> str:
         return "[" + self.elementType.getJavaSignature(True)
 
-    def getCILName(self, _=False):
+    def getCILName(self, _=False) -> str:
         return self.elementType.getCILName() + "[]"
 
-    def getCILSignature(self, _=False):
+    def getCILSignature(self, _=False) -> str:
         return self.getCILName()
 
-    def isListType(self):
+    def isListType(self) -> bool:
         return True
 
-    def isJavaRef(self):
+    def isJavaRef(self) -> bool:
         return True
 
     def __str__(self):
@@ -35,11 +36,14 @@ class ListValueType(ValueType):
     def __hash__(self):
         return str(self).__hash__()
 
-    def toJSON(self, dump_location=True):
+    def toJSON(self, dump_location=True) -> dict:
         return {
             "kind": "ListValueType",
             "elementType": self.elementType.toJSON(dump_location)
         }
 
-    def getWasmName(self):
+    def getWasmName(self) -> str:
         return "i32"
+
+    def getLLVMType(self) -> ir.Type:
+        raise Exception("unimplemented")

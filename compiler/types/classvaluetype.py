@@ -1,4 +1,14 @@
 from .valuetype import ValueType
+from llvmlite import ir
+
+
+class SpecialClass:
+    BOOL = 'bool'
+    STR = 'str'
+    INT = 'int'
+    NONE = '<None>'
+    EMPTY = '<Empty>'
+    OBJECT = 'object'
 
 
 class ClassValueType(ValueType):
@@ -11,54 +21,54 @@ class ClassValueType(ValueType):
         return False
 
     def isListType(self) -> bool:
-        return self.className in {"<Empty>", "<None>"}
+        return self.className in {SpecialClass.EMPTY, SpecialClass.NONE}
 
     def getJavaSignature(self, isList=False) -> str:
-        if self.className == "bool":
+        if self.className == SpecialClass.BOOL:
             if isList:
                 return "Ljava/lang/Boolean;"
             else:
                 return "Z"
-        elif self.className == "str":
+        elif self.className == SpecialClass.STR:
             return "Ljava/lang/String;"
-        elif self.className == "object":
+        elif self.className == SpecialClass.OBJECT:
             return "Ljava/lang/Object;"
-        elif self.className == "int":
+        elif self.className == SpecialClass.INT:
             if isList:
                 return "Ljava/lang/Integer;"
             else:
                 return "I"
-        elif self.className == "<None>":
+        elif self.className == SpecialClass.NONE:
             return "Ljava/lang/Object;"
-        elif self.className == "<Empty>":
+        elif self.className == SpecialClass.EMPTY:
             return "[Ljava/lang/Object;"
         else:
             return "L" + self.className + ";"
 
-    def isNone(self):
-        return self.className == "<None>"
+    def isNone(self) -> bool:
+        return self.className == SpecialClass.NONE
 
-    def isSpecialType(self):
-        return self.className in ["int", "str", "bool"]
+    def isSpecialType(self) -> bool:
+        return self.className in [SpecialClass.INT, SpecialClass.STR, SpecialClass.BOOL]
 
-    def isJavaRef(self):
-        return self.className not in ["int", "bool"]
+    def isJavaRef(self) -> bool:
+        return self.className not in [SpecialClass.INT, SpecialClass.BOOL]
 
-    def getJavaName(self, isList=False):
-        if self.className == "bool":
+    def getJavaName(self, isList=False) -> str:
+        if self.className == SpecialClass.BOOL:
             if isList:
                 return "java/lang/Boolean"
             else:
                 return "boolean"
-        elif self.className == "str":
+        elif self.className == SpecialClass.STR:
             return "java/lang/String"
-        elif self.className == "object":
+        elif self.className == SpecialClass.OBJECT:
             return "java/lang/Object"
-        elif self.className == "<None>":
+        elif self.className == SpecialClass.NONE:
             return "java/lang/Object"
-        elif self.className == "<Empty>":
+        elif self.className == SpecialClass.EMPTY:
             return "[Ljava/lang/Object;"
-        elif self.className == "int":
+        elif self.className == SpecialClass.INT:
             if isList:
                 return "java/lang/Integer"
             else:
@@ -66,42 +76,42 @@ class ClassValueType(ValueType):
         else:
             return self.className
 
-    def getCILSignature(self):
-        if self.className == "<None>":
+    def getCILSignature(self) -> str:
+        if self.className == SpecialClass.NONE:
             return "void"
         else:
             return self.getCILName()
 
-    def getCILName(self):
-        if self.className == "bool":
+    def getCILName(self) -> str:
+        if self.className == SpecialClass.BOOL:
             return "bool"
-        elif self.className == "str":
+        elif self.className == SpecialClass.STR:
             return "string"
-        elif self.className == "object":
+        elif self.className == SpecialClass.OBJECT:
             return "object"
-        elif self.className == "<None>":
+        elif self.className == SpecialClass.NONE:
             return "object"
-        elif self.className == "<Empty>":
+        elif self.className == SpecialClass.EMPTY:
             return "object[]"
-        elif self.className == "int":
+        elif self.className == SpecialClass.INT:
             return "int64"
         else:
             return "class " + self.className
 
-    def getWasmName(self):
+    def getWasmName(self) -> str:
         # bools are i32, ints are i64
         # all others are pointers/refs, which are i32
-        if self.className == "bool":
+        if self.className == SpecialClass.BOOL:
             return "i32"
-        elif self.className == "str":
+        elif self.className == SpecialClass.STR:
             return "i32"
-        elif self.className == "object":
+        elif self.className == SpecialClass.OBJECT:
             return "i32"
-        elif self.className == "<None>":
+        elif self.className == SpecialClass.NONE:
             return "i32"
-        elif self.className == "<Empty>":
+        elif self.className == SpecialClass.EMPTY:
             return "i32"
-        elif self.className == "int":
+        elif self.className == SpecialClass.INT:
             return "i64"
         else:
             return "i32"
@@ -112,8 +122,24 @@ class ClassValueType(ValueType):
     def __hash__(self):
         return str(self).__hash__()
 
-    def toJSON(self, dump_location=True):
+    def toJSON(self, dump_location=True) -> dict:
         return {
             "kind": "ClassValueType",
             "className": self.className
         }
+
+    def getLLVMType(self) -> ir.Type:
+        if self.className == SpecialClass.BOOL:
+            return ir.IntType()
+        elif self.className == SpecialClass.STR:
+            raise Exception("unsupported")
+        elif self.className == SpecialClass.OBJECT:
+            raise Exception("unsupported")
+        elif self.className == SpecialClass.NONE:
+            raise Exception("unsupported")
+        elif self.className == SpecialClass.EMPTY:
+            raise Exception("unsupported")
+        elif self.className == SpecialClass.INT:
+            return ir.IntType()
+        else:
+            raise Exception("unsupported")

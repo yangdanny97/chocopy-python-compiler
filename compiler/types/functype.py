@@ -2,6 +2,7 @@ from compiler.types.classvaluetype import ClassValueType
 from .valuetype import ValueType
 from .symboltype import SymbolType
 from typing import List
+from llvmlite import ir
 
 
 class FuncType(SymbolType):
@@ -65,12 +66,12 @@ class FuncType(SymbolType):
         ) else f" (result {self.returnType.getWasmName()})"
         return params + result
 
-    def methodEquals(self, other):
+    def methodEquals(self, other) -> bool:
         if isinstance(other, FuncType) and len(self.parameters) > 0 and len(other.parameters) > 0:
             return self.parameters[1:] == other.parameters[1:] and self.returnType == other.returnType
         return False
 
-    def isFuncType():
+    def isFuncType() -> bool:
         return True
 
     def __str__(self):
@@ -81,9 +82,20 @@ class FuncType(SymbolType):
         paramStr = ",".join([str(t) for t in self.parameters])
         return (F"[{paramStr}]->{self.returnType}").__hash__()
 
-    def toJSON(self, dump_location=True):
+    def toJSON(self, dump_location=True) -> dict:
         return {
             "kind": "FuncType",
             "parameters": [p.toJSON(dump_location) for p in self.parameters],
             "returnType": self.returnType.toJSON(dump_location)
         }
+
+    def getLLVMType(self) -> ir.Type:
+        params = []
+        for i in range(len(self.parameters)):
+            p = self.parameters[i]
+            if i in self.refParams and isinstance(p, ClassValueType):
+                sig = p.getLLVMType().as_pointer()
+            else:
+                sig = p.getLLVMType()
+            params.append(sig)
+        return ir.FunctionType(self.returnType.getLLVMType(), params)
