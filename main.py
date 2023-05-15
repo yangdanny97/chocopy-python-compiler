@@ -142,14 +142,14 @@ def main():
                 out_msg(fname, args.verbose)
                 f.write(wat_emitter.emit())
     elif args.mode == "llvm":
-        llvm_emitter = compiler.emitLLVM(infile_name, tree)
+        llvm_module = compiler.emitLLVM(infile_name, tree)
         if args.should_print:
-            print(llvm_emitter.emit())
+            print(str(llvm_module))
         else:
-            fname = outdir + llvm_emitter.name + ".ll"
+            fname = outdir + llvm_module.name + ".ll"
             with open(fname, "w") as f:
                 out_msg(fname, args.verbose)
-                f.write(llvm_emitter.emit())
+                f.write(str(llvm_module))
 
 
 if __name__ == "__main__":

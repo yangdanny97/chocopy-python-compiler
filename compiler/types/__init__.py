@@ -1,4 +1,4 @@
-from .classvaluetype import ClassValueType
+from .classvaluetype import ClassValueType, SpecialClass
 from .functype import FuncType
 from .listvaluetype import ListValueType
 from .symboltype import SymbolType

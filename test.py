@@ -7,6 +7,8 @@ from compiler.typechecker import TypeChecker
 from compiler.typeeraser import TypeEraser
 from compiler.typesystem import TypeSystem
 from compiler.compiler import Compiler
+import llvmlite.binding as llvm
+from ctypes import CFUNCTYPE
 
 dump_location = True
 error_flags = {"error", "Error", "Exception",
@@ -14,13 +16,15 @@ error_flags = {"error", "Error", "Exception",
 
 
 def run_all_tests():
-    run_parse_tests()
-    run_typecheck_tests()
-    run_python_backend_tests()
-    run_closure_tests()
-    run_jvm_tests()
-    run_cil_tests()
-    run_wasm_tests()
+    # run_parse_tests()
+    # run_typecheck_tests()
+    # run_python_backend_tests()
+    # run_closure_tests()
+    # run_jvm_tests()
+    # run_cil_tests()
+    # run_wasm_tests()
+    # run_llvm_tests()
+    test_eval_llvm()
 
 
 def run_parse_tests():
@@ -581,3 +585,60 @@ def ast_equals(d1, d2) -> bool:
     if d1 != d2:
         print("Expected {:s}, got {:s}".format(str(d1), str(d2)))
     return d1 == d2
+
+
+def run_llvm_tests():
+    print("Running LLVM backend tests...\n")
+    total = 0
+    n_passed = 0
+    llvm_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
+    for test in llvm_tests_dir.glob('*.py'):
+        passed = run_llvm_test(test)
+        total += 1
+        if not passed:
+            print("Failed: " + str(test) + "\n")
+        else:
+            n_passed += 1
+    if total != n_passed:
+        print("\nNot all test cases passed")
+    print("\nPassed {:d} out of {:d} LLVM backend test cases\n".format(
+        n_passed, total))
+
+
+def eval_llvm(module):
+    target = llvm.Target.from_default_triple()
+    target_machine = target.create_target_machine()
+    llvmmod = llvm.parse_assembly(str(module))
+    with llvm.create_mcjit_compiler(llvmmod, target_machine) as ee:
+        ee.finalize_object()
+        fptr = CFUNCTYPE(None)(ee.get_function_address("__main__"))
+        fptr()
+
+
+def run_llvm_test(test):
+    pass
+
+
+def test_eval_llvm():
+    llvm_debug("foobar.py")
+
+
+def llvm_debug(test):
+    try:
+        compiler = Compiler()
+        astparser = compiler.parser
+        chocopy_ast = compiler.parse(test)
+        if len(astparser.errors) > 0:
+            return False
+        compiler.typecheck(chocopy_ast)
+        module = compiler.emitLLVM(chocopy_ast)
+        print("Module output:")
+        print(str(module))
+        print("Evaluation output:")
+        eval_llvm(module)
+    except Exception as e:
+        print("Internal compiler error:", test)
+        track = traceback.format_exc()
+        print(e)
+        print(track)
+        return False

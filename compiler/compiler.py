@@ -84,9 +84,9 @@ class Compiler:
         wasm_backend.visit(ast)
         return wasm_backend.builder
 
-    def emitLLVM(self, main: str, ast: Node):
+    def emitLLVM(self, ast: Node):
         self.closurepass(ast)
         EmptyListTyper().visit(ast)
-        llvm_backend = LlvmBackend(main, self.transformer.ts)
+        llvm_backend = LlvmBackend(self.transformer.ts)
         llvm_backend.visit(ast)
-        return llvm_backend.builder
+        return llvm_backend.module

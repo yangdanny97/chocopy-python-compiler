@@ -98,4 +98,5 @@ class FuncType(SymbolType):
             else:
                 sig = p.getLLVMType()
             params.append(sig)
-        return ir.FunctionType(self.returnType.getLLVMType(), params)
+        returnType = self.returnType.getLLVMType()
+        return ir.FunctionType(returnType, params)
