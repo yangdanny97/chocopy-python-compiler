@@ -125,7 +125,7 @@ class LlvmBackend(Visitor):
         elif operator == "//":
             return self.builder.sdiv(lhs, rhs)
         elif operator == "%":
-            return self.builder.urem(lhs, rhs)
+            return self.builder.srem(lhs, rhs)
         # relational operators
         elif operator in {"<", "<=", ">", ">="}:
             return self.builder.icmp_signed(operator, lhs, rhs)

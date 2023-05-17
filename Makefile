@@ -9,3 +9,4 @@ clean:
 	rm -f *.out.py
 	rm -f *.wasm
 	rm -f *.wat
+	rm -f *.ll
