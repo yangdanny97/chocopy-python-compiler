@@ -130,13 +130,13 @@ class ClassValueType(ValueType):
 
     def getLLVMType(self) -> ir.Type:
         if self.className == SpecialClass.BOOL:
-            return ir.IntType(8)
+            return ir.IntType(1)
         elif self.className == SpecialClass.STR:
-            raise ir.IntType(8).as_pointer()
+            return ir.IntType(8).as_pointer()
         elif self.className == SpecialClass.OBJECT:
             raise Exception("unsupported")
         elif self.className == SpecialClass.NONE:
-            raise ir.VoidType()
+            return ir.VoidType()
         elif self.className == SpecialClass.EMPTY:
             raise Exception("unsupported")
         elif self.className == SpecialClass.INT:

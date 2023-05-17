@@ -13,7 +13,7 @@ mode_help = (
     'jvm - output JVM bytecode formatted for the Krakatau assembler\n' +
     'cil - output CIL bytecode formatted for the Mono ilasm assembler\n' +
     'wasm - output WASM in WAT format\n' +
-    'llvm - output LLVM\n'
+    'llvm - output LLVM IR\n'
 )
 
 

@@ -8,8 +8,8 @@ from typing import List
 import llvmlite.ir as ir
 import llvmlite.binding as llvm
 
-
-int8_t = ir.IntType(8)  # for booleans
+bool_t = ir.IntType(1)  # for booleans
+int8_t = ir.IntType(8)  # chars
 int32_t = ir.IntType(32)  # for ints
 voidptr_t = ir.IntType(8).as_pointer()
 
@@ -17,6 +17,8 @@ voidptr_t = ir.IntType(8).as_pointer()
 class LlvmBackend(Visitor):
     locals = []
     counter = 0
+    globals = {}
+    externs = {}
 
     def __init__(self, ts: TypeSystem):
         llvm.initialize()
@@ -45,17 +47,54 @@ class LlvmBackend(Visitor):
     # TOP LEVEL & DECLARATIONS
 
     def Program(self, node: Program):
+        # globals for commonly used strings
+        self.globals = {
+            'true': self.global_constant('true',
+                                         ir.ArrayType(int8_t, 5),
+                                         self.make_bytearray('True\00'.encode('ascii'))),
+            'false': self.global_constant('false',
+                                          ir.ArrayType(int8_t, 6),
+                                          self.make_bytearray('False\00'.encode('ascii'))),
+            'fmt_i': self.global_constant('fmt_i',
+                                          ir.ArrayType(int8_t, 4),
+                                          self.make_bytearray('%i\n\00'.encode('ascii'))),
+            'fmt_s': self.global_constant('fmt_s',
+                                          ir.ArrayType(int8_t, 4),
+                                          self.make_bytearray('%s\n\00'.encode('ascii'))),
+            'fmt_assert': self.global_constant('fmt_assert',
+                                               ir.ArrayType(int8_t, 29),
+                                               self.make_bytearray('Assertion failed on line %i\n\00'.encode('ascii')))
+        }
+
+        printf_t = ir.FunctionType(int32_t, [voidptr_t], True)
+        self.externs['printf'] = ir.Function(self.module, printf_t, 'printf')
+        setjmp_t = ir.FunctionType(int32_t, [int32_t], True)
+        self.externs['setjmp'] = ir.Function(self.module, setjmp_t, 'setjmp')
+        # TODO make this the right type
+        longjmp_t = ir.FunctionType(int32_t, [int32_t], True)
+        self.externs['longjmp'] = ir.Function(
+            self.module, longjmp_t, 'longjmp')
+
         funcType = ir.FunctionType(ir.VoidType(), [])
         func = ir.Function(self.module, funcType, "__main__")
+
         self.enterScope()
-        bb_entry = func.append_basic_block('entry')
-        self.builder = ir.IRBuilder(bb_entry)
+        entry_block = func.append_basic_block('entry')
+        self.builder = ir.IRBuilder(entry_block)
+        self.visitStmtList(
+            [d for d in node.declarations if isinstance(d, VarDef)])
         self.visitStmtList(node.statements)
         self.builder.ret_void()
         self.exitScope()
 
     def VarDef(self, node: VarDef):
-        pass
+        val = self.visit(node.value)
+        saved_block = self.builder.block
+        addr = self.create_entry_block_alloca(
+            node.getName(), node.var.t.getLLVMType())
+        self.builder.position_at_end(saved_block)
+        self.builder.store(val, addr)
+        self.locals[-1][node.getName()] = addr
 
     def ClassDef(self, node: ClassDef):
         pass
@@ -82,14 +121,18 @@ class LlvmBackend(Visitor):
 
     # STATEMENTS
 
-    def NonLocalDecl(self, node: NonLocalDecl):
-        pass
-
-    def GlobalDecl(self, node: GlobalDecl):
-        pass
-
     def AssignStmt(self, node: AssignStmt):
-        pass
+        val = self.visit(node.value)
+        for var in node.targets[::-1]:
+            if isinstance(var, MemberExpr):
+                raise Exception("unimplemented")
+            elif isinstance(var, IndexExpr):
+                raise Exception("unimplemented")
+            elif isinstance(var, Identifier):
+                addr = self.locals[-1][var.name]
+                self.builder.store(val, addr)
+            else:
+                raise Exception("Illegal assignment")
 
     def IfStmt(self, node: IfStmt):
         pass
@@ -164,7 +207,7 @@ class LlvmBackend(Visitor):
             val = self.visit(node.operand)
             return self.builder.neg(val)
         elif node.operator == "not":
-            false = ir.Constant(int8_t, 0)
+            false = ir.Constant(bool_t, 0)
             val = self.visit(node.operand)
             return self.builder.icmp_unsigned('==', false, val)
 
@@ -195,13 +238,42 @@ class LlvmBackend(Visitor):
 
     def Identifier(self, node: Identifier):
         addr = self.locals[-1][node.name]
+        assert addr is not None
         return self.builder.load(addr, node.name)
 
     def MemberExpr(self, node: MemberExpr):
         pass
 
     def IfExpr(self, node: IfExpr):
-        pass
+        return self.ifHelper(lambda: self.visit(node.condition),
+                             lambda: self.visit(node.thenExpr),
+                             lambda: self.visit(node.elseExpr),
+                             node.inferredType.getLLVMType())
+
+    def ifHelper(self, condFn, thenFn, elseFn, t):
+        cond = condFn()
+
+        then_block = self.builder.append_basic_block()
+        else_block = self.builder.append_basic_block()
+        merge_block = self.builder.append_basic_block()
+        self.builder.cbranch(cond, then_block, else_block)
+
+        self.builder.position_at_start(then_block)
+        then_val = thenFn()
+        self.builder.branch(merge_block)
+        then_block = self.builder.block
+
+        self.builder.position_at_start(else_block)
+        else_val = elseFn()
+        self.builder.branch(merge_block)
+        else_block = self.builder.block
+
+        self.builder.position_at_start(merge_block)
+
+        phi = self.builder.phi(t)
+        phi.add_incoming(then_val, then_block)
+        phi.add_incoming(else_val, else_block)
+        return phi
 
     def MethodCallExpr(self, node: MethodCallExpr):
         pass
@@ -209,19 +281,20 @@ class LlvmBackend(Visitor):
     # LITERALS
 
     def BooleanLiteral(self, node: BooleanLiteral):
-        return ir.Constant(int8_t, 1 if node.value else 0)
+        return ir.Constant(bool_t, 1 if node.value else 0)
 
     def IntegerLiteral(self, node: IntegerLiteral):
         return ir.Constant(int32_t, node.value)
 
     def NoneLiteral(self, node: NoneLiteral):
-        return ir.Constant(int32_t, 0)
+        return ir.Constant(ir.PointerType(None), None)
 
     def StringLiteral(self, node: StringLiteral):
         const = self.make_bytearray((node.value + '\00').encode('ascii'))
-        alloca = self.builder.alloca(ir.ArrayType(int8_t, len(node.value) + 1), name=self.newLocal())
+        alloca = self.builder.alloca(ir.ArrayType(
+            int8_t, len(node.value) + 1), name=self.newLocal())
         self.builder.store(const, alloca)
-        return alloca
+        return self.builder.bitcast(alloca, voidptr_t)
 
     # TYPES
 
@@ -238,13 +311,18 @@ class LlvmBackend(Visitor):
 
     def emit_print(self, arg: Expr):
         if isinstance(arg.inferredType, ListValueType) or arg.inferredType.className not in {"bool", "int", "str"}:
-            raise Exception("unsupported")
+            raise Exception("Only bool, int, or str may be printed")
         if arg.inferredType.className == "bool":
-            raise Exception("TODO")
+            text = self.ifHelper(
+                lambda: arg,
+                lambda: self.builder.bitcast(self.globals['true'], voidptr_t),
+                lambda: self.builder.bitcast(self.globals['false'], voidptr_t),
+                voidptr_t)
+            return self.printf(self.globals['fmt_s'], True, text)
         elif arg.inferredType.className == 'int':
-            return self.printf("%i\n", False, self.visit(arg))
+            return self.printf(self.globals['fmt_i'], False, self.visit(arg))
         else:
-            return self.printf("%s\n", True, self.visit(arg))
+            return self.printf(self.globals['fmt_s'], True, self.visit(arg))
 
     # UTILS
 
@@ -259,16 +337,19 @@ class LlvmBackend(Visitor):
     def is_nonnull(self, value):
         return self.builder.icmp_unsigned('!=', value.type(None), value)
 
-    def printf(self, format: str, cast: bool, arg):
-        func_t = ir.FunctionType(int32_t, [voidptr_t], True)
-        fmt_bytes = self.make_bytearray((format + '\00').encode('ascii'))
-        alloca = self.builder.alloca(ir.ArrayType(int8_t, 4), name=self.newLocal())
-        self.builder.store(fmt_bytes, alloca)
-        try:
-            fn = self.module.get_global('printf')
-        except KeyError:
-            fn = ir.Function(self.module, func_t, 'printf')
-        fmt_ptr = self.builder.bitcast(alloca, voidptr_t)
-        if cast:
-            arg = self.builder.bitcast(arg, voidptr_t)
-        return self.builder.call(fn, [fmt_ptr, arg])
+    def printf(self, format, cast: bool, arg):
+        fmt_ptr = self.builder.bitcast(format, voidptr_t)
+        return self.builder.call(self.externs['printf'], [fmt_ptr, arg])
+
+    def create_entry_block_alloca(self, name, t):
+        builder = ir.IRBuilder()
+        builder.position_at_start(self.builder.function.entry_basic_block)
+        return builder.alloca(t, size=None, name=name)
+
+    def global_constant(self, name, t, value):
+        module = self.module
+        data = ir.GlobalVariable(module, t, name, 0)
+        data.linkage = 'internal'
+        data.global_constant = True
+        data.initializer = value
+        return data
