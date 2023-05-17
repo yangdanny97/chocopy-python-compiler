@@ -1,1 +1,1 @@
-print("foobar")
+print(-5 % 2)

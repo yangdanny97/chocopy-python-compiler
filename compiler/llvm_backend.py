@@ -40,7 +40,7 @@ class LlvmBackend(Visitor):
 
     def newLocal(self):
         self.counter += 1
-        return f"__local_{self.counter}"
+        return f".local_{self.counter}"
 
     # TOP LEVEL & DECLARATIONS
 
@@ -97,14 +97,76 @@ class LlvmBackend(Visitor):
     def ExprStmt(self, node: ExprStmt):
         self.visit(node.expr)
 
+    def isListConcat(self, operator: str, leftType: ValueType, rightType: ValueType) -> bool:
+        return leftType.isListType() and rightType.isListType() and operator == "+"
+
     def BinaryExpr(self, node: BinaryExpr):
-        pass
+        operator = node.operator
+        leftType = node.left.inferredType
+        rightType = node.right.inferredType
+        lhs = self.visit(node.left)
+        rhs = self.visit(node.right)
+        # concatenation and addition
+        if operator == "+":
+            if self.isListConcat(operator, leftType, rightType):
+                raise Exception("unimplemented")
+            elif leftType == StrType():
+                raise Exception("unimplemented")
+            elif leftType == IntType():
+                return self.builder.add(lhs, rhs)
+            else:
+                raise Exception(
+                    "Internal compiler error: unexpected operand types for +")
+        # other arithmetic operators
+        elif operator == "-":
+            return self.builder.sub(lhs, rhs)
+        elif operator == "*":
+            return self.builder.mul(lhs, rhs)
+        elif operator == "//":
+            return self.builder.sdiv(lhs, rhs)
+        elif operator == "%":
+            return self.builder.urem(lhs, rhs)
+        # relational operators
+        elif operator in {"<", "<=", ">", ">="}:
+            return self.builder.icmp_signed(operator, lhs, rhs)
+        elif operator == "==":
+            if leftType == IntType():
+                return self.builder.icmp_signed(operator, lhs, rhs)
+            elif leftType == StrType():
+                raise Exception("Unimplemented")
+            else:
+                return self.instr("i32.eq")
+        elif operator == "!=":
+            if leftType == IntType():
+                return self.builder.icmp_signed(operator, lhs, rhs)
+            elif leftType == StrType():
+                raise Exception("Unimplemented")
+            else:
+                # pointer comparisons
+                return self.builder.icmp_unsigned(operator, lhs, rhs)
+        elif operator == "is":
+            # pointer comparisons
+            return self.builder.icmp_unsigned("==", lhs, rhs)
+        # logical operators
+        elif operator == "and":
+            return self.builder.and_(lhs, rhs)
+        elif operator == "or":
+            return self.builder.or_(lhs, rhs)
+        else:
+            raise Exception(
+                f"Internal compiler error: unexpected operator {operator}")
 
     def IndexExpr(self, node: IndexExpr):
         pass
 
     def UnaryExpr(self, node: UnaryExpr):
-        pass
+        if node.operator == "-":
+            val = self.visit(node.operand)
+            return self.builder.neg(val)
+        elif node.operator == "not":
+            false = ir.Constant(int8_t, 0)
+            val = self.visit(node.operand)
+            return self.builder.icmp_unsigned('==', false, val)
 
     def CallExpr(self, node: CallExpr):
         if node.function.name == "print":

@@ -21,6 +21,7 @@ assert y - x == w
 assert w * x == x
 assert 5 // 2 == y
 assert 5 % 2 == x
+assert -5 % 2 == 1
 assert not False
 assert not (w != x)
 assert -x == -1
