@@ -12,6 +12,7 @@ bool_t = ir.IntType(1)  # for booleans
 int8_t = ir.IntType(8)  # chars
 int32_t = ir.IntType(32)  # for ints
 voidptr_t = ir.IntType(8).as_pointer()
+jmp_buf_t = ir.ArrayType(ir.IntType(8), 100)
 
 
 class LlvmBackend(Visitor):
@@ -68,12 +69,10 @@ class LlvmBackend(Visitor):
 
         printf_t = ir.FunctionType(int32_t, [voidptr_t], True)
         self.externs['printf'] = ir.Function(self.module, printf_t, 'printf')
-        setjmp_t = ir.FunctionType(int32_t, [int32_t], True)
+        setjmp_t = ir.FunctionType(int32_t, [jmp_buf_t.as_pointer()])
         self.externs['setjmp'] = ir.Function(self.module, setjmp_t, 'setjmp')
-        # TODO make this the right type
-        longjmp_t = ir.FunctionType(int32_t, [int32_t], True)
-        self.externs['longjmp'] = ir.Function(
-            self.module, longjmp_t, 'longjmp')
+        longjmp_t = ir.FunctionType(ir.VoidType(), [jmp_buf_t.as_pointer(), int32_t])
+        self.externs['longjmp'] = ir.Function(self.module, longjmp_t, 'longjmp')
 
         funcType = ir.FunctionType(ir.VoidType(), [])
         func = ir.Function(self.module, funcType, "__main__")
@@ -81,11 +80,35 @@ class LlvmBackend(Visitor):
         self.enterScope()
         entry_block = func.append_basic_block('entry')
         self.builder = ir.IRBuilder(entry_block)
+
+        jmp_buf = self.global_constant("jmp_buf", jmp_buf_t, ir.Constant(jmp_buf_t, bytearray([0] * 100)))
+        status = self.builder.call(self.externs['setjmp'], [jmp_buf])
+        cond = self.builder.icmp_signed("!=", ir.Constant(int32_t, 0), status)
+
+        error_block = self.builder.append_basic_block('error_handling')
+        program_block = self.builder.append_basic_block('program_code')
+        merge_block = self.builder.append_basic_block('end_program')
+        self.builder.cbranch(cond,
+                             error_block,
+                             program_block)
+
+        self.builder.position_at_start(error_block)
+        self.printf(self.globals['fmt_assert'], status)
+        self.builder.branch(merge_block)
+        error_block = self.builder.block
+
+        self.builder.position_at_start(program_block)
+        self.programHelper(node)
+        self.builder.branch(merge_block)
+        program_block = self.builder.block
+        self.builder.position_at_start(merge_block)
+        self.builder.ret_void()
+        self.exitScope()
+
+    def programHelper(self, node: Program):
         self.visitStmtList(
             [d for d in node.declarations if isinstance(d, VarDef)])
         self.visitStmtList(node.statements)
-        self.builder.ret_void()
-        self.exitScope()
 
     def VarDef(self, node: VarDef):
         val = self.visit(node.value)
@@ -135,7 +158,12 @@ class LlvmBackend(Visitor):
                 raise Exception("Illegal assignment")
 
     def IfStmt(self, node: IfStmt):
-        pass
+        if len(node.elseBody) == 0:
+            self.ifHelper(lambda: self.visit(node.condition), lambda: self.visitStmtList(
+                node.thenBody))
+        else:
+            self.ifHelper(lambda: self.visit(node.condition), lambda: self.visitStmtList(
+                node.thenBody), lambda: self.visitStmtList(node.elseBody))
 
     def ExprStmt(self, node: ExprStmt):
         self.visit(node.expr)
@@ -178,7 +206,7 @@ class LlvmBackend(Visitor):
             elif leftType == StrType():
                 raise Exception("Unimplemented")
             else:
-                return self.instr("i32.eq")
+                return self.builder.icmp_signed(operator, lhs, rhs)
         elif operator == "!=":
             if leftType == IntType():
                 return self.builder.icmp_signed(operator, lhs, rhs)
@@ -207,13 +235,15 @@ class LlvmBackend(Visitor):
             val = self.visit(node.operand)
             return self.builder.neg(val)
         elif node.operator == "not":
-            false = ir.Constant(bool_t, 0)
             val = self.visit(node.operand)
-            return self.builder.icmp_unsigned('==', false, val)
+            return self.builder.icmp_unsigned('==', ir.Constant(bool_t, 0), val)
 
     def CallExpr(self, node: CallExpr):
         if node.function.name == "print":
             self.emit_print(node.args[0])
+            return
+        if node.function.name == "__assert__":
+            self.emit_assert(node.args[0])
             return
         callee_func = self.module.get_global(node.function.name)
         if callee_func is None or not isinstance(callee_func, ir.Function):
@@ -250,30 +280,37 @@ class LlvmBackend(Visitor):
                              lambda: self.visit(node.elseExpr),
                              node.inferredType.getLLVMType())
 
-    def ifHelper(self, condFn, thenFn, elseFn, t):
+    def ifHelper(self, condFn, thenFn, elseFn=None, returnType=None):
         cond = condFn()
+        if returnType is not None:
+            assert elseFn is not None
 
-        then_block = self.builder.append_basic_block()
-        else_block = self.builder.append_basic_block()
-        merge_block = self.builder.append_basic_block()
-        self.builder.cbranch(cond, then_block, else_block)
+        then_block = self.builder.append_basic_block('then')
+        if elseFn is not None:
+            else_block = self.builder.append_basic_block('else')
+        merge_block = self.builder.append_basic_block('merge')
+        self.builder.cbranch(cond,
+                             then_block,
+                             else_block if elseFn is not None else merge_block)
 
         self.builder.position_at_start(then_block)
         then_val = thenFn()
         self.builder.branch(merge_block)
         then_block = self.builder.block
 
-        self.builder.position_at_start(else_block)
-        else_val = elseFn()
-        self.builder.branch(merge_block)
-        else_block = self.builder.block
+        if elseFn is not None:
+            self.builder.position_at_start(else_block)
+            else_val = elseFn()
+            self.builder.branch(merge_block)
+            else_block = self.builder.block
 
         self.builder.position_at_start(merge_block)
 
-        phi = self.builder.phi(t)
-        phi.add_incoming(then_val, then_block)
-        phi.add_incoming(else_val, else_block)
-        return phi
+        if returnType is not None:
+            phi = self.builder.phi(returnType, 'phi')
+            phi.add_incoming(then_val, then_block)
+            phi.add_incoming(else_val, else_block)
+            return phi
 
     def MethodCallExpr(self, node: MethodCallExpr):
         pass
@@ -296,33 +333,32 @@ class LlvmBackend(Visitor):
         self.builder.store(const, alloca)
         return self.builder.bitcast(alloca, voidptr_t)
 
-    # TYPES
-
-    def TypedVar(self, node: TypedVar):
-        pass
-
-    def ListType(self, node: ListType):
-        pass
-
-    def ClassType(self, node: ClassType):
-        pass
-
     # BUILT-INS
+
+    def emit_assert(self, arg: Expr):
+        self.ifHelper(
+            lambda: self.builder.icmp_unsigned('==', ir.Constant(bool_t, 0), self.visit(arg)),
+            lambda: self.longJmp(arg.location[0])
+        )
+
+    def longJmp(self, line):
+        jmp_buf = self.module.get_global("jmp_buf")
+        self.builder.call(self.externs['longjmp'], [jmp_buf, ir.Constant(int32_t, line)])
 
     def emit_print(self, arg: Expr):
         if isinstance(arg.inferredType, ListValueType) or arg.inferredType.className not in {"bool", "int", "str"}:
             raise Exception("Only bool, int, or str may be printed")
         if arg.inferredType.className == "bool":
             text = self.ifHelper(
-                lambda: arg,
+                lambda: self.visit(arg),
                 lambda: self.builder.bitcast(self.globals['true'], voidptr_t),
                 lambda: self.builder.bitcast(self.globals['false'], voidptr_t),
                 voidptr_t)
-            return self.printf(self.globals['fmt_s'], True, text)
+            return self.printf(self.globals['fmt_s'], text)
         elif arg.inferredType.className == 'int':
-            return self.printf(self.globals['fmt_i'], False, self.visit(arg))
+            return self.printf(self.globals['fmt_i'], self.visit(arg))
         else:
-            return self.printf(self.globals['fmt_s'], True, self.visit(arg))
+            return self.printf(self.globals['fmt_s'], self.visit(arg))
 
     # UTILS
 
@@ -337,7 +373,7 @@ class LlvmBackend(Visitor):
     def is_nonnull(self, value):
         return self.builder.icmp_unsigned('!=', value.type(None), value)
 
-    def printf(self, format, cast: bool, arg):
+    def printf(self, format, arg):
         fmt_ptr = self.builder.bitcast(format, voidptr_t)
         return self.builder.call(self.externs['printf'], [fmt_ptr, arg])
 
