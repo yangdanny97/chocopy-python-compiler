@@ -73,6 +73,8 @@ class LlvmBackend(Visitor):
         self.externs['setjmp'] = ir.Function(self.module, setjmp_t, 'setjmp')
         longjmp_t = ir.FunctionType(ir.VoidType(), [jmp_buf_t.as_pointer(), int32_t])
         self.externs['longjmp'] = ir.Function(self.module, longjmp_t, 'longjmp')
+        strlen_t = ir.FunctionType(int32_t, [voidptr_t])
+        self.externs['strlen'] = ir.Function(self.module, strlen_t, 'strlen')
 
         funcType = ir.FunctionType(ir.VoidType(), [])
         func = ir.Function(self.module, funcType, "__main__")
@@ -245,6 +247,8 @@ class LlvmBackend(Visitor):
         if node.function.name == "__assert__":
             self.emit_assert(node.args[0])
             return
+        if node.function.name == "len":
+            return self.emit_len(node.args[0])
         callee_func = self.module.get_global(node.function.name)
         if callee_func is None or not isinstance(callee_func, ir.Function):
             raise Exception("unknown function")
@@ -335,8 +339,15 @@ class LlvmBackend(Visitor):
 
     # BUILT-INS
 
+    def emit_len(self, arg: Expr):
+        if arg.inferredType == StrType():
+            val = self.builder.bitcast(self.visit(arg), voidptr_t)
+            return self.builder.call(self.externs['strlen'], [val])
+        else:
+            raise Exception("unimplemented")
+
     def emit_assert(self, arg: Expr):
-        self.ifHelper(
+        return self.ifHelper(
             lambda: self.builder.icmp_unsigned('==', ir.Constant(bool_t, 0), self.visit(arg)),
             lambda: self.longJmp(arg.location[0])
         )
