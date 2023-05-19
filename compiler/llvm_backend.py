@@ -89,21 +89,22 @@ class LlvmBackend(Visitor):
 
         error_block = self.builder.append_basic_block('error_handling')
         program_block = self.builder.append_basic_block('program_code')
-        merge_block = self.builder.append_basic_block('end_program')
+        end_program = self.builder.append_basic_block('end_program')
         self.builder.cbranch(cond,
                              error_block,
                              program_block)
 
         self.builder.position_at_start(error_block)
         self.printf(self.globals['fmt_assert'], status)
-        self.builder.branch(merge_block)
+        self.builder.branch(end_program)
         error_block = self.builder.block
 
         self.builder.position_at_start(program_block)
         self.programHelper(node)
-        self.builder.branch(merge_block)
+
+        self.builder.branch(end_program)
         program_block = self.builder.block
-        self.builder.position_at_start(merge_block)
+        self.builder.position_at_start(end_program)
         self.builder.ret_void()
         self.exitScope()
 
@@ -230,7 +231,10 @@ class LlvmBackend(Visitor):
                 f"Internal compiler error: unexpected operator {operator}")
 
     def IndexExpr(self, node: IndexExpr):
-        pass
+        if node.list.inferredType == StrType():
+            raise Exception("unimplemented")
+        else:
+            raise Exception("unimplemented")
 
     def UnaryExpr(self, node: UnaryExpr):
         if node.operator == "-":
@@ -265,10 +269,35 @@ class LlvmBackend(Visitor):
         pass
 
     def WhileStmt(self, node: WhileStmt):
-        pass
+        while_block = self.builder.append_basic_block('while')
+        do_block = self.builder.append_basic_block('do')
+        end_block = self.builder.append_basic_block('end')
+        self.builder.branch(while_block)
+
+        self.builder.position_at_start(while_block)
+        cond = self.visit(node.condition)
+        self.builder.cbranch(cond,
+                             do_block,
+                             end_block)
+        while_block = self.builder.block
+
+        self.builder.position_at_start(do_block)
+        self.visitStmtList(node.body)
+        self.builder.branch(while_block)
+        do_block = self.builder.block
+
+        self.builder.position_at_start(end_block)
 
     def ReturnStmt(self, node: ReturnStmt):
-        pass
+        if self.returnType.isNone():
+            self.builder.ret_void()
+        else:
+            val = None
+            if node.value is None:
+                val = self.NoneLiteral(None)
+            else:
+                val = self.visit(node.value)
+            self.builder.ret(val)
 
     def Identifier(self, node: Identifier):
         addr = self.locals[-1][node.name]
