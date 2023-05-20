@@ -67,19 +67,32 @@ class LlvmBackend(Visitor):
                                                self.make_bytearray('Assertion failed on line %i\n\00'.encode('ascii'))),
             'fmt_err': self.global_constant('fmt_err',
                                             ir.ArrayType(int8_t, 18),
-                                            self.make_bytearray('Error on line %i\n\00'.encode('ascii')))
+                                            self.make_bytearray('Error on line %i\n\00'.encode('ascii'))),
+            'fmt_str_concat': self.global_constant('fmt_str_concat',
+                                                   ir.ArrayType(int8_t, 5),
+                                                   self.make_bytearray('%s%s\00'.encode('ascii')))
         }
 
         printf_t = ir.FunctionType(int32_t, [voidptr_t], True)
         self.externs['printf'] = ir.Function(self.module, printf_t, 'printf')
+
         setjmp_t = ir.FunctionType(int32_t, [jmp_buf_t.as_pointer()])
         self.externs['setjmp'] = ir.Function(self.module, setjmp_t, 'setjmp')
+
         longjmp_t = ir.FunctionType(
             ir.VoidType(), [jmp_buf_t.as_pointer(), int32_t])
         self.externs['longjmp'] = ir.Function(
             self.module, longjmp_t, 'longjmp')
+
         strlen_t = ir.FunctionType(int32_t, [voidptr_t])
         self.externs['strlen'] = ir.Function(self.module, strlen_t, 'strlen')
+
+        sprintf_t = ir.FunctionType(voidptr_t, [voidptr_t, voidptr_t], True)
+        self.externs['sprintf'] = ir.Function(
+            self.module, sprintf_t, 'sprintf')
+
+        malloc_t = ir.FunctionType(voidptr_t, [int32_t])
+        self.externs['malloc'] = ir.Function(self.module, malloc_t, 'malloc')
 
         funcType = ir.FunctionType(ir.VoidType(), [])
         func = ir.Function(self.module, funcType, "__main__")
@@ -199,7 +212,20 @@ class LlvmBackend(Visitor):
             if self.isListConcat(operator, leftType, rightType):
                 raise Exception("unimplemented")
             elif leftType == StrType():
-                raise Exception("unimplemented")
+                lhs = self.builder.bitcast(lhs, voidptr_t)
+                rhs = self.builder.bitcast(rhs, voidptr_t)
+                llen = self.builder.call(self.externs['strlen'], [lhs])
+                rlen = self.builder.call(self.externs['strlen'], [rhs])
+                total_len = self.builder.add(self.builder.add(
+                    llen, rlen), ir.Constant(int32_t, 1))
+                # this is a memory leak since we never free
+                new_str = self.builder.call(
+                    self.externs['malloc'], [total_len])
+                fmt = self.builder.bitcast(
+                    self.globals['fmt_str_concat'], voidptr_t)
+                self.builder.call(self.externs['sprintf'], [
+                                  new_str, fmt, lhs, rhs])
+                return new_str
             elif leftType == IntType():
                 return self.builder.add(lhs, rhs)
             else:
