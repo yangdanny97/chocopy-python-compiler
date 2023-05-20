@@ -64,15 +64,20 @@ class LlvmBackend(Visitor):
                                           self.make_bytearray('%s\n\00'.encode('ascii'))),
             'fmt_assert': self.global_constant('fmt_assert',
                                                ir.ArrayType(int8_t, 29),
-                                               self.make_bytearray('Assertion failed on line %i\n\00'.encode('ascii')))
+                                               self.make_bytearray('Assertion failed on line %i\n\00'.encode('ascii'))),
+            'fmt_err': self.global_constant('fmt_err',
+                                            ir.ArrayType(int8_t, 18),
+                                            self.make_bytearray('Error on line %i\n\00'.encode('ascii')))
         }
 
         printf_t = ir.FunctionType(int32_t, [voidptr_t], True)
         self.externs['printf'] = ir.Function(self.module, printf_t, 'printf')
         setjmp_t = ir.FunctionType(int32_t, [jmp_buf_t.as_pointer()])
         self.externs['setjmp'] = ir.Function(self.module, setjmp_t, 'setjmp')
-        longjmp_t = ir.FunctionType(ir.VoidType(), [jmp_buf_t.as_pointer(), int32_t])
-        self.externs['longjmp'] = ir.Function(self.module, longjmp_t, 'longjmp')
+        longjmp_t = ir.FunctionType(
+            ir.VoidType(), [jmp_buf_t.as_pointer(), int32_t])
+        self.externs['longjmp'] = ir.Function(
+            self.module, longjmp_t, 'longjmp')
         strlen_t = ir.FunctionType(int32_t, [voidptr_t])
         self.externs['strlen'] = ir.Function(self.module, strlen_t, 'strlen')
 
@@ -83,7 +88,8 @@ class LlvmBackend(Visitor):
         entry_block = func.append_basic_block('entry')
         self.builder = ir.IRBuilder(entry_block)
 
-        jmp_buf = self.global_constant("jmp_buf", jmp_buf_t, ir.Constant(jmp_buf_t, bytearray([0] * 100)))
+        jmp_buf = self.global_constant(
+            "jmp_buf", jmp_buf_t, ir.Constant(jmp_buf_t, bytearray([0] * 100)))
         status = self.builder.call(self.externs['setjmp'], [jmp_buf])
         cond = self.builder.icmp_signed("!=", ir.Constant(int32_t, 0), status)
 
@@ -95,7 +101,15 @@ class LlvmBackend(Visitor):
                              program_block)
 
         self.builder.position_at_start(error_block)
-        self.printf(self.globals['fmt_assert'], status)
+        # if setjmp returns a positive status N, then a user-defined assertion failed on line N
+        # if setjmp returns a negative status N, then a built-in invariant (such as a bounds check) failed on line -N
+        self.ifHelper(lambda: self.builder.icmp_signed(
+            '>', ir.Constant(int32_t, 0), status),
+            lambda: self.printf(self.globals['fmt_assert'], status),
+            lambda: self.printf(
+                self.globals['fmt_err'], self.builder.neg(status))
+        )
+
         self.builder.branch(end_program)
         error_block = self.builder.block
 
@@ -232,9 +246,39 @@ class LlvmBackend(Visitor):
 
     def IndexExpr(self, node: IndexExpr):
         if node.list.inferredType == StrType():
-            raise Exception("unimplemented")
+            string = self.visit(node.list)
+            idx = self.visit(node.index)
+            return self.strIndex(string, idx, True, node.index.location[0])
         else:
             raise Exception("unimplemented")
+
+    def strIndex(self, string, index, check_bounds=False, line: int = 0):
+        string = self.builder.bitcast(string, voidptr_t)
+        # bounds checks
+        # negate the line number for built-in checks
+        if check_bounds:
+            self.ifHelper(
+                lambda: self.builder.icmp_signed(
+                    '>', ir.Constant(int32_t, 0), index),
+                lambda: self.longJmp(-line)
+            )
+            self.ifHelper(
+                lambda: self.builder.icmp_signed('<=',
+                                                 self.builder.call(
+                                                     self.externs['strlen'], [string]),
+                                                 index),
+                lambda: self.longJmp(-line)
+            )
+        ptr = self.builder.gep(string, [index])
+        char = self.builder.load(ptr)
+        alloca = self.builder.alloca(ir.ArrayType(
+            int8_t, 2), name=self.newLocal())
+        alloca = self.builder.bitcast(alloca, voidptr_t)
+        char_ptr = self.builder.gep(alloca, [ir.Constant(int32_t, 0)])
+        self.builder.store(char, char_ptr, 8)
+        t_ptr = self.builder.gep(alloca, [ir.Constant(int32_t, 1)])
+        self.builder.store(ir.Constant(int8_t, 0), t_ptr, 8)
+        return alloca
 
     def UnaryExpr(self, node: UnaryExpr):
         if node.operator == "-":
@@ -263,26 +307,54 @@ class LlvmBackend(Visitor):
         return self.builder.call(callee_func, call_args, 'calltmp')
 
     def ForStmt(self, node: ForStmt):
-        pass
+        var = self.locals[-1][node.identifier.name]
+        idx = self.builder.alloca(int32_t, None, 'idx')
+        self.builder.store(ir.Constant(int32_t, 0), idx)
+        iterable = self.visit(node.iterable)
+
+        if node.iterable.inferredType == StrType():
+            self.whileHelper(
+                lambda: self.builder.icmp_signed("<",
+                                                 self.builder.load(idx),
+                                                 self.builder.call(self.externs['strlen'], [iterable])),
+                lambda: self.forBody(node,
+                                     var,
+                                     lambda currIdx: self.strIndex(
+                                         iterable, currIdx),
+                                     idx))
+        else:
+            raise Exception("unimplemented")
+
+    def forBody(self, node: ForStmt, var, idxFn, idx):
+        currIdx = self.builder.load(idx)
+        self.builder.store(idxFn(currIdx), var)
+        self.visitStmtList(node.body)
+        self.builder.store(self.builder.add(
+            currIdx, ir.Constant(int32_t, 1)), idx)
 
     def ListExpr(self, node: ListExpr):
         pass
 
     def WhileStmt(self, node: WhileStmt):
+        self.whileHelper(
+            lambda: self.visit(node.condition),
+            lambda: self.visitStmtList(node.body))
+
+    def whileHelper(self, condFn, bodyFn):
         while_block = self.builder.append_basic_block('while')
         do_block = self.builder.append_basic_block('do')
         end_block = self.builder.append_basic_block('end')
         self.builder.branch(while_block)
 
         self.builder.position_at_start(while_block)
-        cond = self.visit(node.condition)
+        cond = condFn()
         self.builder.cbranch(cond,
                              do_block,
                              end_block)
         while_block = self.builder.block
 
         self.builder.position_at_start(do_block)
-        self.visitStmtList(node.body)
+        bodyFn()
         self.builder.branch(while_block)
         do_block = self.builder.block
 
@@ -377,13 +449,15 @@ class LlvmBackend(Visitor):
 
     def emit_assert(self, arg: Expr):
         return self.ifHelper(
-            lambda: self.builder.icmp_unsigned('==', ir.Constant(bool_t, 0), self.visit(arg)),
+            lambda: self.builder.icmp_unsigned(
+                '==', ir.Constant(bool_t, 0), self.visit(arg)),
             lambda: self.longJmp(arg.location[0])
         )
 
-    def longJmp(self, line):
+    def longJmp(self, line: int):
         jmp_buf = self.module.get_global("jmp_buf")
-        self.builder.call(self.externs['longjmp'], [jmp_buf, ir.Constant(int32_t, line)])
+        self.builder.call(self.externs['longjmp'], [
+                          jmp_buf, ir.Constant(int32_t, line)])
 
     def emit_print(self, arg: Expr):
         if isinstance(arg.inferredType, ListValueType) or arg.inferredType.className not in {"bool", "int", "str"}:
@@ -406,12 +480,6 @@ class LlvmBackend(Visitor):
         b = bytearray(buf)
         n = len(b)
         return ir.Constant(ir.ArrayType(int8_t, n), b)
-
-    def is_null(self, value):
-        return self.builder.icmp_unsigned('==', value.type(None), value)
-
-    def is_nonnull(self, value):
-        return self.builder.icmp_unsigned('!=', value.type(None), value)
 
     def printf(self, format, arg):
         fmt_ptr = self.builder.bitcast(format, voidptr_t)

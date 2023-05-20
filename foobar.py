@@ -1,4 +1,6 @@
-x:int = 10
-while x > 0:
+x:str = "9819278632"
+i:str = ""
+for i in x:
+    print(i)
+for i in x:
     print(x)
-    x = x - 1
