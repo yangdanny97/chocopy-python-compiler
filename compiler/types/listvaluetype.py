@@ -46,4 +46,4 @@ class ListValueType(ValueType):
         return "i32"
 
     def getLLVMType(self) -> ir.Type:
-        raise Exception("unimplemented")
+        return ir.IntType(8).as_pointer()

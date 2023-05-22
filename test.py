@@ -629,7 +629,8 @@ def llvm_debug(test):
         astparser = compiler.parser
         chocopy_ast = compiler.parse(test)
         if len(astparser.errors) > 0:
-            return False
+            print(astparser.errors)
+            assert len(astparser.errors) == 0
         compiler.typecheck(chocopy_ast)
         module = compiler.emitLLVM(chocopy_ast)
         print("Module output:")
