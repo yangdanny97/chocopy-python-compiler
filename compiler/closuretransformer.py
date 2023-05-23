@@ -12,7 +12,7 @@ def typeToAnnotation(t: ValueType) -> SymbolType:
 
 
 class ClosureTransformer(TypeChecker):
-    # rewriting function signatures to include free vars as explicit arguments
+    # rewrite function signatures to include free vars as explicit arguments
     # rewrite function calls to include new args
 
     def __init__(self):

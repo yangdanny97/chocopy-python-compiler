@@ -7,6 +7,7 @@ class ListExpr(Expr):
     def __init__(self, location: List[int], elements: List[Expr]):
         super().__init__(location, "ListExpr")
         self.elements = elements
+        # this is populated by the EmptyListTyper pass
         self.emptyListType = None
 
     def preorder(self, visitor):

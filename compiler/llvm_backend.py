@@ -134,8 +134,8 @@ class LlvmBackend(Visitor):
     def VarDef(self, node: VarDef):
         val = self.visit(node.value)
         saved_block = self.builder.block
-        addr = self.create_entry_block_alloca(
-            node.getName(), node.var.t.getLLVMType())
+        addr = self.builder.alloca(
+            node.var.t.getLLVMType(), None, node.getName())
         self.builder.position_at_end(saved_block)
         self.builder.store(val, addr)
         self.locals[-1][node.getName()] = addr
@@ -171,7 +171,12 @@ class LlvmBackend(Visitor):
             if isinstance(var, MemberExpr):
                 raise Exception("unimplemented")
             elif isinstance(var, IndexExpr):
-                raise Exception("unimplemented")
+                lst = self.visit(var.list)
+                idx = self.visit(var.index)
+                self.assert_nonnull(lst, var.list.location[0])
+                ptr = self.listIndex(
+                    lst, idx, var.inferredType.getLLVMType(), True, var.index.location[0])
+                self.builder.store(val, ptr)
             elif isinstance(var, Identifier):
                 addr = self.locals[-1][var.name]
                 self.builder.store(val, addr)
@@ -270,11 +275,13 @@ class LlvmBackend(Visitor):
             lst = self.visit(node.list)
             idx = self.visit(node.index)
             self.assert_nonnull(lst, node.list.location[0])
-            return self.listIndex(lst, idx,
-                                  node.inferredType.getLLVMType(),
-                                  True, node.index.location[0])
+            ptr = self.listIndex(lst, idx,
+                                 node.inferredType.getLLVMType(),
+                                 True, node.index.location[0])
+            return self.builder.load(ptr)
 
-    def listIndex(self, list, index, arrType, check_bounds=False, line: int = 0):
+    def listIndex(self, list, index, elemType, check_bounds=False, line: int = 0):
+        # return pointer to list[index]
         length = self.list_len(list)
         if check_bounds:
             self.ifHelper(
@@ -288,16 +295,15 @@ class LlvmBackend(Visitor):
                                                  index),
                 lambda: self.longJmp(line)
             )
-        structType = ir.LiteralStructType([int32_t, arrType])
+        structType = ir.LiteralStructType([int32_t, elemType])
         list = self.builder.bitcast(list, structType.as_pointer())
         # get the actual array and cast
         data = self.builder.gep(list, [
             ir.Constant(int32_t, 0),
             ir.Constant(int32_t, 1)])
-        data = self.builder.bitcast(data, arrType.as_pointer())
-        # index the array
-        ptr = self.builder.gep(data, [index])
-        return self.builder.load(ptr)
+        data = self.builder.bitcast(data, elemType.as_pointer())
+        # return pointer to value in array
+        return self.builder.gep(data, [index])
 
     def strIndex(self, string, index, check_bounds=False, line: int = 0):
         string = self.builder.bitcast(string, voidptr_t)
@@ -377,8 +383,8 @@ class LlvmBackend(Visitor):
                                                  length),
                 lambda: self.forBody(node,
                                      var,
-                                     lambda currIdx: self.listIndex(
-                                         iterable, currIdx, node.identifier.inferredType.getLLVMType()),
+                                     lambda currIdx: self.builder.load(self.listIndex(
+                                         iterable, currIdx, node.identifier.inferredType.getLLVMType())),
                                      idx_var))
 
     def forBody(self, node: ForStmt, var, idxFn, idx_var):
@@ -502,7 +508,7 @@ class LlvmBackend(Visitor):
     def IntegerLiteral(self, node: IntegerLiteral):
         return ir.Constant(int32_t, node.value)
 
-    def NoneLiteral(self, node: NoneLiteral):
+    def NoneLiteral(self, _: NoneLiteral):
         return ir.Constant(voidptr_t, None)
 
     def StringLiteral(self, node: StringLiteral):
@@ -550,7 +556,7 @@ class LlvmBackend(Visitor):
     def emit_print(self, arg: Expr):
         if isinstance(arg.inferredType, ListValueType) or arg.inferredType.className not in {"bool", "int", "str"}:
             raise Exception("Only bool, int, or str may be printed")
-        if arg.inferredType.className == "bool":
+        if arg.inferredType == BoolType():
             text = self.ifHelper(
                 lambda: self.visit(arg),
                 lambda: self.builder.bitcast(self.globals['true'], voidptr_t),
@@ -572,11 +578,6 @@ class LlvmBackend(Visitor):
     def printf(self, format, arg):
         fmt_ptr = self.builder.bitcast(format, voidptr_t)
         return self.builder.call(self.externs['printf'], [fmt_ptr, arg])
-
-    def create_entry_block_alloca(self, name, t):
-        builder = ir.IRBuilder()
-        builder.position_at_start(self.builder.function.entry_basic_block)
-        return builder.alloca(t, size=None, name=name)
 
     def global_constant(self, name, t, value):
         module = self.module

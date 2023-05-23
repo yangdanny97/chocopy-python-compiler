@@ -3,7 +3,9 @@ from .types import *
 from .visitor import Visitor
 from typing import List
 
-# A visitor to refine the types of empty list literals
+# A visitor to refine the types of empty list literals []
+# based on what they are being assigned to
+# Prior to this pass, they have the special type <Empty>
 
 
 class EmptyListTyper(Visitor):
