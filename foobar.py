@@ -1,6 +1,7 @@
-x:[int] = None
-y:int = 0
-x = [1, 2, 3] + [4, 5, 6] + [7, 8]
-for y in x:
-    print(y)
-print(len(x))
+z:[str] = None
+y:str = ""
+z = ["asd"] + ["asd"]
+print(len(z))
+print(z[0])
+y = z[0]
+print(len(y))

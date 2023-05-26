@@ -223,7 +223,7 @@ class LlvmBackend(Visitor):
                 rlen = self.list_len(rhs)
                 total_len = self.builder.add(llen, rlen)
                 if node.inferredType == EmptyType():
-                    elemType = node.emptyListType.getLLVMType()
+                    elemType = int8_t
                 else:
                     elemType = node.inferredType.elementType.getLLVMType()
                 assert elemType is not None
@@ -233,19 +233,19 @@ class LlvmBackend(Visitor):
                 size_ptr = self.builder.bitcast(new_arr, int32_t.as_pointer())
                 self.builder.store(total_len, size_ptr)
 
-                data = self.getListDataPtr(new_arr, elemType)
+                data_lhs_start = self.getListDataPtr(new_arr, elemType)
                 lhs_data = self.getListDataPtr(lhs, elemType)
                 rhs_data = self.getListDataPtr(rhs, elemType)
                 lhs_bytes = self.builder.mul(llen, self.sizeof(elemType))
 
                 self.builder.call(self.externs['memcpy'], [
-                    self.toVoidPtr(data), self.toVoidPtr(lhs_data), lhs_bytes])
+                    self.toVoidPtr(data_lhs_start), self.toVoidPtr(lhs_data), lhs_bytes])
 
-                data_rhs_start = self.builder.gep(data, [llen])
-                rhs_bytes = self.builder.mul(rlen, self.sizeof(elemType))
+                # data_rhs_start = self.builder.gep(data_lhs_start, [llen])
+                # rhs_bytes = self.builder.mul(rlen, self.sizeof(elemType))
 
-                self.builder.call(self.externs['memcpy'], [
-                                  self.toVoidPtr(data_rhs_start), self.toVoidPtr(rhs_data), rhs_bytes])
+                # self.builder.call(self.externs['memcpy'], [
+                #                   self.toVoidPtr(data_rhs_start), self.toVoidPtr(rhs_data), rhs_bytes])
                 return new_arr
             elif leftType == StrType():
                 lhs = self.toVoidPtr(lhs)
@@ -284,6 +284,7 @@ class LlvmBackend(Visitor):
                 cmp = self.builder.call(self.externs['strcmp'], [lhs, rhs])
                 return self.builder.icmp_signed("==", cmp, ir.Constant(int32_t, 0))
             else:
+                # bool
                 return self.builder.icmp_signed(operator, lhs, rhs)
         elif operator == "!=":
             if leftType == IntType():
@@ -292,11 +293,14 @@ class LlvmBackend(Visitor):
                 cmp = self.builder.call(self.externs['strcmp'], [lhs, rhs])
                 return self.builder.icmp_signed("!=", cmp, ir.Constant(int32_t, 0))
             else:
-                # pointer comparisons - TODO fix this op
-                return self.builder.icmp_unsigned(operator, lhs, rhs)
+                # bool
+                return self.builder.icmp_signed(operator, lhs, rhs)
         elif operator == "is":
             # pointer comparisons
-            return self.builder.icmp_unsigned("==", lhs, rhs)
+            return self.builder.icmp_unsigned("==",
+                                              self.builder.ptrtoint(
+                                                  lhs, int32_t),
+                                              self.builder.ptrtoint(rhs, int32_t))
         # logical operators
         elif operator == "and":
             return self.builder.and_(lhs, rhs)
@@ -431,7 +435,11 @@ class LlvmBackend(Visitor):
     def ListExpr(self, node: ListExpr):
         n = len(node.elements)
         if n == 0:
-            elemType = node.emptyListType.getLLVMType()
+            if node.emptyListType:
+                elemType = node.emptyListType.getLLVMType()
+            else:
+                # fallback to voidptr
+                elemType = int8_t
         else:
             elemType = node.inferredType.elementType.getLLVMType()
         assert elemType is not None
@@ -626,11 +634,11 @@ class LlvmBackend(Visitor):
         return data
 
     def sizeof(self, t):
-        if isinstance(t, ir.IntType):
+        if isinstance(t, ir.IntType) and not t.is_pointer:
             width = t.width
             # each item in array must be at least 1 byte
-            if width == 1:
-                width = 8
+            if width < 8:
+                return ir.Constant(int32_t, 1)
             return ir.Constant(int32_t, width // 8)
         null = t(None)
         offset = null.gep([int32_t(1)])
