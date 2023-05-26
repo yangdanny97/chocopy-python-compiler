@@ -134,12 +134,12 @@ class ClassValueType(ValueType):
         elif self.className == SpecialClass.STR:
             return ir.IntType(8).as_pointer()
         elif self.className == SpecialClass.OBJECT:
-            raise Exception("unsupported")
+            return ir.IntType(8).as_pointer()
         elif self.className == SpecialClass.NONE:
-            return ir.VoidType()
+            return ir.IntType(8).as_pointer()
         elif self.className == SpecialClass.EMPTY:
-            raise Exception("unsupported")
+            return ir.IntType(8).as_pointer()
         elif self.className == SpecialClass.INT:
             return ir.IntType(32)
         else:
-            raise Exception("unsupported")
+            return ir.IntType(8).as_pointer()

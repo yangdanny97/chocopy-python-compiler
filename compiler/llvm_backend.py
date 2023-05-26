@@ -3,7 +3,7 @@ from .types import *
 from .typesystem import TypeSystem
 from .visitor import Visitor
 from collections import defaultdict
-from typing import List, Union
+from typing import List
 
 import llvmlite.ir as ir
 import llvmlite.binding as llvm
@@ -11,7 +11,7 @@ import llvmlite.binding as llvm
 JMP_BUF_BYTES = 100
 
 bool_t = ir.IntType(1)  # for booleans
-int8_t = ir.IntType(8)  # chars
+int8_t = ir.IntType(8)  # chars, or booleans in arrays
 int32_t = ir.IntType(32)  # for ints
 voidptr_t = ir.IntType(8).as_pointer()
 jmp_buf_t = ir.ArrayType(ir.IntType(8), JMP_BUF_BYTES)
@@ -91,6 +91,12 @@ class LlvmBackend(Visitor):
 
         malloc_t = ir.FunctionType(voidptr_t, [int32_t])
         self.externs['malloc'] = ir.Function(self.module, malloc_t, 'malloc')
+
+        strcmp_t = ir.FunctionType(int32_t, [voidptr_t, voidptr_t])
+        self.externs['strcmp'] = ir.Function(self.module, strcmp_t, 'strcmp')
+
+        memcpy_t = ir.FunctionType(voidptr_t, [voidptr_t, voidptr_t, int32_t])
+        self.externs['memcpy'] = ir.Function(self.module, memcpy_t, 'memcpy')
 
         funcType = ir.FunctionType(ir.VoidType(), [])
         func = ir.Function(self.module, funcType, "__main__")
@@ -197,6 +203,11 @@ class LlvmBackend(Visitor):
     def isListConcat(self, operator: str, leftType: ValueType, rightType: ValueType) -> bool:
         return leftType.isListType() and rightType.isListType() and operator == "+"
 
+    def getListDataPtr(self, lst, elemType):
+        lst = self.builder.bitcast(lst, int32_t.as_pointer())
+        lst = self.builder.gep(lst, [ir.Constant(int32_t, 1)])
+        return self.builder.bitcast(lst, elemType.as_pointer())
+
     def BinaryExpr(self, node: BinaryExpr):
         operator = node.operator
         leftType = node.left.inferredType
@@ -206,19 +217,46 @@ class LlvmBackend(Visitor):
         # concatenation and addition
         if operator == "+":
             if self.isListConcat(operator, leftType, rightType):
-                raise Exception("unimplemented")
+                lhs = self.toVoidPtr(lhs)
+                rhs = self.toVoidPtr(rhs)
+                llen = self.list_len(lhs)
+                rlen = self.list_len(rhs)
+                total_len = self.builder.add(llen, rlen)
+                if node.inferredType == EmptyType():
+                    elemType = node.emptyListType.getLLVMType()
+                else:
+                    elemType = node.inferredType.elementType.getLLVMType()
+                assert elemType is not None
+                size = self.builder.add(ir.Constant(int32_t, 4), self.builder.mul(
+                    total_len, self.sizeof(elemType)))
+                new_arr = self.builder.call(self.externs['malloc'], [size])
+                size_ptr = self.builder.bitcast(new_arr, int32_t.as_pointer())
+                self.builder.store(total_len, size_ptr)
+
+                data = self.getListDataPtr(new_arr, elemType)
+                lhs_data = self.getListDataPtr(lhs, elemType)
+                rhs_data = self.getListDataPtr(rhs, elemType)
+                lhs_bytes = self.builder.mul(llen, self.sizeof(elemType))
+
+                self.builder.call(self.externs['memcpy'], [
+                    self.toVoidPtr(data), self.toVoidPtr(lhs_data), lhs_bytes])
+
+                data_rhs_start = self.builder.gep(data, [llen])
+                rhs_bytes = self.builder.mul(rlen, self.sizeof(elemType))
+
+                self.builder.call(self.externs['memcpy'], [
+                                  self.toVoidPtr(data_rhs_start), self.toVoidPtr(rhs_data), rhs_bytes])
+                return new_arr
             elif leftType == StrType():
-                lhs = self.builder.bitcast(lhs, voidptr_t)
-                rhs = self.builder.bitcast(rhs, voidptr_t)
+                lhs = self.toVoidPtr(lhs)
+                rhs = self.toVoidPtr(rhs)
                 llen = self.builder.call(self.externs['strlen'], [lhs])
                 rlen = self.builder.call(self.externs['strlen'], [rhs])
                 total_len = self.builder.add(self.builder.add(
                     llen, rlen), ir.Constant(int32_t, 1))
-                # this is a memory leak since we never free
                 new_str = self.builder.call(
                     self.externs['malloc'], [total_len])
-                fmt = self.builder.bitcast(
-                    self.globals['fmt_str_concat'], voidptr_t)
+                fmt = self.toVoidPtr(self.globals['fmt_str_concat'])
                 self.builder.call(self.externs['sprintf'], [
                                   new_str, fmt, lhs, rhs])
                 return new_str
@@ -243,16 +281,18 @@ class LlvmBackend(Visitor):
             if leftType == IntType():
                 return self.builder.icmp_signed(operator, lhs, rhs)
             elif leftType == StrType():
-                raise Exception("Unimplemented")
+                cmp = self.builder.call(self.externs['strcmp'], [lhs, rhs])
+                return self.builder.icmp_signed("==", cmp, ir.Constant(int32_t, 0))
             else:
                 return self.builder.icmp_signed(operator, lhs, rhs)
         elif operator == "!=":
             if leftType == IntType():
                 return self.builder.icmp_signed(operator, lhs, rhs)
             elif leftType == StrType():
-                raise Exception("Unimplemented")
+                cmp = self.builder.call(self.externs['strcmp'], [lhs, rhs])
+                return self.builder.icmp_signed("!=", cmp, ir.Constant(int32_t, 0))
             else:
-                # pointer comparisons
+                # pointer comparisons - TODO fix this op
                 return self.builder.icmp_unsigned(operator, lhs, rhs)
         elif operator == "is":
             # pointer comparisons
@@ -295,18 +335,12 @@ class LlvmBackend(Visitor):
                                                  index),
                 lambda: self.longJmp(line)
             )
-        structType = ir.LiteralStructType([int32_t, elemType])
-        list = self.builder.bitcast(list, structType.as_pointer())
-        # get the actual array and cast
-        data = self.builder.gep(list, [
-            ir.Constant(int32_t, 0),
-            ir.Constant(int32_t, 1)])
-        data = self.builder.bitcast(data, elemType.as_pointer())
+        data = self.getListDataPtr(list, elemType)
         # return pointer to value in array
         return self.builder.gep(data, [index])
 
     def strIndex(self, string, index, check_bounds=False, line: int = 0):
-        string = self.builder.bitcast(string, voidptr_t)
+        string = self.toVoidPtr(string)
         # bounds checks
         if check_bounds:
             self.ifHelper(
@@ -323,14 +357,14 @@ class LlvmBackend(Visitor):
             )
         ptr = self.builder.gep(string, [index])
         char = self.builder.load(ptr)
-        alloca = self.builder.alloca(ir.ArrayType(
-            int8_t, 2))
-        alloca = self.builder.bitcast(alloca, voidptr_t)
-        char_ptr = self.builder.gep(alloca, [ir.Constant(int32_t, 0)])
+        addr = self.builder.call(self.externs['malloc'], [
+                                 ir.Constant(int32_t, 2)])
+        addr = self.toVoidPtr(addr)
+        char_ptr = self.builder.gep(addr, [ir.Constant(int32_t, 0)])
         self.builder.store(char, char_ptr, 8)
-        t_ptr = self.builder.gep(alloca, [ir.Constant(int32_t, 1)])
+        t_ptr = self.builder.gep(addr, [ir.Constant(int32_t, 1)])
         self.builder.store(ir.Constant(int8_t, 0), t_ptr, 8)
-        return alloca
+        return addr
 
     def UnaryExpr(self, node: UnaryExpr):
         if node.operator == "-":
@@ -400,20 +434,21 @@ class LlvmBackend(Visitor):
             elemType = node.emptyListType.getLLVMType()
         else:
             elemType = node.inferredType.elementType.getLLVMType()
-        listType = ir.LiteralStructType([int32_t, ir.ArrayType(elemType, n)])
-        alloca = self.builder.alloca(listType)
+        assert elemType is not None
+        size = self.builder.add(ir.Constant(int32_t, 4), self.builder.mul(
+            ir.Constant(int32_t, n), self.sizeof(elemType)))
+        addr = self.builder.call(self.externs['malloc'], [size])
+        addr = self.builder.bitcast(addr, int32_t.as_pointer())
         for i in range(n):
             value = self.visit(node.elements[i])
-            idx_ptr = self.builder.gep(alloca, [
-                ir.Constant(int32_t, 0),
-                ir.Constant(int32_t, 1),
-                ir.Constant(int32_t, i)])
+            data = self.getListDataPtr(addr, elemType)
+            idx_ptr = self.builder.gep(data, [ir.Constant(int32_t, i)])
             self.builder.store(value, idx_ptr)
         len_ptr = self.builder.gep(
-            alloca, [ir.Constant(int32_t, 0), ir.Constant(int32_t, 0)])
+            addr, [ir.Constant(int32_t, 0)])
         self.builder.store(ir.Constant(int32_t, n), len_ptr)
-        alloca = self.builder.bitcast(alloca, voidptr_t)
-        return alloca
+        addr = self.toVoidPtr(addr)
+        return addr
 
     def WhileStmt(self, node: WhileStmt):
         self.whileHelper(
@@ -512,24 +547,26 @@ class LlvmBackend(Visitor):
         return ir.Constant(voidptr_t, None)
 
     def StringLiteral(self, node: StringLiteral):
-        const = self.make_bytearray((node.value + '\00').encode('ascii'))
-        alloca = self.builder.alloca(ir.ArrayType(
-            int8_t, len(node.value) + 1))
-        self.builder.store(const, alloca)
-        return self.builder.bitcast(alloca, voidptr_t)
+        bytes = bytearray((node.value + '\00').encode('ascii'))
+        size = ir.Constant(int32_t, 1 + len(node.value))
+        addr = self.builder.call(self.externs['malloc'], [size])
+        for i in range(len(bytes)):
+            idx_ptr = self.builder.gep(addr, [ir.Constant(int32_t, i)])
+            self.builder.store(ir.Constant(int8_t, bytes[i]), idx_ptr)
+        return addr
 
     # BUILT-INS
 
     def emit_len(self, arg: Expr):
         val = self.visit(arg)
         if arg.inferredType == StrType():
-            val = self.builder.bitcast(val, voidptr_t)
+            val = self.toVoidPtr(val)
             return self.builder.call(self.externs['strlen'], [val])
         else:
             return self.list_len(val)
 
     def assert_nonnull(self, val, line):
-        val = self.builder.bitcast(val, voidptr_t)
+        val = self.toVoidPtr(val)
         self.ifHelper(
             lambda: self.builder.icmp_signed(
                 '==', ir.Constant(voidptr_t, None), val),
@@ -541,11 +578,12 @@ class LlvmBackend(Visitor):
         return self.builder.load(val)
 
     def emit_assert(self, arg: Expr):
+        line = arg.location[0]
         arg = self.visit(arg)
         return self.ifHelper(
             lambda: self.builder.icmp_unsigned(
                 '==', ir.Constant(bool_t, 0), arg),
-            lambda: self.longJmp(arg.location[0])
+            lambda: self.longJmp(line)
         )
 
     def longJmp(self, line: int):
@@ -559,8 +597,8 @@ class LlvmBackend(Visitor):
         if arg.inferredType == BoolType():
             text = self.ifHelper(
                 lambda: self.visit(arg),
-                lambda: self.builder.bitcast(self.globals['true'], voidptr_t),
-                lambda: self.builder.bitcast(self.globals['false'], voidptr_t),
+                lambda: self.toVoidPtr(self.globals['true']),
+                lambda: self.toVoidPtr(self.globals['false']),
                 voidptr_t)
             return self.printf(self.globals['fmt_s'], text)
         elif arg.inferredType.className == 'int':
@@ -576,7 +614,7 @@ class LlvmBackend(Visitor):
         return ir.Constant(ir.ArrayType(int8_t, n), b)
 
     def printf(self, format, arg):
-        fmt_ptr = self.builder.bitcast(format, voidptr_t)
+        fmt_ptr = self.toVoidPtr(format)
         return self.builder.call(self.externs['printf'], [fmt_ptr, arg])
 
     def global_constant(self, name, t, value):
@@ -586,3 +624,17 @@ class LlvmBackend(Visitor):
         data.global_constant = True
         data.initializer = value
         return data
+
+    def sizeof(self, t):
+        if isinstance(t, ir.IntType):
+            width = t.width
+            # each item in array must be at least 1 byte
+            if width == 1:
+                width = 8
+            return ir.Constant(int32_t, width // 8)
+        null = t(None)
+        offset = null.gep([int32_t(1)])
+        return self.builder.ptrtoint(offset, int32_t)
+
+    def toVoidPtr(self, ptr):
+        return self.builder.bitcast(ptr, voidptr_t)
