@@ -221,15 +221,16 @@ class LlvmBackend(Visitor):
                 rhs = self.toVoidPtr(rhs)
                 llen = self.list_len(lhs)
                 rlen = self.list_len(rhs)
-                total_len = self.builder.add(llen, rlen)
+                total_len = self.builder.add(llen, rlen, 'total_len')
                 if node.inferredType == EmptyType():
                     elemType = int8_t
                 else:
                     elemType = node.inferredType.elementType.getLLVMType()
                 assert elemType is not None
                 size = self.builder.add(ir.Constant(int32_t, 4), self.builder.mul(
-                    total_len, self.sizeof(elemType)))
-                new_arr = self.builder.call(self.externs['malloc'], [size])
+                    total_len, self.sizeof(elemType)), 'bytes')
+                new_arr = self.builder.call(
+                    self.externs['malloc'], [size], 'new_list')
                 size_ptr = self.builder.bitcast(new_arr, int32_t.as_pointer())
                 self.builder.store(total_len, size_ptr)
 
@@ -241,11 +242,11 @@ class LlvmBackend(Visitor):
                 self.builder.call(self.externs['memcpy'], [
                     self.toVoidPtr(data_lhs_start), self.toVoidPtr(lhs_data), lhs_bytes])
 
-                # data_rhs_start = self.builder.gep(data_lhs_start, [llen])
-                # rhs_bytes = self.builder.mul(rlen, self.sizeof(elemType))
+                data_rhs_start = self.builder.gep(data_lhs_start, [llen])
+                rhs_bytes = self.builder.mul(rlen, self.sizeof(elemType))
 
-                # self.builder.call(self.externs['memcpy'], [
-                #                   self.toVoidPtr(data_rhs_start), self.toVoidPtr(rhs_data), rhs_bytes])
+                self.builder.call(self.externs['memcpy'], [
+                                  self.toVoidPtr(data_rhs_start), self.toVoidPtr(rhs_data), rhs_bytes])
                 return new_arr
             elif leftType == StrType():
                 lhs = self.toVoidPtr(lhs)
@@ -255,7 +256,7 @@ class LlvmBackend(Visitor):
                 total_len = self.builder.add(self.builder.add(
                     llen, rlen), ir.Constant(int32_t, 1))
                 new_str = self.builder.call(
-                    self.externs['malloc'], [total_len])
+                    self.externs['malloc'], [total_len], 'new_str')
                 fmt = self.toVoidPtr(self.globals['fmt_str_concat'])
                 self.builder.call(self.externs['sprintf'], [
                                   new_str, fmt, lhs, rhs])
@@ -362,7 +363,7 @@ class LlvmBackend(Visitor):
         ptr = self.builder.gep(string, [index])
         char = self.builder.load(ptr)
         addr = self.builder.call(self.externs['malloc'], [
-                                 ir.Constant(int32_t, 2)])
+                                 ir.Constant(int32_t, 2), 'char'])
         addr = self.toVoidPtr(addr)
         char_ptr = self.builder.gep(addr, [ir.Constant(int32_t, 0)])
         self.builder.store(char, char_ptr, 8)
@@ -445,7 +446,7 @@ class LlvmBackend(Visitor):
         assert elemType is not None
         size = self.builder.add(ir.Constant(int32_t, 4), self.builder.mul(
             ir.Constant(int32_t, n), self.sizeof(elemType)))
-        addr = self.builder.call(self.externs['malloc'], [size])
+        addr = self.builder.call(self.externs['malloc'], [size], 'list_literal')
         addr = self.builder.bitcast(addr, int32_t.as_pointer())
         for i in range(n):
             value = self.visit(node.elements[i])
@@ -557,7 +558,7 @@ class LlvmBackend(Visitor):
     def StringLiteral(self, node: StringLiteral):
         bytes = bytearray((node.value + '\00').encode('ascii'))
         size = ir.Constant(int32_t, 1 + len(node.value))
-        addr = self.builder.call(self.externs['malloc'], [size])
+        addr = self.builder.call(self.externs['malloc'], [size], 'str_literal')
         for i in range(len(bytes)):
             idx_ptr = self.builder.gep(addr, [ir.Constant(int32_t, i)])
             self.builder.store(ir.Constant(int8_t, bytes[i]), idx_ptr)
@@ -583,7 +584,7 @@ class LlvmBackend(Visitor):
 
     def list_len(self, arg):
         val = self.builder.bitcast(arg, int32_t.as_pointer())
-        return self.builder.load(val)
+        return self.builder.load(val, 'len')
 
     def emit_assert(self, arg: Expr):
         line = arg.location[0]
@@ -634,15 +635,17 @@ class LlvmBackend(Visitor):
         return data
 
     def sizeof(self, t):
-        if isinstance(t, ir.IntType) and not t.is_pointer:
+        if not t.is_pointer:
             width = t.width
             # each item in array must be at least 1 byte
             if width < 8:
                 return ir.Constant(int32_t, 1)
             return ir.Constant(int32_t, width // 8)
-        null = t(None)
-        offset = null.gep([int32_t(1)])
-        return self.builder.ptrtoint(offset, int32_t)
+        else:
+            null = t.as_pointer()(None)
+            offset = null.gep([int32_t(1)])
+            size = self.builder.ptrtoint(offset, int32_t, 'sizeof')
+            return size
 
     def toVoidPtr(self, ptr):
         return self.builder.bitcast(ptr, voidptr_t)
