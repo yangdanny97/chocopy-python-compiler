@@ -24,7 +24,7 @@ def run_all_tests():
     # run_cil_tests()
     # run_wasm_tests()
     run_llvm_tests()
-    test_eval_llvm()
+    # test_eval_llvm()
 
 
 def run_parse_tests():
@@ -581,19 +581,14 @@ disabled_llvm_tests = [
     "/binary_tree.",
     "/classes.",
     "/doubling_vector.",
-    "/globals.",
     "/nonlocal_builtins.",
     "/nonlocal_loop.",
     "/nonlocal.",
     "/ratio.",
-    "/operators.",
     "/inherit_init.",
     "/linked_list.",
     "/exponent.",
-    "/lists.",
     "/short_circuit.",
-    "/global_loop.",
-    "/control_flow.",
     "modulo"
 ]
 
@@ -630,6 +625,7 @@ def eval_llvm(module):
     target = llvm.Target.from_default_triple()
     target_machine = target.create_target_machine()
     llvmmod = llvm.parse_assembly(str(module))
+    llvmmod.verify()
     with llvm.create_mcjit_compiler(llvmmod, target_machine) as ee:
         ee.finalize_object()
         fptr = CFUNCTYPE(None)(ee.get_function_address("__main__"))
@@ -637,10 +633,11 @@ def eval_llvm(module):
 
 
 def test_eval_llvm():
-    run_llvm_test("foobar.py", False)
+    run_llvm_test("foobar.py", True)
 
 
 def run_llvm_test(test, debug):
+    print("running test", test)
     try:
         compiler = Compiler()
         astparser = compiler.parser

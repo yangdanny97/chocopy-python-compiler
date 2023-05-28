@@ -4,11 +4,12 @@ from .typesystem import TypeSystem
 from .visitor import Visitor
 from collections import defaultdict
 from typing import List
+import json
 
 import llvmlite.ir as ir
 import llvmlite.binding as llvm
 
-JMP_BUF_BYTES = 100
+JMP_BUF_BYTES = 200
 
 bool_t = ir.IntType(1)  # for booleans
 int8_t = ir.IntType(8)  # chars, or booleans in arrays
@@ -22,6 +23,7 @@ class LlvmBackend(Visitor):
     counter = 0
     globals = {}
     externs = {}
+    constructors = {}
 
     def __init__(self, ts: TypeSystem):
         llvm.initialize()
@@ -29,6 +31,30 @@ class LlvmBackend(Visitor):
         llvm.initialize_native_asmprinter()
         self.module = ir.Module()
         self.builder = None
+        # (class name, method name) -> (idx in vtable, defining class name)
+        self.methodOffsets = dict()
+        self.ts = ts
+
+    def initializeOffsets(self):
+        tblOffset = 0
+        methodTableOffsets = dict()
+        # assign positions in the global method table
+        classes = [c for c in self.ts.classes if c !=
+                   "<None>" and c != "<Empty>"]
+        for cls in classes:
+            ctorType = ir.FunctionType(ir.VoidType(), [voidptr_t])
+            ctor = ir.Function(self.module, ctorType, cls)
+            self.constructors[cls] = ctor
+            for methName, _, defCls in self.ts.getOrderedMethods(cls):
+                if cls == defCls:
+                    methodTableOffsets[(cls, methName)] = tblOffset
+                    tblOffset += 1
+        # calculate info for each class
+        for cls in classes:
+            methods = self.ts.getOrderedMethods(cls)
+            for idx, methInfo in enumerate(methods):
+                name, _, defCls = methInfo
+                self.methodOffsets[(cls, name)] = (idx, defCls)
 
     def enterScope(self):
         self.locals.append(defaultdict(lambda: None))
@@ -46,32 +72,30 @@ class LlvmBackend(Visitor):
     # TOP LEVEL & DECLARATIONS
 
     def Program(self, node: Program):
-        # globals for commonly used strings
-        self.globals = {
-            'true': self.global_constant('true',
-                                         ir.ArrayType(int8_t, 5),
-                                         self.make_bytearray('True\00'.encode('ascii'))),
-            'false': self.global_constant('false',
-                                          ir.ArrayType(int8_t, 6),
-                                          self.make_bytearray('False\00'.encode('ascii'))),
-            'fmt_i': self.global_constant('fmt_i',
-                                          ir.ArrayType(int8_t, 4),
-                                          self.make_bytearray('%i\n\00'.encode('ascii'))),
-            'fmt_s': self.global_constant('fmt_s',
-                                          ir.ArrayType(int8_t, 4),
-                                          self.make_bytearray('%s\n\00'.encode('ascii'))),
-            'fmt_assert': self.global_constant('fmt_assert',
-                                               ir.ArrayType(int8_t, 29),
-                                               self.make_bytearray('Assertion failed on line %i\n\00'.encode('ascii'))),
-            'fmt_err': self.global_constant('fmt_err',
-                                            ir.ArrayType(int8_t, 18),
-                                            self.make_bytearray('Error on line %i\n\00'.encode('ascii'))),
-            'fmt_str_concat': self.global_constant('fmt_str_concat',
-                                                   ir.ArrayType(int8_t, 5),
-                                                   self.make_bytearray('%s%s\00'.encode('ascii'))),
-            'jmp_buf': self.global_constant(
-                "jmp_buf", jmp_buf_t, ir.Constant(jmp_buf_t, bytearray([0] * JMP_BUF_BYTES)))
-        }
+        self.initializeOffsets()
+        self.global_constant('__true',
+                             ir.ArrayType(int8_t, 5),
+                             self.make_bytearray('True\00'.encode('ascii')))
+        self.global_constant('__false',
+                             ir.ArrayType(int8_t, 6),
+                             self.make_bytearray('False\00'.encode('ascii')))
+        self.global_constant('__fmt_i',
+                             ir.ArrayType(int8_t, 4),
+                             self.make_bytearray('%i\n\00'.encode('ascii')))
+        self.global_constant('__fmt_s',
+                             ir.ArrayType(int8_t, 4),
+                             self.make_bytearray('%s\n\00'.encode('ascii')))
+        self.global_constant('__fmt_assert',
+                             ir.ArrayType(int8_t, 29),
+                             self.make_bytearray('Assertion failed on line %i\n\00'.encode('ascii')))
+        self.global_constant('__fmt_err',
+                             ir.ArrayType(int8_t, 18),
+                             self.make_bytearray('Error on line %i\n\00'.encode('ascii')))
+        self.global_constant('__fmt_str_concat',
+                             ir.ArrayType(int8_t, 5),
+                             self.make_bytearray('%s%s\00'.encode('ascii')))
+        self.global_constant(
+            "__jmp_buf", jmp_buf_t, ir.Constant(jmp_buf_t, bytearray([0] * JMP_BUF_BYTES)))
 
         printf_t = ir.FunctionType(int32_t, [voidptr_t], True)
         self.externs['printf'] = ir.Function(self.module, printf_t, 'printf')
@@ -101,11 +125,32 @@ class LlvmBackend(Visitor):
         self.externs['memcpy'] = ir.Function(self.module, memcpy_t, 'memcpy')
 
         # begin main function
-
+        # declare global variables, methods, and functions
+        varDefs = [d for d in node.declarations if isinstance(d, VarDef)]
+        for d in varDefs:
+            t = d.var.t.getLLVMType()
+            self.global_variable(d.var.name(), t)
         funcDefs = [d for d in node.declarations if isinstance(d, FuncDef)]
+        for d in funcDefs:
+            self.declareFunc(d)
+        classDefs = [d for d in node.declarations if isinstance(d, ClassDef)]
+        for cls in classDefs:
+            methodDefs = [d for d in cls.declarations if isinstance(d, FuncDef)]
+            for m in methodDefs:
+                if m.getIdentifier().name != "__init__":
+                    raise Exception("TODO")
+        # provide default __init__ impl for classes
+        for cls in self.constructors:
+            ctor = self.constructors[cls]
+            if len(ctor.blocks) == 0:
+                bb = ctor.append_basic_block('entry')
+                ir.IRBuilder(bb).ret_void()
+
+        # define functions
         for d in funcDefs:
             self.visit(d)
 
+        # main function
         funcType = ir.FunctionType(ir.VoidType(), [])
         func = ir.Function(self.module, funcType, "__main__")
 
@@ -114,7 +159,7 @@ class LlvmBackend(Visitor):
         self.builder = ir.IRBuilder(entry_block)
 
         status = self.builder.call(self.externs['setjmp'], [
-                                   self.globals['jmp_buf']])
+                                   self.module.get_global('__jmp_buf')])
         cond = self.builder.icmp_signed("!=", int32_t(0), status)
 
         error_block = self.builder.append_basic_block('error_handling')
@@ -125,24 +170,25 @@ class LlvmBackend(Visitor):
                              program_block)
 
         self.builder.position_at_start(error_block)
-        self.printf(self.globals['fmt_err'], status)
+        self.printf(self.module.get_global('__fmt_err'), status)
 
         self.builder.branch(end_program)
         error_block = self.builder.block
 
         self.builder.position_at_start(program_block)
-        self.programHelper(node)
+        # initialize globals
+        for d in varDefs:
+            val = self.visit(d.value)
+            addr = self.module.get_global(d.var.name())
+            assert addr is not None
+            self.builder.store(val, addr)
+        self.visitStmtList(node.statements)
 
         self.builder.branch(end_program)
         program_block = self.builder.block
         self.builder.position_at_start(end_program)
         self.builder.ret_void()
         self.exitScope()
-
-    def programHelper(self, node: Program):
-        self.visitStmtList(
-            [d for d in node.declarations if isinstance(d, VarDef)])
-        self.visitStmtList(node.statements)
 
     def VarDef(self, node: VarDef):
         val = self.visit(node.value)
@@ -156,16 +202,20 @@ class LlvmBackend(Visitor):
     def ClassDef(self, node: ClassDef):
         pass
 
-    def FuncDef(self, node: FuncDef):
-        # TODO - methods
+    def declareFunc(self, node: FuncDef):
         self.returnType = node.type.returnType
-        shouldReturnValue = not self.returnType.isNone()
         funcname = node.name.name
         returnType = node.type.returnType.getLLVMType()
         argTypes = [p.getLLVMType() for p in node.type.parameters]
         funcType = ir.FunctionType(returnType, argTypes)
-        func = ir.Function(self.module, funcType, funcname)
-        self.globals[funcname] = func
+        ir.Function(self.module, funcType, funcname)
+
+    def FuncDef(self, node: FuncDef):
+        # TODO - methods
+        shouldReturnValue = not self.returnType.isNone()
+        func = self.module.get_global(node.getIdentifier().name)
+        self.returnType = node.type.returnType
+        shouldReturnValue = not self.returnType.isNone()
         self.enterScope()
         bb_entry = func.append_basic_block('entry')
         self.builder = ir.IRBuilder(bb_entry)
@@ -202,7 +252,7 @@ class LlvmBackend(Visitor):
                     lst, idx, var.inferredType.getLLVMType(), True, var.index.location[0])
                 self.builder.store(val, ptr)
             elif isinstance(var, Identifier):
-                addr = self.locals[-1][var.name]
+                addr = self.getAddr(var)
                 self.builder.store(val, addr)
             else:
                 raise Exception("Illegal assignment")
@@ -275,7 +325,7 @@ class LlvmBackend(Visitor):
                     llen, rlen), int32_t(1))
                 new_str = self.builder.call(
                     self.externs['malloc'], [total_len], 'new_str')
-                fmt = self.toVoidPtr(self.globals['fmt_str_concat'])
+                fmt = self.toVoidPtr(self.module.get_global('__fmt_str_concat'))
                 self.builder.call(self.externs['sprintf'], [
                                   new_str, fmt, lhs, rhs])
                 return new_str
@@ -397,13 +447,21 @@ class LlvmBackend(Visitor):
             val = self.visit(node.operand)
             return self.builder.icmp_unsigned('==', bool_t(0), val)
 
+    def constructor(self, node: CallExpr):
+        # TODO - calculate size
+        obj = self.builder.call(self.externs['malloc'], [ir.Constant(int32_t, 1)], 'new_object')
+        self.builder.call(self.constructors[node.function.name], [obj])
+        return obj
+
     def CallExpr(self, node: CallExpr):
-        if node.function.name == "print":
+        if node.isConstructor:
+            return self.constructor(node)
+        elif node.function.name == "print":
             return self.emit_print(node.args[0])
-        if node.function.name == "__assert__":
+        elif node.function.name == "__assert__":
             self.emit_assert(node.args[0])
             return
-        if node.function.name == "len":
+        elif node.function.name == "len":
             return self.emit_len(node.args[0])
         callee_func = self.module.get_global(node.function.name)
         if callee_func is None or not isinstance(callee_func, ir.Function):
@@ -415,7 +473,7 @@ class LlvmBackend(Visitor):
         return self.builder.call(callee_func, call_args, 'calltmp')
 
     def ForStmt(self, node: ForStmt):
-        var = self.locals[-1][node.identifier.name]
+        var = self.getAddr(node.identifier)
         idx_var = self.builder.alloca(int32_t, None, 'idx')
         self.builder.store(int32_t(0), idx_var)
         iterable = self.visit(node.iterable)
@@ -514,9 +572,18 @@ class LlvmBackend(Visitor):
                 val = self.visit(node.value)
             self.builder.ret(val)
 
+    def getAddr(self, node: Identifier):
+        if node.varInstance.isGlobal:
+            return self.module.get_global(node.name)
+        elif node.varInstance.isNonlocal:
+            raise Exception("unimplemented")
+        else:
+            addr = self.locals[-1][node.name]
+            assert addr is not None
+            return addr
+
     def Identifier(self, node: Identifier):
-        addr = self.locals[-1][node.name]
-        assert addr is not None
+        addr = self.getAddr(node)
         return self.builder.load(addr, node.name)
 
     def MemberExpr(self, node: MemberExpr):
@@ -617,7 +684,7 @@ class LlvmBackend(Visitor):
         )
 
     def longJmp(self, line: int):
-        jmp_buf = self.module.get_global("jmp_buf")
+        jmp_buf = self.module.get_global('__jmp_buf')
         self.builder.call(self.externs['longjmp'], [
                           jmp_buf, int32_t(line)])
 
@@ -627,14 +694,14 @@ class LlvmBackend(Visitor):
         if arg.inferredType == BoolType():
             text = self.ifHelper(
                 lambda: self.visit(arg),
-                lambda: self.toVoidPtr(self.globals['true']),
-                lambda: self.toVoidPtr(self.globals['false']),
+                lambda: self.toVoidPtr(self.module.get_global('__true')),
+                lambda: self.toVoidPtr(self.module.get_global('__false')),
                 voidptr_t)
-            self.printf(self.globals['fmt_s'], text)
+            self.printf(self.module.get_global('__fmt_s'), text)
         elif arg.inferredType.className == 'int':
-            self.printf(self.globals['fmt_i'], self.visit(arg))
+            self.printf(self.module.get_global('__fmt_i'), self.visit(arg))
         else:
-            self.printf(self.globals['fmt_s'], self.visit(arg))
+            self.printf(self.module.get_global('__fmt_s'), self.visit(arg))
         return self.NoneLiteral(None)
 
     # UTILS
@@ -650,10 +717,18 @@ class LlvmBackend(Visitor):
 
     def global_constant(self, name, t, value):
         module = self.module
-        data = ir.GlobalVariable(module, t, name, 0)
+        data = ir.GlobalVariable(module, t, name)
         data.linkage = 'internal'
         data.global_constant = True
         data.initializer = value
+        return data
+
+    def global_variable(self, name, t):
+        module = self.module
+        data = ir.GlobalVariable(module, t, name)
+        data.linkage = 'internal'
+        data.initializer = t(None)
+        data.global_constant = False
         return data
 
     def sizeof(self, t):
