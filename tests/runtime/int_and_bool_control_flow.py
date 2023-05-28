@@ -1,7 +1,7 @@
-x:int = 1
-y:int = 2
-a:bool = True
-b:bool = False
+x: int = 1
+y: int = 2
+a: bool = True
+b: bool = False
 
 if a:
     assert True

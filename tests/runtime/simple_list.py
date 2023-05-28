@@ -1,5 +1,5 @@
-w:[int] = None
-x:int = 0
+w: [int] = None
+x: int = 0
 
 w = []
 assert len(w) == 0

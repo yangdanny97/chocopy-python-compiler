@@ -1,6 +1,7 @@
 def test():
-    x:int = 1
-    y:[int] = None
+    x: int = 1
+    y: [int] = None
+
     def inner():
         nonlocal x
         for x in y:
@@ -8,5 +9,6 @@ def test():
     y = [1, 2, 3]
     inner()
     assert x == 3
+
 
 test()

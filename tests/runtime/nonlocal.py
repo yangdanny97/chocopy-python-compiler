@@ -1,18 +1,23 @@
-a:int = 0
+a: int = 0
 
-def test(x:int)->int:
+
+def test(x: int) -> int:
     def test2():
         nonlocal x
         x = 2
     test2()
     return x
 
-def test3()->int:
-    x:int = 4
+
+def test3() -> int:
+    x: int = 4
+
     def test4():
         nonlocal x
+
         def test5():
             assert x == 4
+
         def test6():
             nonlocal x
             x = 3
@@ -24,27 +29,34 @@ def test3()->int:
     test4()
     return x
 
+
 def test7():
-    x:[int] = None
+    x: [int] = None
+
     def test8():
         x[0] = 0
     x = [1, 2, 3]
     test8()
     assert x[0] == 0
 
-def test9(x:int):
+
+def test9(x: int):
     def test9helper():
         nonlocal x
         x = 0
     test9helper()
 
+
 def test10():
-    y:int = 1
-    def test11(m:int)->int:
+    y: int = 1
+
+    def test11(m: int) -> int:
         return m + y
-    def test12()->int:
+
+    def test12() -> int:
         nonlocal y
-        def test13(m:int)->int:
+
+        def test13(m: int) -> int:
             return m + y
         y = test13(y)
         assert y == 2
@@ -53,12 +65,14 @@ def test10():
     assert test12() == 4
     assert y == 2
 
+
 class Nonlocals:
-    def testMethod3(self:"Nonlocals"):
+    def testMethod3(self: "Nonlocals"):
         pass
 
-    def testMethod(self:"Nonlocals", x:int):
-        y:int = 2
+    def testMethod(self: "Nonlocals", x: int):
+        y: int = 2
+
         def testMethod2():
             nonlocal x
             nonlocal y
@@ -68,19 +82,21 @@ class Nonlocals:
         testMethod2()
         assert y == 3
 
-    def testMethod4(self:"Nonlocals"):
+    def testMethod4(self: "Nonlocals"):
         test13(self)
         assert not (self is None)
 
-def test13(x:"Nonlocals"):
+
+def test13(x: "Nonlocals"):
     def test14():
         nonlocal x
         x = None
     test14()
 
-b:Nonlocals = None
 
-# nonlocals can be mutated 
+b: Nonlocals = None
+
+# nonlocals can be mutated
 assert test(1) == 2
 
 assert test3() == 3

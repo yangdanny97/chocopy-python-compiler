@@ -1,4 +1,4 @@
-w:[int] = None
+w: [int] = None
 assert w is None
 assert not w is []
 w = []

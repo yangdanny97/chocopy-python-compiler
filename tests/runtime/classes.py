@@ -1,5 +1,5 @@
 class A:
-    y:int = 1
+    y: int = 1
 
     def __init__(self: A):
         pass
@@ -8,24 +8,26 @@ class A:
         global x
         x = 1
 
+
 class B(A):
-    z:int = 0
+    z: int = 0
 
     def __init__(self: B):
         self.z = 5
         self.y = 5
-    
+
     def t(self: B):
         global x
         x = 2
-    
-    def setZ(self: B, z:int):
+
+    def setZ(self: B, z: int):
         self.z = z
 
-x:int = 0
-c1:A = None
-c2:B = None
-c3:A = None
+
+x: int = 0
+c1: A = None
+c2: B = None
+c3: A = None
 
 # constructors, getters, setters
 c1 = A()

@@ -1,13 +1,13 @@
-x:[int] = None
-y:str = "123"
-z:str = ""
-char:str = ""
-a:bool = True
-b:int = 0
-c:int = 100
-d:[bool] = None
-e:object = None
-f:[object] = None
+x: [int] = None
+y: str = "123"
+z: str = ""
+char: str = ""
+a: bool = True
+b: int = 0
+c: int = 100
+d: [bool] = None
+e: object = None
+f: [object] = None
 
 x = []
 

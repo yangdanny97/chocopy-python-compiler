@@ -1,7 +1,7 @@
-x:str = "123"
-y:str = ""
-z:str = "12345"
-char:str = "c"
+x: str = "123"
+y: str = ""
+z: str = "12345"
+char: str = "c"
 print(x)
 print(y)
 print(z)

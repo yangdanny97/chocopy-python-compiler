@@ -68,7 +68,9 @@ class LlvmBackend(Visitor):
                                             self.make_bytearray('Error on line %i\n\00'.encode('ascii'))),
             'fmt_str_concat': self.global_constant('fmt_str_concat',
                                                    ir.ArrayType(int8_t, 5),
-                                                   self.make_bytearray('%s%s\00'.encode('ascii')))
+                                                   self.make_bytearray('%s%s\00'.encode('ascii'))),
+            'jmp_buf': self.global_constant(
+                "jmp_buf", jmp_buf_t, ir.Constant(jmp_buf_t, bytearray([0] * JMP_BUF_BYTES)))
         }
 
         printf_t = ir.FunctionType(int32_t, [voidptr_t], True)
@@ -98,6 +100,12 @@ class LlvmBackend(Visitor):
         memcpy_t = ir.FunctionType(voidptr_t, [voidptr_t, voidptr_t, int32_t])
         self.externs['memcpy'] = ir.Function(self.module, memcpy_t, 'memcpy')
 
+        # begin main function
+
+        funcDefs = [d for d in node.declarations if isinstance(d, FuncDef)]
+        for d in funcDefs:
+            self.visit(d)
+
         funcType = ir.FunctionType(ir.VoidType(), [])
         func = ir.Function(self.module, funcType, "__main__")
 
@@ -105,10 +113,9 @@ class LlvmBackend(Visitor):
         entry_block = func.append_basic_block('entry')
         self.builder = ir.IRBuilder(entry_block)
 
-        jmp_buf = self.global_constant(
-            "jmp_buf", jmp_buf_t, ir.Constant(jmp_buf_t, bytearray([0] * JMP_BUF_BYTES)))
-        status = self.builder.call(self.externs['setjmp'], [jmp_buf])
-        cond = self.builder.icmp_signed("!=", ir.Constant(int32_t, 0), status)
+        status = self.builder.call(self.externs['setjmp'], [
+                                   self.globals['jmp_buf']])
+        cond = self.builder.icmp_signed("!=", int32_t(0), status)
 
         error_block = self.builder.append_basic_block('error_handling')
         program_block = self.builder.append_basic_block('program_code')
@@ -150,22 +157,33 @@ class LlvmBackend(Visitor):
         pass
 
     def FuncDef(self, node: FuncDef):
-        funcname = node.name
+        # TODO - methods
+        self.returnType = node.type.returnType
+        shouldReturnValue = not self.returnType.isNone()
+        funcname = node.name.name
         returnType = node.type.returnType.getLLVMType()
         argTypes = [p.getLLVMType() for p in node.type.parameters]
         funcType = ir.FunctionType(returnType, argTypes)
         func = ir.Function(self.module, funcType, funcname)
+        self.globals[funcname] = func
         self.enterScope()
         bb_entry = func.append_basic_block('entry')
         self.builder = ir.IRBuilder(bb_entry)
         for i, arg in enumerate(func.args):
-            arg.name = node.proto.argnames[i]
+            arg.name = node.params[i].name()
             alloca = self.builder.alloca(
                 node.type.parameters[i].getLLVMType(), name=arg.name)
             self.builder.store(arg, alloca)
             self.locals[-1][arg.name] = alloca
+        for d in node.declarations:
+            self.visit(d)
         self.visitStmtList(node.statements)
-        # self.builder.ret(retval)
+        # implicitly return None if possible
+        if shouldReturnValue is not None and (
+            len(node.statements) == 0 or
+            not isinstance(node.statements[-1], ReturnStmt)
+        ):
+            self.builder.ret(self.NoneLiteral(None))
         self.exitScope()
         return func
 
@@ -205,7 +223,7 @@ class LlvmBackend(Visitor):
 
     def getListDataPtr(self, lst, elemType):
         lst = self.builder.bitcast(lst, int32_t.as_pointer())
-        lst = self.builder.gep(lst, [ir.Constant(int32_t, 1)])
+        lst = self.builder.gep(lst, [int32_t(1)])
         return self.builder.bitcast(lst, elemType.as_pointer())
 
     def BinaryExpr(self, node: BinaryExpr):
@@ -227,7 +245,7 @@ class LlvmBackend(Visitor):
                 else:
                     elemType = node.inferredType.elementType.getLLVMType()
                 assert elemType is not None
-                size = self.builder.add(ir.Constant(int32_t, 4), self.builder.mul(
+                size = self.builder.add(int32_t(4), self.builder.mul(
                     total_len, self.sizeof(elemType)), 'bytes')
                 new_arr = self.builder.call(
                     self.externs['malloc'], [size], 'new_list')
@@ -254,7 +272,7 @@ class LlvmBackend(Visitor):
                 llen = self.builder.call(self.externs['strlen'], [lhs])
                 rlen = self.builder.call(self.externs['strlen'], [rhs])
                 total_len = self.builder.add(self.builder.add(
-                    llen, rlen), ir.Constant(int32_t, 1))
+                    llen, rlen), int32_t(1))
                 new_str = self.builder.call(
                     self.externs['malloc'], [total_len], 'new_str')
                 fmt = self.toVoidPtr(self.globals['fmt_str_concat'])
@@ -283,7 +301,7 @@ class LlvmBackend(Visitor):
                 return self.builder.icmp_signed(operator, lhs, rhs)
             elif leftType == StrType():
                 cmp = self.builder.call(self.externs['strcmp'], [lhs, rhs])
-                return self.builder.icmp_signed("==", cmp, ir.Constant(int32_t, 0))
+                return self.builder.icmp_signed("==", cmp, int32_t(0))
             else:
                 # bool
                 return self.builder.icmp_signed(operator, lhs, rhs)
@@ -292,7 +310,7 @@ class LlvmBackend(Visitor):
                 return self.builder.icmp_signed(operator, lhs, rhs)
             elif leftType == StrType():
                 cmp = self.builder.call(self.externs['strcmp'], [lhs, rhs])
-                return self.builder.icmp_signed("!=", cmp, ir.Constant(int32_t, 0))
+                return self.builder.icmp_signed("!=", cmp, int32_t(0))
             else:
                 # bool
                 return self.builder.icmp_signed(operator, lhs, rhs)
@@ -331,7 +349,7 @@ class LlvmBackend(Visitor):
         if check_bounds:
             self.ifHelper(
                 lambda: self.builder.icmp_signed(
-                    '>', ir.Constant(int32_t, 0), index),
+                    '>', int32_t(0), index),
                 lambda: self.longJmp(line)
             )
             self.ifHelper(
@@ -350,7 +368,7 @@ class LlvmBackend(Visitor):
         if check_bounds:
             self.ifHelper(
                 lambda: self.builder.icmp_signed(
-                    '>', ir.Constant(int32_t, 0), index),
+                    '>', int32_t(0), index),
                 lambda: self.longJmp(line)
             )
             self.ifHelper(
@@ -363,12 +381,12 @@ class LlvmBackend(Visitor):
         ptr = self.builder.gep(string, [index])
         char = self.builder.load(ptr)
         addr = self.builder.call(self.externs['malloc'], [
-                                 ir.Constant(int32_t, 2), 'char'])
+                                 int32_t(2)], 'char')
         addr = self.toVoidPtr(addr)
-        char_ptr = self.builder.gep(addr, [ir.Constant(int32_t, 0)])
+        char_ptr = self.builder.gep(addr, [int32_t(0)])
         self.builder.store(char, char_ptr, 8)
-        t_ptr = self.builder.gep(addr, [ir.Constant(int32_t, 1)])
-        self.builder.store(ir.Constant(int8_t, 0), t_ptr, 8)
+        t_ptr = self.builder.gep(addr, [int32_t(1)])
+        self.builder.store(int8_t(0), t_ptr, 8)
         return addr
 
     def UnaryExpr(self, node: UnaryExpr):
@@ -377,12 +395,11 @@ class LlvmBackend(Visitor):
             return self.builder.neg(val)
         elif node.operator == "not":
             val = self.visit(node.operand)
-            return self.builder.icmp_unsigned('==', ir.Constant(bool_t, 0), val)
+            return self.builder.icmp_unsigned('==', bool_t(0), val)
 
     def CallExpr(self, node: CallExpr):
         if node.function.name == "print":
-            self.emit_print(node.args[0])
-            return
+            return self.emit_print(node.args[0])
         if node.function.name == "__assert__":
             self.emit_assert(node.args[0])
             return
@@ -400,7 +417,7 @@ class LlvmBackend(Visitor):
     def ForStmt(self, node: ForStmt):
         var = self.locals[-1][node.identifier.name]
         idx_var = self.builder.alloca(int32_t, None, 'idx')
-        self.builder.store(ir.Constant(int32_t, 0), idx_var)
+        self.builder.store(int32_t(0), idx_var)
         iterable = self.visit(node.iterable)
 
         if node.iterable.inferredType == StrType():
@@ -431,7 +448,7 @@ class LlvmBackend(Visitor):
         self.builder.store(idxFn(currIdx), var)
         self.visitStmtList(node.body)
         self.builder.store(self.builder.add(
-            currIdx, ir.Constant(int32_t, 1)), idx_var)
+            currIdx, int32_t(1)), idx_var)
 
     def ListExpr(self, node: ListExpr):
         n = len(node.elements)
@@ -444,18 +461,19 @@ class LlvmBackend(Visitor):
         else:
             elemType = node.inferredType.elementType.getLLVMType()
         assert elemType is not None
-        size = self.builder.add(ir.Constant(int32_t, 4), self.builder.mul(
-            ir.Constant(int32_t, n), self.sizeof(elemType)))
-        addr = self.builder.call(self.externs['malloc'], [size], 'list_literal')
+        size = self.builder.add(int32_t(4), self.builder.mul(
+            int32_t(n), self.sizeof(elemType)))
+        addr = self.builder.call(self.externs['malloc'], [
+                                 size], 'list_literal')
         addr = self.builder.bitcast(addr, int32_t.as_pointer())
         for i in range(n):
             value = self.visit(node.elements[i])
             data = self.getListDataPtr(addr, elemType)
-            idx_ptr = self.builder.gep(data, [ir.Constant(int32_t, i)])
+            idx_ptr = self.builder.gep(data, [int32_t(i)])
             self.builder.store(value, idx_ptr)
         len_ptr = self.builder.gep(
-            addr, [ir.Constant(int32_t, 0)])
-        self.builder.store(ir.Constant(int32_t, n), len_ptr)
+            addr, [int32_t(0)])
+        self.builder.store(int32_t(n), len_ptr)
         addr = self.toVoidPtr(addr)
         return addr
 
@@ -479,14 +497,15 @@ class LlvmBackend(Visitor):
 
         self.builder.position_at_start(do_block)
         bodyFn()
-        self.builder.branch(while_block)
+        if not self.builder.block.is_terminated:
+            self.builder.branch(while_block)
         do_block = self.builder.block
 
         self.builder.position_at_start(end_block)
 
     def ReturnStmt(self, node: ReturnStmt):
         if self.returnType.isNone():
-            self.builder.ret_void()
+            self.builder.ret(self.NoneLiteral(None))
         else:
             val = None
             if node.value is None:
@@ -524,13 +543,15 @@ class LlvmBackend(Visitor):
 
         self.builder.position_at_start(then_block)
         then_val = thenFn()
-        self.builder.branch(merge_block)
+        if not self.builder.block.is_terminated:
+            self.builder.branch(merge_block)
         then_block = self.builder.block
 
         if elseFn is not None:
             self.builder.position_at_start(else_block)
             else_val = elseFn()
-            self.builder.branch(merge_block)
+            if not self.builder.block.is_terminated:
+                self.builder.branch(merge_block)
             else_block = self.builder.block
 
         self.builder.position_at_start(merge_block)
@@ -547,21 +568,21 @@ class LlvmBackend(Visitor):
     # LITERALS
 
     def BooleanLiteral(self, node: BooleanLiteral):
-        return ir.Constant(bool_t, 1 if node.value else 0)
+        return bool_t(1 if node.value else 0)
 
     def IntegerLiteral(self, node: IntegerLiteral):
-        return ir.Constant(int32_t, node.value)
+        return int32_t(node.value)
 
     def NoneLiteral(self, _: NoneLiteral):
-        return ir.Constant(voidptr_t, None)
+        return voidptr_t(None)
 
     def StringLiteral(self, node: StringLiteral):
         bytes = bytearray((node.value + '\00').encode('ascii'))
-        size = ir.Constant(int32_t, 1 + len(node.value))
+        size = int32_t(1 + len(node.value))
         addr = self.builder.call(self.externs['malloc'], [size], 'str_literal')
         for i in range(len(bytes)):
-            idx_ptr = self.builder.gep(addr, [ir.Constant(int32_t, i)])
-            self.builder.store(ir.Constant(int8_t, bytes[i]), idx_ptr)
+            idx_ptr = self.builder.gep(addr, [int32_t(i)])
+            self.builder.store(int8_t(bytes[i]), idx_ptr)
         return addr
 
     # BUILT-INS
@@ -578,7 +599,7 @@ class LlvmBackend(Visitor):
         val = self.toVoidPtr(val)
         self.ifHelper(
             lambda: self.builder.icmp_signed(
-                '==', ir.Constant(voidptr_t, None), val),
+                '==', voidptr_t(None), val),
             lambda: self.longJmp(line)
         )
 
@@ -591,14 +612,14 @@ class LlvmBackend(Visitor):
         arg = self.visit(arg)
         return self.ifHelper(
             lambda: self.builder.icmp_unsigned(
-                '==', ir.Constant(bool_t, 0), arg),
+                '==', bool_t(0), arg),
             lambda: self.longJmp(line)
         )
 
     def longJmp(self, line: int):
         jmp_buf = self.module.get_global("jmp_buf")
         self.builder.call(self.externs['longjmp'], [
-                          jmp_buf, ir.Constant(int32_t, line)])
+                          jmp_buf, int32_t(line)])
 
     def emit_print(self, arg: Expr):
         if isinstance(arg.inferredType, ListValueType) or arg.inferredType.className not in {"bool", "int", "str"}:
@@ -609,11 +630,12 @@ class LlvmBackend(Visitor):
                 lambda: self.toVoidPtr(self.globals['true']),
                 lambda: self.toVoidPtr(self.globals['false']),
                 voidptr_t)
-            return self.printf(self.globals['fmt_s'], text)
+            self.printf(self.globals['fmt_s'], text)
         elif arg.inferredType.className == 'int':
-            return self.printf(self.globals['fmt_i'], self.visit(arg))
+            self.printf(self.globals['fmt_i'], self.visit(arg))
         else:
-            return self.printf(self.globals['fmt_s'], self.visit(arg))
+            self.printf(self.globals['fmt_s'], self.visit(arg))
+        return self.NoneLiteral(None)
 
     # UTILS
 
@@ -639,8 +661,8 @@ class LlvmBackend(Visitor):
             width = t.width
             # each item in array must be at least 1 byte
             if width < 8:
-                return ir.Constant(int32_t, 1)
-            return ir.Constant(int32_t, width // 8)
+                return int32_t(1)
+            return int32_t(width // 8)
         else:
             null = t.as_pointer()(None)
             offset = null.gep([int32_t(1)])

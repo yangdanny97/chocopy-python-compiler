@@ -5,20 +5,20 @@ class Vector(object):
     size: int = 0
 
     # Constructor
-    def __init__(self:"Vector"):
+    def __init__(self: "Vector"):
         self.items = [0]
 
     # Returns current capacity
-    def capacity(self:"Vector") -> int:
+    def capacity(self: "Vector") -> int:
         return len(self.items)
 
     # Increases capacity of vector by one element
-    def increase_capacity(self:"Vector") -> int:
+    def increase_capacity(self: "Vector") -> int:
         self.items = self.items + [0]
         return self.capacity()
 
     # Appends one item to end of vector
-    def append(self:"Vector", item: int):
+    def append(self: "Vector", item: int):
         if self.size == self.capacity():
             self.increase_capacity()
 
@@ -26,11 +26,13 @@ class Vector(object):
         self.size = self.size + 1
 
 # A faster (but more memory-consuming) implementation of vector
+
+
 class DoublingVector(Vector):
-    doubling_limit:int = 16
+    doubling_limit: int = 16
 
     # Overriding to do fewer resizes
-    def increase_capacity(self:"DoublingVector") -> int:
+    def increase_capacity(self: "DoublingVector") -> int:
         if (self.capacity() <= self.doubling_limit // 2):
             self.items = self.items + self.items
         else:
@@ -39,18 +41,20 @@ class DoublingVector(Vector):
             self.items = self.items + [0]
         return self.capacity()
 
-def vrange(i:int, j:int) -> Vector:
-    v:Vector = None
+
+def vrange(i: int, j: int) -> Vector:
+    v: Vector = None
     v = DoublingVector()
-    
+
     while i < j:
         v.append(i)
         i = i + 1
 
     return v
-      
-vec:Vector = None
-num:int = 0
+
+
+vec: Vector = None
+num: int = 0
 
 # Create a vector and populate it with The Numbers
 vec = DoublingVector()

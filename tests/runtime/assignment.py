@@ -1,10 +1,10 @@
-x:int = 1
-y:int = 2
-z:object = None
-a:bool = True
-b:bool = False
-c:str = ""
-d:str = ""
+x: int = 1
+y: int = 2
+z: object = None
+a: bool = True
+b: bool = False
+c: str = ""
+d: str = ""
 
 b = a
 

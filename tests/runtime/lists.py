@@ -1,20 +1,24 @@
-w:[object] = None
-x:[int] = None
-x2:[int] = None
-y:[str] = None
-y2:[str] = None
-z:object = None
-a:[[object]] = None
-b:[[int]] = None
+w: [object] = None
+x: [int] = None
+x2: [int] = None
+y: [str] = None
+y2: [str] = None
+z: object = None
+a: [[object]] = None
+b: [[int]] = None
 
-def setIdx(lst:[int], idx:int, value:int):
+
+def setIdx(lst: [int], idx: int, value: int):
     lst[idx] = value
 
-def setNestedIdx(lst:[[int]], idx1:int, idx2:int, value:int):
+
+def setNestedIdx(lst: [[int]], idx1: int, idx2: int, value: int):
     lst[idx1][idx2] = value
 
-def getNestedIdx(lst:[[int]], idx:int)->[int]:
+
+def getNestedIdx(lst: [[int]], idx: int) -> [int]:
     return lst[idx]
+
 
 w = []
 x = []
@@ -48,7 +52,7 @@ assert x[2] == 2
 assert x[3] == 3
 
 x = [1, 2, 3]
-x =  x + [4]
+x = x + [4]
 assert len(x) == 4
 assert x[0] == 1
 assert x[1] == 2
@@ -159,7 +163,7 @@ y = y + [""]
 assert len(y) == 1
 assert len(y[0]) == 0
 
-x = [1,2,3]
+x = [1, 2, 3]
 setIdx(x, 1, 0)
 assert x[1] == 0
 
@@ -181,5 +185,3 @@ assert x2[0] == 0
 x = [1]
 y = ["1"]
 w = x + y
-
-

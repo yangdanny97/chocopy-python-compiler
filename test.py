@@ -23,7 +23,7 @@ def run_all_tests():
     # run_jvm_tests()
     # run_cil_tests()
     # run_wasm_tests()
-    # run_llvm_tests()
+    run_llvm_tests()
     test_eval_llvm()
 
 
@@ -167,23 +167,12 @@ def run_python_backend_tests():
         n_passed, total))
 
 
-disabled_wasm_tests = []
-
-
 def run_wasm_tests():
     print("Running WASM backend tests...\n")
     total = 0
     n_passed = 0
     wasm_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
     for test in wasm_tests_dir.glob('*.py'):
-        skip = False
-        for disabled in disabled_wasm_tests:
-            if disabled in str(test):
-                skip = True
-                break
-        if skip:
-            print("Skipping: " + str(test) + "\n")
-            continue
         passed = run_wasm_test(test)
         total += 1
         if not passed:
@@ -587,17 +576,48 @@ def ast_equals(d1, d2) -> bool:
     return d1 == d2
 
 
+disabled_llvm_tests = [
+    "/incrementing_counter.",
+    "/binary_tree.",
+    "/classes.",
+    "/doubling_vector.",
+    "/globals.",
+    "/nonlocal_builtins.",
+    "/nonlocal_loop.",
+    "/nonlocal.",
+    "/ratio.",
+    "/operators.",
+    "/inherit_init.",
+    "/linked_list.",
+    "/exponent.",
+    "/lists.",
+    "/short_circuit.",
+    "/global_loop.",
+    "/control_flow.",
+    "modulo"
+]
+
+
 def run_llvm_tests():
     print("Running LLVM backend tests...\n")
     total = 0
     n_passed = 0
     llvm_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
     for test in llvm_tests_dir.glob('*.py'):
-        passed = run_llvm_test(test)
+        skip = False
+        for disabled in disabled_llvm_tests:
+            if disabled in str(test):
+                skip = True
+                break
+        if skip:
+            # print("Skipping: " + str(test) + "\n")
+            continue
+        passed = run_llvm_test(test, False)
         total += 1
         if not passed:
             print("Failed: " + str(test) + "\n")
         else:
+            print("Passed: " + str(test) + "\n")
             n_passed += 1
     if total != n_passed:
         print("\nNot all test cases passed")
@@ -606,6 +626,7 @@ def run_llvm_tests():
 
 
 def eval_llvm(module):
+    # eval the compiled LLVMLite from Python
     target = llvm.Target.from_default_triple()
     target_machine = target.create_target_machine()
     llvmmod = llvm.parse_assembly(str(module))
@@ -615,15 +636,11 @@ def eval_llvm(module):
         fptr()
 
 
-def run_llvm_test(test):
-    pass
-
-
 def test_eval_llvm():
-    llvm_debug("foobar.py")
+    run_llvm_test("foobar.py", False)
 
 
-def llvm_debug(test):
+def run_llvm_test(test, debug):
     try:
         compiler = Compiler()
         astparser = compiler.parser
@@ -636,10 +653,11 @@ def llvm_debug(test):
             print(compiler.typechecker.errors)
             assert len(compiler.typechecker.errors) == 0
         module = compiler.emitLLVM(chocopy_ast)
-        print("Module output:")
-        print(str(module))
-        print("Evaluation output:")
+        if debug:
+            print("Module output:")
+            print(str(module))
         eval_llvm(module)
+        return True
     except Exception as e:
         print("Internal compiler error:", test)
         track = traceback.format_exc()

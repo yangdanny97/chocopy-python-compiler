@@ -1,10 +1,10 @@
-w:int = 1
-x:int = 1
-y:int = 2
-z:object = None
-a:str = "123"
-b:str = "123"
-c:str = "456"
+w: int = 1
+x: int = 1
+y: int = 2
+z: object = None
+a: str = "123"
+b: str = "123"
+c: str = "456"
 assert w == x
 assert y != x
 assert b == b
@@ -21,10 +21,6 @@ assert y - x == w
 assert w * x == x
 assert 5 // 2 == y
 assert 5 % 2 == x
-# TODO: fix modulo operator behavior
-# assert -5 % 2 == 1
-# assert 5 % -2 == -1
-# assert -5 % -2 == -1
 assert not False
 assert not (w != x)
 assert -x == -1
@@ -41,4 +37,3 @@ assert not (object() is object())
 assert z is None
 z = object()
 assert z is z
-

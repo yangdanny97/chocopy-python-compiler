@@ -1,19 +1,24 @@
-x:int = 1
-y:int = 2
-a:bool = True
-b:bool = False
+x: int = 1
+y: int = 2
+a: bool = True
+b: bool = False
 
-def test1(a1:int, a2:int)->int:
+
+def test1(a1: int, a2: int) -> int:
     return a1 + a2
 
-def test2(a1:bool)->bool:
+
+def test2(a1: bool) -> bool:
     return not a1
+
 
 def test3():
     return None
 
+
 def test4():
     return
+
 
 test3()
 test4()

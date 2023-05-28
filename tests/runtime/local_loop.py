@@ -1,5 +1,5 @@
-x:str = ""
-y:str = "123"
+x: str = ""
+y: str = "123"
 
 for x in y:
     pass

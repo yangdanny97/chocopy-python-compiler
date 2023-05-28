@@ -1,7 +1,7 @@
-x:int = 1
-y:int = 2
-a:bool = True
-b:bool = False
+x: int = 1
+y: int = 2
+a: bool = True
+b: bool = False
 
 print(x)
 print(y)
@@ -35,4 +35,3 @@ assert x == 2
 x = y = 3
 assert x == y
 assert x == 3
-

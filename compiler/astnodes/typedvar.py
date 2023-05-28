@@ -13,6 +13,9 @@ class TypedVar(Node):
         self.t = None  # the typechecked type goes here
         self.varInstance = None
 
+    def name(self):
+        return self.identifier.name
+
     def visit(self, visitor):
         return visitor.TypedVar(self)
 
