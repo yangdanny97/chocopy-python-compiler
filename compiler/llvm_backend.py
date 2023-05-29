@@ -135,7 +135,8 @@ class LlvmBackend(Visitor):
             self.declareFunc(d)
         classDefs = [d for d in node.declarations if isinstance(d, ClassDef)]
         for cls in classDefs:
-            methodDefs = [d for d in cls.declarations if isinstance(d, FuncDef)]
+            methodDefs = [
+                d for d in cls.declarations if isinstance(d, FuncDef)]
             for m in methodDefs:
                 if m.getIdentifier().name != "__init__":
                     raise Exception("TODO")
@@ -193,11 +194,23 @@ class LlvmBackend(Visitor):
     def VarDef(self, node: VarDef):
         val = self.visit(node.value)
         saved_block = self.builder.block
-        addr = self.builder.alloca(
-            node.var.t.getLLVMType(), None, node.getName())
-        self.builder.position_at_end(saved_block)
-        self.builder.store(val, addr)
-        self.locals[-1][node.getName()] = addr
+        if node.isAttr:
+            raise Exception("this should be handled elsewhere")
+        elif node.var.varInstance.isNonlocal:
+            addr = self.builder.alloca(
+                node.var.t.getLLVMType(), None, node.getName())
+            wrapper = self.builder.alloca(
+                node.var.t.getLLVMType().as_pointer(), None, node.getName() + "_wrapper")
+            self.builder.position_at_end(saved_block)
+            self.builder.store(val, addr)
+            self.builder.store(addr, wrapper)
+            self.locals[-1][node.getName()] = wrapper
+        else:
+            addr = self.builder.alloca(
+                node.var.t.getLLVMType(), None, node.getName())
+            self.builder.position_at_end(saved_block)
+            self.builder.store(val, addr)
+            self.locals[-1][node.getName()] = addr
 
     def ClassDef(self, node: ClassDef):
         pass
@@ -205,9 +218,7 @@ class LlvmBackend(Visitor):
     def declareFunc(self, node: FuncDef):
         self.returnType = node.type.returnType
         funcname = node.name.name
-        returnType = node.type.returnType.getLLVMType()
-        argTypes = [p.getLLVMType() for p in node.type.parameters]
-        funcType = ir.FunctionType(returnType, argTypes)
+        funcType = node.type.getLLVMType()
         ir.Function(self.module, funcType, funcname)
 
     def FuncDef(self, node: FuncDef):
@@ -222,7 +233,7 @@ class LlvmBackend(Visitor):
         for i, arg in enumerate(func.args):
             arg.name = node.params[i].name()
             alloca = self.builder.alloca(
-                node.type.parameters[i].getLLVMType(), name=arg.name)
+                node.type.getLLVMType().args[i], name=arg.name)
             self.builder.store(arg, alloca)
             self.locals[-1][arg.name] = alloca
         for d in node.declarations:
@@ -325,7 +336,8 @@ class LlvmBackend(Visitor):
                     llen, rlen), int32_t(1))
                 new_str = self.builder.call(
                     self.externs['malloc'], [total_len], 'new_str')
-                fmt = self.toVoidPtr(self.module.get_global('__fmt_str_concat'))
+                fmt = self.toVoidPtr(
+                    self.module.get_global('__fmt_str_concat'))
                 self.builder.call(self.externs['sprintf'], [
                                   new_str, fmt, lhs, rhs])
                 return new_str
@@ -449,9 +461,32 @@ class LlvmBackend(Visitor):
 
     def constructor(self, node: CallExpr):
         # TODO - calculate size
-        obj = self.builder.call(self.externs['malloc'], [ir.Constant(int32_t, 1)], 'new_object')
+        obj = self.builder.call(self.externs['malloc'], [
+                                ir.Constant(int32_t, 1)], 'new_object')
         self.builder.call(self.constructors[node.function.name], [obj])
         return obj
+
+    def visitArg(self, funcType: FuncType, paramIdx: int, arg: Expr):
+        argIsRef = isinstance(arg, Identifier) and arg.varInstance.isNonlocal
+        paramIsRef = paramIdx in funcType.refParams
+        if argIsRef and paramIsRef and arg.varInstance == funcType.refParams[paramIdx]:
+            # ref arg and ref param, pass ref arg
+            return self.getAddr(arg)
+        elif paramIsRef:
+            # non-ref arg and ref param, or do not pass ref arg
+            # unwrap if necessary, re-wrap
+            saved_block = self.builder.block
+            val = self.visit(arg)
+            addr = self.builder.alloca(
+                node.var.t.getLLVMType())
+            wrapper = self.builder.alloca(
+                node.var.t.getLLVMType().as_pointer(), None, "wrapper")
+            self.builder.position_at_end(saved_block)
+            self.builder.store(val, addr)
+            self.builder.store(addr, wrapper)
+            return wrapper
+        else:  # non-ref param, maybe unwrap
+            return self.visit(arg)
 
     def CallExpr(self, node: CallExpr):
         if node.isConstructor:
@@ -469,7 +504,10 @@ class LlvmBackend(Visitor):
         if len(callee_func.args) != len(node.args):
             raise Exception('Call argument length mismatch',
                             node.function.name)
-        call_args = [self.visit(arg) for arg in node.args]
+        call_args = []
+        for i in range(len(node.args)):
+            call_args.append(self.visitArg(
+                node.function.inferredType, i, node.args[i]))
         return self.builder.call(callee_func, call_args, 'calltmp')
 
     def ForStmt(self, node: ForStmt):
@@ -576,7 +614,10 @@ class LlvmBackend(Visitor):
         if node.varInstance.isGlobal:
             return self.module.get_global(node.name)
         elif node.varInstance.isNonlocal:
-            raise Exception("unimplemented")
+            addr = self.locals[-1][node.name]
+            assert addr is not None
+            return self.builder.load(addr)
+            # return self.builder.gep(addr, [int32_t(0)])
         else:
             addr = self.locals[-1][node.name]
             assert addr is not None

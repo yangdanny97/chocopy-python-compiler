@@ -1,11 +1,9 @@
-x: int = 1
-
-
 def test():
+    x: int = 1
     y: [int] = None
 
     def inner():
-        global x
+        nonlocal x
         for x in y:
             pass
     y = [1, 2, 3]

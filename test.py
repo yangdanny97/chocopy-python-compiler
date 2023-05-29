@@ -581,8 +581,6 @@ disabled_llvm_tests = [
     "/binary_tree.",
     "/classes.",
     "/doubling_vector.",
-    "/nonlocal_builtins.",
-    "/nonlocal_loop.",
     "/nonlocal.",
     "/ratio.",
     "/inherit_init.",
