@@ -21,11 +21,14 @@ class LlvmBackend(Visitor):
     locals: List[defaultdict]
     externs: Dict[str, ir.Function]
     constructors: Dict[str, ir.Function]
+    methods: Dict[str, Dict[str, ir.Function]]
+    structs: Dict[str, ir.LiteralStructType]
     # (class name, method name) -> (idx in vtable, defining class name)
     methodOffsets: Dict[Tuple[str, str], Tuple[int, str]]
     # (class name, attr name) -> idx in struct
     attrOffsets: Dict[Tuple[str, str], int]
     builder: ir.builder = None
+    currentClass: str = None
 
     def __init__(self, ts: TypeSystem):
         llvm.initialize()
@@ -35,7 +38,8 @@ class LlvmBackend(Visitor):
         self.ts = ts
         self.locals = []
         self.externs = {}
-        self.constructors = {}
+        self.methods = {}
+        self.structs = {}
         self.methodOffsets = {}
         self.attrOffsets = {}
 
@@ -47,18 +51,18 @@ class LlvmBackend(Visitor):
                    "<None>" and c != "<Empty>"]
         for cls in classes:
             ctorType = ir.FunctionType(ir.VoidType(), [voidptr_t])
-            ctor = ir.Function(self.module, ctorType, cls)
-            self.constructors[cls] = ctor
-            for methName, _, defCls in self.ts.getOrderedMethods(cls):
+            ctor = ir.Function(self.module, ctorType, cls + "____init__")
+            self.methods[cls]["__init__"] = ctor
+            self.structs[cls] = self.getClassStructType(cls)
+            for idx, (methName, methType, defCls) in enumerate(self.ts.getOrderedMethods(cls)):
+                self.methodOffsets[(cls, methName)] = (idx, defCls)
                 if cls == defCls:
                     methodTableOffsets[(cls, methName)] = tblOffset
                     tblOffset += 1
-        # calculate info for each class
-        for cls in classes:
-            methods = self.ts.getOrderedMethods(cls)
-            for idx, methInfo in enumerate(methods):
-                name, _, defCls = methInfo
-                self.methodOffsets[(cls, name)] = (idx, defCls)
+                if methName != "__init__":
+                    funcType = methType.getLLVMType()
+                    self.methods[cls][methName] = ir.Function(self.module, funcType, cls + "__" + methName)
+                    # TODO - set up tables
 
     def enterScope(self):
         self.locals.append(defaultdict(lambda: None))
@@ -73,12 +77,12 @@ class LlvmBackend(Visitor):
         for s in stmts:
             self.visit(s)
 
-    def getClassStructType(self, cls) -> ir.LiteralStructType:
+    def getClassStructType(self, cls: str) -> ir.LiteralStructType:
         elements = [voidptr_t]  # pointer to vtable
         attrs = self.ts.getOrderedAttrs(cls)
         for attrInfo in attrs:
             elements.append(attrInfo[1].getLLVMType())
-        return ir.LiteralStructType()
+        return ir.LiteralStructType(elements)
 
     # TOP LEVEL & DECLARATIONS
 
@@ -146,14 +150,16 @@ class LlvmBackend(Visitor):
             self.declareFunc(d)
         classDefs = [d for d in node.declarations if isinstance(d, ClassDef)]
         for cls in classDefs:
+            self.currentClass = cls.name.name
             methodDefs = [
                 d for d in cls.declarations if isinstance(d, FuncDef)]
             for m in methodDefs:
-                if m.getIdentifier().name != "__init__":
-                    raise Exception("TODO")
+                self.visit(m)
+        self.currentClass = None
+
         # provide default __init__ impl for classes
-        for cls in self.constructors:
-            ctor = self.constructors[cls]
+        for cls in self.methods:
+            ctor = self.methods[cls]["__init__"]
             if len(ctor.blocks) == 0:
                 bb = ctor.append_basic_block('entry')
                 ir.IRBuilder(bb).ret_void()
@@ -227,15 +233,15 @@ class LlvmBackend(Visitor):
         pass
 
     def declareFunc(self, node: FuncDef):
-        self.returnType = node.type.returnType
         funcname = node.name.name
         funcType = node.type.getLLVMType()
         ir.Function(self.module, funcType, funcname)
 
     def FuncDef(self, node: FuncDef):
-        # TODO - methods
-        shouldReturnValue = not self.returnType.isNone()
-        func = self.module.get_global(node.getIdentifier().name)
+        if node.isMethod:
+            func = self.module.get_global(self.curentClass + "__" + node.getIdentifier().name)
+        else:
+            func = self.module.get_global(node.getIdentifier().name)
         self.returnType = node.type.returnType
         shouldReturnValue = not self.returnType.isNone()
         self.enterScope()
@@ -261,11 +267,20 @@ class LlvmBackend(Visitor):
 
     # STATEMENTS
 
+    def getAttrPtr(self, node: MemberExpr):
+        cls = node.object.inferredType.className
+        attr = node.member.name
+        offset = self.attrOffsets[(cls, attr)]
+        obj = self.visit(node.object)
+        obj = self.builder.bitcast(obj, self.structs[cls].as_pointer())
+        return self.builder.gep(obj, [int32_t(offset)])
+
     def AssignStmt(self, node: AssignStmt):
         val = self.visit(node.value)
         for var in node.targets[::-1]:
             if isinstance(var, MemberExpr):
-                raise Exception("unimplemented")
+                ptr = self.getAttrPtr(var)
+                self.builder.store(val, ptr)
             elif isinstance(var, IndexExpr):
                 lst = self.visit(var.list)
                 idx = self.visit(var.index)
@@ -471,10 +486,10 @@ class LlvmBackend(Visitor):
             return self.builder.icmp_unsigned('==', bool_t(0), val)
 
     def constructor(self, node: CallExpr):
-        # TODO - calculate size
-        obj = self.builder.call(self.externs['malloc'], [
-                                ir.Constant(int32_t, 1)], 'new_object')
-        self.builder.call(self.constructors[node.function.name], [obj])
+        cls = node.function.name
+        size = self.sizeof(self.structs[cls])
+        obj = self.builder.call(self.externs['malloc'], [size], 'new_object')
+        self.builder.call(self.constructors[cls + "____init__"], [obj])
         return obj
 
     def visitArg(self, funcType: FuncType, paramIdx: int, arg: Expr):
@@ -638,12 +653,8 @@ class LlvmBackend(Visitor):
         return self.builder.load(addr, node.name)
 
     def MemberExpr(self, node: MemberExpr):
-        cls = node.object.inferredType.className
+        ptr = self.getAttrPtr(node)
         attr = node.member.name
-        offset = self.attrOffsets[(cls, attr)]
-        obj = self.visit(node.object)
-        obj = self.builder.bitcast(obj, self.getClassStructType(cls).as_pointer())
-        ptr = self.builder.gep(obj, [int32_t(offset)])
         return self.builder.load(ptr, attr)
 
     def IfExpr(self, node: IfExpr):
@@ -687,7 +698,22 @@ class LlvmBackend(Visitor):
             return phi
 
     def MethodCallExpr(self, node: MethodCallExpr):
-        pass
+        obj = self.visit(node.method.object)
+        className = node.method.object.inferredType.className
+        methName = node.method.member.name
+        methIdx = self.methodOffsets[(className, methName)][0]
+        # TODO
+        callee_func = None
+        if callee_func is None or not isinstance(callee_func, ir.Function):
+            raise Exception("unknown method")
+        if len(callee_func.args) != len(node.args) + 1:
+            raise Exception('Call argument length mismatch',
+                            node.function.name)
+        call_args = [obj]
+        for i in range(len(node.args)):
+            call_args.append(self.visitArg(
+                node.function.inferredType, i, node.args[i]))
+        return self.builder.call(callee_func, call_args, 'callmethodtmp')
 
     # LITERALS
 

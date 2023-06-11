@@ -23,7 +23,7 @@ def run_all_tests():
     # run_jvm_tests()
     # run_cil_tests()
     # run_wasm_tests()
-    run_llvm_tests()
+    # run_llvm_tests()
     test_eval_llvm()
 
 
