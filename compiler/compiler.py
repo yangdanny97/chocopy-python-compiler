@@ -17,11 +17,12 @@ from pathlib import Path
 
 
 class Compiler:
+    transformer: ClosureTransformer = None
+
     def __init__(self):
         self.ts = TypeSystem()
         self.parser = Parser()
         self.typechecker = TypeChecker(self.ts)
-        self.transformer = None
 
     def parse(self, infile) -> Node:
         astparser = self.parser

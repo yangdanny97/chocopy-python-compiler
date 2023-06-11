@@ -1,8 +1,13 @@
 from .types import *
 from collections import defaultdict
+from typing import List, Dict, Tuple, Any
 
 
 class ClassInfo:
+    orderedAttrs: List[str]
+    attrs: Dict[str, Tuple[ValueType, Any]]
+    methods: Dict[str, FuncType]
+
     def __init__(self, name: str, superclass: str = None):
         self.name = name
         self.superclass = superclass
@@ -15,6 +20,8 @@ class ClassInfo:
 
 
 class TypeSystem:
+    classes: Dict[str, ClassInfo]
+
     def __init__(self):
         # information for each class
         self.classes = defaultdict(lambda: None)
@@ -38,7 +45,7 @@ class TypeSystem:
         self.classes["<None>"] = ClassInfo("<None>", "object")
         self.classes["<Empty>"] = ClassInfo("<Empty>", "object")
 
-    def getMethodHelper(self, className: str, methodName: str):
+    def getMethodHelper(self, className: str, methodName: str) -> Tuple[FuncType, str]:
         # requires className to be the name of a valid class
         if methodName not in self.classes[className].methods:
             if self.classes[className].superclass is None:
@@ -46,16 +53,16 @@ class TypeSystem:
             return self.getMethodHelper(self.classes[className].superclass, methodName)
         return (self.classes[className].methods[methodName], className)
 
-    def getMethod(self, className: str, methodName: str):
+    def getMethod(self, className: str, methodName: str) -> FuncType:
         # requires className to be the name of a valid class
         return self.getMethodHelper(className, methodName)[0]
 
-    def getMethodDefClass(self, className: str, methodName: str):
+    def getMethodDefClass(self, className: str, methodName: str) -> str:
         # returns the class that the method was originally defined in
         # requires className to be the name of a valid class
         return self.getMethodHelper(className, methodName)[1]
 
-    def getAttrHelper(self, className: str, attrName: str):
+    def getAttrHelper(self, className: str, attrName: str) -> Tuple[ValueType, Any]:
         # requires className to be the name of a valid class
         if attrName not in self.classes[className].attrs:
             if self.classes[className].superclass is None:
@@ -63,17 +70,17 @@ class TypeSystem:
             return self.getAttrHelper(self.classes[className].superclass, attrName)
         return self.classes[className].attrs[attrName]
 
-    def getAttr(self, className: str, attrName: str):
+    def getAttr(self, className: str, attrName: str) -> ValueType:
         # returns type of attribute
         # requires className to be the name of a valid class
         return self.getAttrHelper(className, attrName)[0]
 
-    def getAttrInit(self, className: str, attrName: str):
+    def getAttrInit(self, className: str, attrName: str) -> Any:
         # returns initial value of attribute
         # requires className to be the name of a valid class
         return self.getAttrHelper(className, attrName)[1]
 
-    def getAttrOrMethod(self, className: str, name: str):
+    def getAttrOrMethod(self, className: str, name: str) -> SymbolType:
         # returns type of attribute or method
         # requires className to be the name of a valid class
         if name in self.classes[className].methods:
@@ -120,7 +127,7 @@ class TypeSystem:
             return self.canAssign(a.elementType, b.elementType)
         return False
 
-    def join(self, a: ValueType, b: ValueType):
+    def join(self, a: ValueType, b: ValueType) -> ValueType:
         # return closest mutual ancestor on typing tree
         if self.canAssign(a, b):
             return b
@@ -151,7 +158,7 @@ class TypeSystem:
         # this really shouldn't be returned
         return ObjectType()
 
-    def getOrderedMethods(self, className: str):
+    def getOrderedMethods(self, className: str) -> List[Tuple[str, FuncType, str]]:
         # (name, signature, defined in class)
         methods = []
         if self.classes[className].superclass is not None:
@@ -170,12 +177,12 @@ class TypeSystem:
                     (name, self.classes[className].methods[name], className))
         return methods
 
-    def getMappedMethods(self, className: str):
+    def getMappedMethods(self, className: str) -> Dict[str, Tuple[FuncType, str]]:
         # map of name -> signature, defined in class
         ordered = self.getOrderedMethods(className)
         return {x: (y, z) for x, y, z in ordered}
 
-    def getOrderedAttrs(self, className: str):
+    def getOrderedAttrs(self, className: str) -> List[Tuple[str, ValueType, Any]]:
         # return list of (name, type, init value) triples
         attrs = []
         if self.classes[className].superclass is not None:
@@ -185,7 +192,7 @@ class TypeSystem:
             attrs.append((attr, attrType, attrInit))
         return attrs
 
-    def getMappedAttrs(self, className: str):
+    def getMappedAttrs(self, className: str) -> Dict[str, Tuple[ValueType, Any]]:
         # map of name -> type, init value tuples
         ordered = self.getOrderedAttrs(className)
         return {x: (y, z) for x, y, z in ordered}

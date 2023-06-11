@@ -3,7 +3,7 @@ from .types import *
 from .builder import Builder
 from .typesystem import TypeSystem
 from .visitor import CommonVisitor
-from typing import List
+from typing import List, Dict
 import json
 
 
@@ -11,16 +11,18 @@ class JvmBackend(CommonVisitor):
     localLimit = 50
     stackLimit = 500
     defaultToGlobals = False  # treat all vars as global if this is true
+    classes: Dict[str, Builder]
 
     def __init__(self, main: str, ts: TypeSystem):
-        self.classes = dict()
+        self.classes = {}
         self.classes[main] = Builder(main)
         self.currentClass = main
         self.main = main  # name of main class
         self.ts = ts
+        self.locals = []
         self.enterScope()
 
-    def currentBuilder(self):
+    def currentBuilder(self) -> Builder:
         return self.classes[self.currentClass]
 
     def newLabelName(self) -> str:

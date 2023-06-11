@@ -1,17 +1,18 @@
 from .node import Node
 from .identifier import Identifier
 from .typeannotation import TypeAnnotation
+from ..types import ValueType, VarInstance
 from typing import List
 
 
 class TypedVar(Node):
+    t: ValueType = None  # the typechecked type goes here
+    varInstance: VarInstance = None
 
     def __init__(self, location: List[int], identifier: Identifier, typ: TypeAnnotation):
         super().__init__(location, "TypedVar")
         self.identifier = identifier
         self.type = typ
-        self.t = None  # the typechecked type goes here
-        self.varInstance = None
 
     def name(self):
         return self.identifier.name

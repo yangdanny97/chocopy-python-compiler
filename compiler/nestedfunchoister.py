@@ -1,6 +1,7 @@
 from .astnodes import *
 from .types import *
 from .visitor import Visitor
+from typing import List, Dict
 
 
 class HoistedFunctionInfo:
@@ -12,6 +13,10 @@ class HoistedFunctionInfo:
 class NestedFuncHoister(Visitor):
     # hoist all nested funcs to be top level funcs
     # rename hoisted functions to be unique & rename call sites
+    functionInfo: List[Dict[str, HoistedFunctionInfo]]
+    currentClass: str
+    nestingNames: List[str]
+    hoisted: List[FuncDef]
 
     def __init__(self):
         # map of function names to their modified names

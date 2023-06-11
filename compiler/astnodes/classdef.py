@@ -46,7 +46,7 @@ class ClassDef(Declaration):
                              for decl in self.declarations]
         return d
 
-    def getIdentifier(self):
+    def getIdentifier(self) -> Identifier:
         return self.name
 
     def getDefaultConstructor(self) -> FuncDef:

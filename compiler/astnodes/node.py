@@ -19,7 +19,7 @@ class Node:
     def postorder(self, visitor):
         return self.visit(visitor)
 
-    def toJSON(self, dump_location=True):
+    def toJSON(self, dump_location=True) -> dict:
         d = {}
         d['kind'] = self.kind
         if dump_location:

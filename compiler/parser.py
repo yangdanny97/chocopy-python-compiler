@@ -1,5 +1,5 @@
-from ast import *
 from .astnodes import *
+import ast
 import typing
 
 
@@ -14,25 +14,25 @@ class ParseError(Exception):
         super().__init__(message + ".")
 
 
-class Parser(NodeVisitor):
+class Parser(ast.NodeVisitor):
     def __init__(self):
         self.errors = []
 
     # reduce a list of >2 expressions separated by a
     # left-associative operator into a BinaryExpr tree
-    def binaryReduce(self, op: str, values: typing.List[Expr]) -> Expr:
+    def binaryReduce(self, op: str, values: typing.List[Expr]) -> BinaryExpr:
         current = BinaryExpr(values[0].location, values[0], op, values[1])
         for v in values[2:]:
             current = BinaryExpr(values[0].location, current, op, v)
         return current
 
-    def getLocation(self, node) -> typing.List[int]:
+    def getLocation(self, node: ast.AST) -> typing.List[int]:
         # input is Python AST node
         # get 2 item list corresponding to AST node starting location
         # make columns 1-indexed
         return [node.lineno, node.col_offset + 1]
 
-    def visit(self, node):
+    def visit(self, node: ast.AST):
         try:
             return super().visit(node)
         except ParseError as e:
@@ -40,15 +40,15 @@ class Parser(NodeVisitor):
             return
 
     # process python AST nodes into chocopy type annotations
-    def getTypeAnnotation(self, node) -> TypeAnnotation:
+    def getTypeAnnotation(self, node: ast.expr) -> TypeAnnotation:
         location = self.getLocation(node)
-        if isinstance(node, List):
+        if isinstance(node, ast.List):
             if len(node.elts) > 1:
                 raise ParseError("Unsupported List type annotation", node)
             return ListType(location, self.getTypeAnnotation(node.elts[0]))
-        elif isinstance(node, Name):
+        elif isinstance(node, ast.Name):
             return ClassType(location, node.id)
-        elif isinstance(node, Str):
+        elif isinstance(node, ast.Str):
             return ClassType(location, node.s)
         else:
             raise ParseError("Unsupported type annotation", node)
@@ -56,7 +56,7 @@ class Parser(NodeVisitor):
     # see https://greentreesnakes.readthedocs.io/en/latest/nodes.html
     # and https://docs.python.org/3/library/ast.html
 
-    def visit_Module(self, node):
+    def visit_Module(self, node: ast.Module) -> Program:
         location = [1, 1]
         if hasattr(node, "type_ignores") and node.type_ignores:
             raise ParseError("Cannot ignore type", node)
@@ -88,7 +88,7 @@ class Parser(NodeVisitor):
             location = declarations[0].location
         return Program(location, declarations, statements, Errors([0, 0], []))
 
-    def visit_FunctionDef(self, node):
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> FuncDef:
         if node.decorator_list:
             raise ParseError("Unsupported decorator list",
                              node.decorator_list[0])
@@ -124,7 +124,7 @@ class Parser(NodeVisitor):
             returns = self.getTypeAnnotation(node.returns)
         return FuncDef(location, identifier, arguments, returns, declarations, statements)
 
-    def visit_ClassDef(self, node):
+    def visit_ClassDef(self, node: ast.ClassDef) -> ClassDef:
         location = self.getLocation(node)
         identifier = Identifier([location[0], location[1] + 6], node.name)
         if len(node.bases) > 1:
@@ -154,19 +154,19 @@ class Parser(NodeVisitor):
                         "Expected attribute or method declaration", node.body[i])
         return ClassDef(location, identifier, base, body)
 
-    def visit_Return(self, node):
+    def visit_Return(self, node: ast.Return) -> ReturnStmt:
         location = self.getLocation(node)
         if node.value is None:
             return ReturnStmt(location, None)
         else:
             return ReturnStmt(location, self.visit(node.value))
 
-    def visit_Assign(self, node):
+    def visit_Assign(self, node: ast.Assign) -> AssignStmt:
         location = self.getLocation(node)
         targets = [self.visit(t) for t in node.targets]
         return AssignStmt(location, targets, self.visit(node.value))
 
-    def visit_AnnAssign(self, node):
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> VarDef:
         if not node.value:
             raise ParseError("Expected initializing value", node)
         if not hasattr(node, "annotation") or not node.annotation:
@@ -181,7 +181,7 @@ class Parser(NodeVisitor):
             raise ParseError("Expected literal value", node.value)
         return VarDef(location, var, value)
 
-    def visit_While(self, node):
+    def visit_While(self, node: ast.While) -> WhileStmt:
         location = self.getLocation(node)
         if node.orelse:
             raise ParseError("Cannot have else in while", node)
@@ -192,7 +192,7 @@ class Parser(NodeVisitor):
                 raise ParseError("Illegal declaration", node)
         return WhileStmt(location, condition, body)
 
-    def visit_For(self, node):
+    def visit_For(self, node: ast.For) -> ForStmt:
         location = self.getLocation(node)
         if node.orelse:
             raise ParseError("Cannot have else in for", node)
@@ -204,7 +204,7 @@ class Parser(NodeVisitor):
                 raise ParseError("Illegal declaration", node)
         return ForStmt(location, identifier, iterable, body)
 
-    def visit_If(self, node):
+    def visit_If(self, node: ast.If) -> IfStmt:
         location = self.getLocation(node)
         condition = self.visit(node.test)
         then_body = [self.visit(b) for b in node.body]
@@ -216,7 +216,7 @@ class Parser(NodeVisitor):
                 raise ParseError("Illegal declaration", node)
         return IfStmt(location, condition, then_body, else_body)
 
-    def visit_Global(self, node):
+    def visit_Global(self, node: ast.Global) -> GlobalDecl:
         location = self.getLocation(node)
         if len(node.names) != 1:
             raise ParseError(
@@ -226,7 +226,7 @@ class Parser(NodeVisitor):
         identifier = Identifier(idLoc, node.names[0])
         return GlobalDecl(location, identifier)
 
-    def visit_Nonlocal(self, node):
+    def visit_Nonlocal(self, node: ast.Nonlocal) -> NonLocalDecl:
         location = self.getLocation(node)
         if len(node.names) != 1:
             raise ParseError(
@@ -236,40 +236,40 @@ class Parser(NodeVisitor):
         identifier = Identifier(idLoc, node.names[0])
         return NonLocalDecl(location, identifier)
 
-    def visit_Expr(self, node):
+    def visit_Expr(self, node: ast.Expr) -> ExprStmt:
         # this is a Stmt that evaluates an Expr
         location = self.getLocation(node)
         val = self.visit(node.value)
         return ExprStmt(location, val)
 
-    def visit_Pass(self, node):
+    def visit_Pass(self, _: ast.Pass) -> None:
         # removed by any AST constructors that take in [Stmt]
         return None
 
-    def visit_BoolOp(self, node):
+    def visit_BoolOp(self, node: ast.BoolOp) -> BinaryExpr:
         values = [self.visit(v) for v in node.values]
         op = self.visit(node.op)
         return self.binaryReduce(op, values)
 
-    def visit_BinOp(self, node):
+    def visit_BinOp(self, node: ast.BinOp) -> BinaryExpr:
         left = self.visit(node.left)
         right = self.visit(node.right)
         location = self.getLocation(node)
         return BinaryExpr(location, left, self.visit(node.op), right)
 
-    def visit_UnaryOp(self, node):
+    def visit_UnaryOp(self, node: ast.UnaryOp) -> UnaryExpr:
         operand = self.visit(node.operand)
         location = self.getLocation(node)
         return UnaryExpr(location, self.visit(node.op), operand)
 
-    def visit_IfExp(self, node):
+    def visit_IfExp(self, node: ast.IfExp) -> IfExpr:
         location = self.getLocation(node)
         condition = self.visit(node.test)
         then_body = self.visit(node.body)
         else_body = self.visit(node.orelse)
         return IfExpr(location, condition, then_body, else_body)
 
-    def visit_Call(self, node):
+    def visit_Call(self, node: ast.Call) -> Expr:
         location = self.getLocation(node)
         function = self.visit(node.func)
         if node.keywords:
@@ -281,7 +281,7 @@ class Parser(NodeVisitor):
             return CallExpr(location, function, arguments)
         raise ParseError("Invalid receiver of call", node.func)
 
-    def visit_Constant(self, node):
+    def visit_Constant(self, node: ast.Constant) -> Expr:
         # support for Python 3.8
         location = self.getLocation(node)
         if isinstance(node.value, bool):
@@ -295,7 +295,7 @@ class Parser(NodeVisitor):
         else:
             raise ParseError("Unsupported constant", node)
 
-    def visit_Compare(self, node):
+    def visit_Compare(self, node: ast.Compare) -> BinaryExpr:
         if len(node.ops) > 1 or len(node.comparators) > 1:
             raise ParseError("Unsupported compare between > 2 things", node)
         location = self.getLocation(node)
@@ -304,36 +304,36 @@ class Parser(NodeVisitor):
         right = self.visit(node.comparators[0])
         return BinaryExpr(location, left, operator, right)
 
-    def visit_Attribute(self, node):
+    def visit_Attribute(self, node: ast.Attribute) -> MemberExpr:
         location = self.getLocation(node)
         obj = self.visit(node.value)
         member = Identifier(location, node.attr)
         return MemberExpr(location, obj, member)
 
-    def visit_Subscript(self, node):
+    def visit_Subscript(self, node: ast.Subscript) -> IndexExpr:
         location = self.getLocation(node)
         return IndexExpr(location, self.visit(node.value), self.visit(node.slice))
 
-    def visit_Name(self, node):
+    def visit_Name(self, node: ast.Name) -> Identifier:
         location = self.getLocation(node)
         return Identifier(location, node.id)
 
-    def visit_Num(self, node):
+    def visit_Num(self, node: ast.Num) -> IntegerLiteral:
         location = self.getLocation(node)
         if not isinstance(node.n, int):
             raise ParseError("Only integers are supported", node)
         return IntegerLiteral(location, node.n)
 
-    def visit_Str(self, node):
+    def visit_Str(self, node: ast.Str) -> StringLiteral:
         location = self.getLocation(node)
         return StringLiteral(location, node.s)
 
-    def visit_List(self, node):
+    def visit_List(self, node: ast.List) -> ListExpr:
         location = self.getLocation(node)
         elements = [self.visit(e) for e in node.elts]
         return ListExpr(location, elements)
 
-    def visit_NameConstant(self, node):
+    def visit_NameConstant(self, node: ast.NameConstant) -> Expr:
         location = self.getLocation(node)
         if node.value is None:
             return NoneLiteral(location)
@@ -342,10 +342,10 @@ class Parser(NodeVisitor):
         else:
             raise ParseError("Unsupported name constant", node)
 
-    def visit_Index(self, node):
+    def visit_Index(self, node: ast.Index):
         return self.visit(node.value)
 
-    def visit_arguments(self, node):
+    def visit_arguments(self, node: ast.arguments) -> list:
         if node.vararg:
             raise ParseError("Unsupported vararg", node.vararg)
         if node.kwarg:
@@ -359,7 +359,7 @@ class Parser(NodeVisitor):
         args = [self.visit(a) for a in args]
         return args
 
-    def visit_arg(self, node):
+    def visit_arg(self, node: ast.arg) -> TypedVar:
         # type annotation is either Str(s) or Name(id)
         if not hasattr(node, "annotation") or not node.annotation:
             raise ParseError("Missing type annotation", node)
@@ -368,7 +368,7 @@ class Parser(NodeVisitor):
         annotation = self.getTypeAnnotation(node.annotation)
         return TypedVar(location, identifier, annotation)
 
-    def visit_Assert(self, node):
+    def visit_Assert(self, node: ast.Assert) -> ExprStmt:
         location = self.getLocation(node)
         func = Identifier(location, "__assert__")
         return ExprStmt(location, CallExpr(location, func, [self.visit(node.test)]))

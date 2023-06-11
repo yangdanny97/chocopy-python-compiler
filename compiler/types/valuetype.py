@@ -2,22 +2,22 @@ from .symboltype import SymbolType
 
 
 class ValueType(SymbolType):
-    def isValueType():
+    def isValueType() -> bool:
         return True
 
-    def isNone(self):
+    def isNone(self) -> bool:
         return False
 
     def toJSON(self, dump_location=True):
         raise Exception("unsupported")
 
-    def getJavaSignature(self):
+    def getJavaSignature(self) -> str:
         raise Exception("unsupported")
 
-    def isJavaRef(self):
+    def isJavaRef(self) -> bool:
         raise Exception("unsupported")
 
-    def isListType(self):
+    def isListType(self) -> bool:
         raise Exception("unsupported")
 
     def getLLVMType(self):

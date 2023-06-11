@@ -3,7 +3,7 @@ from .types import *
 from .builder import Builder
 from .typesystem import TypeSystem
 from .visitor import CommonVisitor
-from typing import List
+from typing import List, Dict, Tuple, Set
 
 
 class WasmBuilder(Builder):
@@ -65,20 +65,24 @@ class WasmBuilder(Builder):
 
 
 class WasmBackend(CommonVisitor):
+    # (class name, attr name) -> class offset
+    attrOffsets: Dict[Tuple[str, str], int]
+    # (class name, method name) -> (class offset, table offset, inherited)
+    methodOffsets: Dict[Tuple[str, str], Tuple[int, int, bool]]
+    # class -> offset of start of vtable
+    vtables: Dict[str, int]
+    undeclaredFuncs: Set[str]
+    locals: WasmBuilder = None
+
     def __init__(self, main: str, ts: TypeSystem):
         self.builder = WasmBuilder(main)
         self.main = main  # name of main method
         self.ts = ts
         self.defaultToGlobals = False  # treat all vars as global if this is true
         self.localCounter = 0
-        self.locals = None
-
-        # (class name, attr name) -> class offset
-        self.attrOffsets = dict()
-        # (class name, method name) -> (class offset, table offset, inherited)
-        self.methodOffsets = dict()
-        # class -> offset of start of vtable
-        self.vtables = dict()
+        self.attrOffsets = {}
+        self.methodOffsets = {}
+        self.vtables = {}
         self.undeclaredFuncs = set()
 
     def initializeOffsets(self):

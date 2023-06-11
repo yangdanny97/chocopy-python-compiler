@@ -3,8 +3,7 @@ from .types import *
 from .typesystem import TypeSystem
 from .visitor import Visitor
 from collections import defaultdict
-from typing import List
-import json
+from typing import List, Dict, Tuple
 
 import llvmlite.ir as ir
 import llvmlite.binding as llvm
@@ -19,21 +18,26 @@ jmp_buf_t = ir.ArrayType(ir.IntType(8), JMP_BUF_BYTES)
 
 
 class LlvmBackend(Visitor):
-    locals = []
-    counter = 0
-    globals = {}
-    externs = {}
-    constructors = {}
+    locals: List[defaultdict]
+    externs: Dict[str, ir.Function]
+    constructors: Dict[str, ir.Function]
+    # (class name, method name) -> (idx in vtable, defining class name)
+    methodOffsets: Dict[Tuple[str, str], Tuple[int, str]]
+    # (class name, attr name) -> idx in struct
+    attrOffsets: Dict[Tuple[str, str], int]
+    builder: ir.builder = None
 
     def __init__(self, ts: TypeSystem):
         llvm.initialize()
         llvm.initialize_native_target()
         llvm.initialize_native_asmprinter()
         self.module = ir.Module()
-        self.builder = None
-        # (class name, method name) -> (idx in vtable, defining class name)
-        self.methodOffsets = dict()
         self.ts = ts
+        self.locals = []
+        self.externs = {}
+        self.constructors = {}
+        self.methodOffsets = {}
+        self.attrOffsets = {}
 
     def initializeOffsets(self):
         tblOffset = 0
@@ -68,6 +72,13 @@ class LlvmBackend(Visitor):
     def visitStmtList(self, stmts: List[Stmt]):
         for s in stmts:
             self.visit(s)
+
+    def getClassStructType(self, cls) -> ir.LiteralStructType:
+        elements = [voidptr_t]  # pointer to vtable
+        attrs = self.ts.getOrderedAttrs(cls)
+        for attrInfo in attrs:
+            elements.append(attrInfo[1].getLLVMType())
+        return ir.LiteralStructType()
 
     # TOP LEVEL & DECLARATIONS
 
@@ -617,7 +628,6 @@ class LlvmBackend(Visitor):
             addr = self.locals[-1][node.name]
             assert addr is not None
             return self.builder.load(addr)
-            # return self.builder.gep(addr, [int32_t(0)])
         else:
             addr = self.locals[-1][node.name]
             assert addr is not None
@@ -628,7 +638,13 @@ class LlvmBackend(Visitor):
         return self.builder.load(addr, node.name)
 
     def MemberExpr(self, node: MemberExpr):
-        pass
+        cls = node.object.inferredType.className
+        attr = node.member.name
+        offset = self.attrOffsets[(cls, attr)]
+        obj = self.visit(node.object)
+        obj = self.builder.bitcast(obj, self.getClassStructType(cls).as_pointer())
+        ptr = self.builder.gep(obj, [int32_t(offset)])
+        return self.builder.load(ptr, attr)
 
     def IfExpr(self, node: IfExpr):
         return self.ifHelper(lambda: self.visit(node.condition),

@@ -2,14 +2,7 @@ from .astnodes import *
 from .types import *
 from .visitor import Visitor
 from .varcollector import VarCollector
-from typing import List
-
-
-class VarInstance:
-    def __init__(self):
-        self.isNonlocal = False
-        self.isGlobal = False
-        self.isSelf = False
+from typing import List, Dict
 
 
 def newInstance(tv: TypedVar) -> VarInstance:
@@ -17,7 +10,7 @@ def newInstance(tv: TypedVar) -> VarInstance:
     return tv.varInstance
 
 
-def merge(d1, d2):
+def merge(d1: dict, d2: dict) -> dict:
     combined = {}
     for k in d1:
         combined[k] = d1[k]
@@ -43,10 +36,11 @@ class ClosureVisitor(Visitor):
 
     # instances that are captured by nested functions are marked as refs
     # instances that correspond to global variables are marked as such
+    globals: Dict[str, VarInstance]
+    decls: List[Dict[str, VarInstance]]
 
     def __init__(self):
         self.globals = {}
-        self.nonlocals = []  # uncaptured nonlocals
         self.decls = []
 
     def getInstance(self, name: str) -> VarInstance:

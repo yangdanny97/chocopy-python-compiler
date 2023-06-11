@@ -8,13 +8,13 @@ import json
 
 
 class CilStackLoc:
-    def __init__(self, name, loc, t, isArg):
+    def __init__(self, name: str, loc: int, t: str, isArg: bool):
         self.name = name
         self.loc = loc
         self.isArg = isArg
         self.t = t
 
-    def decl(self):
+    def decl(self) -> str:
         return f"[{self.loc}] {self.t} {self.name}"
 
 
@@ -26,6 +26,7 @@ class CilBackend(CommonVisitor):
         self.builder = Builder(main)
         self.main = main  # name of main class
         self.ts = ts
+        self.locals = []
         self.enterScope()
 
     def indent(self):
@@ -612,7 +613,7 @@ class CilBackend(CommonVisitor):
     def IntegerLiteral(self, node: IntegerLiteral):
         self.instr(f"ldc.i8 {node.value}")
 
-    def NoneLiteral(self, node: NoneLiteral):
+    def NoneLiteral(self, _: NoneLiteral):
         self.instr("ldnull")
 
     def StringLiteral(self, node: StringLiteral):

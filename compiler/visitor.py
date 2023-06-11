@@ -1,6 +1,7 @@
 from .astnodes import *
 from collections import defaultdict
 from .builder import Builder
+from typing import List
 
 
 class Visitor:
@@ -106,8 +107,7 @@ class CommonVisitor(Visitor):
     counter = 0  # for labels
 
     # helpers for handling locals
-
-    locals = []
+    locals: List[defaultdict] = None
 
     def enterScope(self):
         self.locals.append(defaultdict(lambda: None))

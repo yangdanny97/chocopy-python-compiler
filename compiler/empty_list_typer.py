@@ -9,10 +9,8 @@ from typing import List
 
 
 class EmptyListTyper(Visitor):
-
-    def __init__(self):
-        self.expectedType = None
-        self.expReturnType = None
+    expectedType: ValueType = None
+    expReturnType: ValueType = None
 
     def visit(self, node: Node):
         return node.preorder(self)

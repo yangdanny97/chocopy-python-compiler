@@ -3,9 +3,16 @@ from .types import *
 from collections import defaultdict
 from .typesystem import TypeSystem, ClassInfo
 from .visitor import Visitor
+from typing import List, Optional
 
 
 class TypeChecker(Visitor):
+    symbolTable: List[defaultdict]
+    currentClass: str
+    errors: List[CompilerError]
+    expReturnType: Optional[ValueType]
+    program: Program
+
     def __init__(self, ts: TypeSystem):
         # typechecker attributes and their chocopy typing judgement analogues:
         # O : symbolTable

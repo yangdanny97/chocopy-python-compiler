@@ -6,6 +6,7 @@ from .visitor import Visitor
 
 class VarCollector(Visitor):
     # simple visitor to collect all the identifiers used as expressions or assignment targets
+    vars: List[Identifier]
 
     def __init__(self):
         self.vars = []

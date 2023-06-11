@@ -1,16 +1,20 @@
 from compiler.types.classvaluetype import ClassValueType
 from .valuetype import ValueType
 from .symboltype import SymbolType
-from typing import List
+from .varinstance import VarInstance
+from typing import List, Dict
 from llvmlite import ir
 
 
 class FuncType(SymbolType):
+    refParams: Dict[int, VarInstance]
+    freevars: list
+
     def __init__(self, parameters: List[ValueType], returnType: ValueType):
         self.parameters = parameters
         self.returnType = returnType
         self.refParams = {}
-        self.freevars = []  # used in AST transformations, not printed out
+        self.freevars = []
 
     def __eq__(self, other):
         if isinstance(other, FuncType):

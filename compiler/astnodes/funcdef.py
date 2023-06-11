@@ -3,10 +3,13 @@ from .identifier import Identifier
 from .typedvar import TypedVar
 from .typeannotation import TypeAnnotation
 from .stmt import Stmt
+from ..types import FuncType
 from typing import List
 
 
 class FuncDef(Declaration):
+    freevars: List[Identifier]  # used in AST transformations, not printed out
+    type: FuncType = None  # type signature of function
 
     # The AST for
     #     def NAME(PARAMS) -> RETURNTYPE:
@@ -22,8 +25,7 @@ class FuncDef(Declaration):
         self.declarations = declarations
         self.statements = [s for s in statements if s is not None]
         self.isMethod = isMethod
-        self.freevars = []  # used in AST transformations, not printed out
-        self.type = None  # type signature of function
+        self.freevars = []
 
     def getFreevarNames(self):
         return set([v.name for v in self.freevars])
@@ -56,5 +58,5 @@ class FuncDef(Declaration):
         d["statements"] = [s.toJSON(dump_location) for s in self.statements]
         return d
 
-    def getIdentifier(self):
+    def getIdentifier(self) -> Identifier:
         return self.name

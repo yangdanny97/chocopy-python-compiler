@@ -1,10 +1,12 @@
 from .declaration import Declaration
 from .expr import Expr
+from .identifier import Identifier
 from .typedvar import TypedVar
-from typing import List
+from typing import List, Optional
 
 
 class VarDef(Declaration):
+    attrOfClass: Optional[str]
 
     def __init__(self, location: List[int], var: TypedVar, value: Expr, isAttr: bool = False, attrOfClass=None):
         super().__init__(location, "VarDef")
@@ -31,7 +33,7 @@ class VarDef(Declaration):
         d["value"] = self.value.toJSON(dump_location)
         return d
 
-    def getIdentifier(self):
+    def getIdentifier(self) -> Identifier:
         return self.var.identifier
 
     def getName(self) -> str:
