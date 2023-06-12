@@ -9,22 +9,57 @@ from compiler.typesystem import TypeSystem
 from compiler.compiler import Compiler
 import llvmlite.binding as llvm
 from ctypes import CFUNCTYPE
+from typing import List
 
 dump_location = True
 error_flags = {"error", "Error", "Exception",
                "exception", "Expected", "expected", "failed"}
 
 
+disabled_llvm_tests = [
+    "/binary_tree.",
+    "/doubling_vector.",
+    "/nonlocal.",
+    "/exponent.",
+    "/modulo."
+]
+
+disabled_jvm_tests = [
+    "short_circuit",
+    "modulo"
+]
+
+disabled_cil_tests = [
+    "short_circuit",
+    "modulo"
+]
+
+disabled_wasm_tests = [
+    "short_circuit",
+    "modulo"
+]
+
+
+def should_skip(disabled_tests: List[str], test: Path) -> bool:
+    skip = False
+    for disabled in disabled_tests:
+        if disabled in str(test):
+            skip = True
+            print("Skipping " + str(test))
+            break
+    return skip
+
+
 def run_all_tests():
-    # run_parse_tests()
-    # run_typecheck_tests()
-    # run_python_backend_tests()
-    # run_closure_tests()
-    # run_jvm_tests()
-    # run_cil_tests()
-    # run_wasm_tests()
-    # run_llvm_tests()
-    test_eval_llvm()
+    run_parse_tests()
+    run_typecheck_tests()
+    run_python_backend_tests()
+    run_closure_tests()
+    run_jvm_tests()
+    run_cil_tests()
+    run_wasm_tests()
+    run_llvm_tests()
+    # test_eval_llvm()
 
 
 def run_parse_tests():
@@ -173,6 +208,8 @@ def run_wasm_tests():
     n_passed = 0
     wasm_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
     for test in wasm_tests_dir.glob('*.py'):
+        if should_skip(disabled_wasm_tests, test):
+            continue
         passed = run_wasm_test(test)
         total += 1
         if not passed:
@@ -195,6 +232,8 @@ def run_jvm_tests():
     n_passed = 0
     jvm_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
     for test in jvm_tests_dir.glob('*.py'):
+        if should_skip(disabled_jvm_tests, test):
+            continue
         passed = run_jvm_test(test)
         total += 1
         if not passed:
@@ -217,6 +256,8 @@ def run_cil_tests():
     n_passed = 0
     cil_tests_dir = (Path(__file__).parent / "tests/runtime/").resolve()
     for test in cil_tests_dir.glob('*.py'):
+        if should_skip(disabled_cil_tests, test):
+            continue
         passed = run_cil_test(test)
         total += 1
         if not passed:
@@ -576,21 +617,6 @@ def ast_equals(d1, d2) -> bool:
     return d1 == d2
 
 
-disabled_llvm_tests = [
-    "/incrementing_counter.",
-    "/binary_tree.",
-    "/classes.",
-    "/doubling_vector.",
-    "/nonlocal.",
-    "/ratio.",
-    "/inherit_init.",
-    "/linked_list.",
-    "/exponent.",
-    "/short_circuit.",
-    "modulo"
-]
-
-
 def run_llvm_tests():
     print("Running LLVM backend tests...\n")
     total = 0
@@ -603,7 +629,7 @@ def run_llvm_tests():
                 skip = True
                 break
         if skip:
-            # print("Skipping: " + str(test) + "\n")
+            print("Skipping: " + str(test) + "\n")
             continue
         passed = run_llvm_test(test, False)
         total += 1

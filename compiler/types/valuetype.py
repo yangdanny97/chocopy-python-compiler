@@ -1,4 +1,5 @@
 from .symboltype import SymbolType
+from llvmlite import ir
 
 
 class ValueType(SymbolType):
@@ -20,5 +21,5 @@ class ValueType(SymbolType):
     def isListType(self) -> bool:
         raise Exception("unsupported")
 
-    def getLLVMType(self):
+    def getLLVMType(self) -> ir.Type:
         raise Exception("unsupported")

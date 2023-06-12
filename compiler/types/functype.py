@@ -93,7 +93,7 @@ class FuncType(SymbolType):
             "returnType": self.returnType.toJSON(dump_location)
         }
 
-    def getLLVMType(self) -> ir.Type:
+    def getLLVMType(self) -> ir.FunctionType:
         params = []
         for i in range(len(self.parameters)):
             p = self.parameters[i]
