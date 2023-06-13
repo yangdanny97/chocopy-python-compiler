@@ -1,9 +1,11 @@
 from .expr import Expr
 from .identifier import Identifier
 from typing import List
+from ..types import SymbolType
 
 
 class MemberExpr(Expr):
+    inferredType: SymbolType
 
     def __init__(self, location: List[int], obj: Expr, member: Identifier):
         super().__init__(location, "MemberExpr")

@@ -122,9 +122,11 @@ class WasmBackend(CommonVisitor):
     def instr(self, instr: str):
         self.builder.newLine(instr)
 
+    # set the value, consuming it from the stack
     def setLocal(self, name: str):
         self.instr(f"local.set ${name}")
 
+    # set the value and load it back onto the stack
     def teeLocal(self, name: str):
         self.instr(f"local.tee ${name}")
 
@@ -373,8 +375,10 @@ class WasmBackend(CommonVisitor):
         operator = node.operator
         leftType = node.left.inferredType
         rightType = node.right.inferredType
-        self.visit(node.left)
-        self.visit(node.right)
+        shortCircuitOperators = {"and", "or"}
+        if operator not in shortCircuitOperators:
+            self.visit(node.left)
+            self.visit(node.right)
         # concatenation and addition
         if operator == "+":
             if self.isListConcat(operator, leftType, rightType):
@@ -394,6 +398,17 @@ class WasmBackend(CommonVisitor):
         elif operator == "//":
             self.instr("i64.div_s")
         elif operator == "%":
+            a = self.newLocal(None, IntType().getWasmName())
+            b = self.newLocal(None, IntType().getWasmName())
+            self.setLocal(b)
+            self.setLocal(a)
+            # emulate Python modulo with ((a rem b) + b) rem b)
+            self.getLocal(a)
+            self.getLocal(b)
+            self.instr("i64.rem_s")
+            self.getLocal(b)
+            self.instr("i64.add")
+            self.getLocal(b)
             self.instr("i64.rem_s")
         # relational operators
         elif operator == "<":
@@ -426,9 +441,17 @@ class WasmBackend(CommonVisitor):
             self.instr("i32.eq")
         # logical operators
         elif operator == "and":
-            self.instr("i32.and")
+            c = lambda: self.visit(node.left)
+            t = lambda: self.visit(node.right)
+            e = lambda: self.instr("i32.const 0")
+            resultType = BoolType().getWasmName()
+            self.ternary(c, t, e, resultType)
         elif operator == "or":
-            self.instr("i32.or")
+            c = lambda: self.visit(node.left)
+            t = lambda: self.instr("i32.const 1")
+            e = lambda: self.visit(node.right)
+            resultType = BoolType().getWasmName()
+            self.ternary(c, t, e, resultType)
         else:
             raise Exception(
                 f"Internal compiler error: unexpected operator {operator}")
@@ -622,16 +645,22 @@ class WasmBackend(CommonVisitor):
             self.instr(f"local.get ${node.name}")
 
     def IfExpr(self, node: IfExpr):
-        n = self.newLocal(self.genLocalName("ifexpr_result"),
-                          node.inferredType.getWasmName())
-        self.visit(node.condition)
+        c = lambda: self.visit(node.condition)
+        t = lambda: self.visit(node.thenExpr)
+        e = lambda: self.visit(node.elseExpr)
+        resultType = node.inferredType.getWasmName()
+        self.ternary(c, t, e, resultType)
+
+    def ternary(self, condFn, thenFn, elseFn, resultType):
+        n = self.newLocal(self.genLocalName("ifexpr_result"), resultType)
+        condFn()
         self.builder._if()
         self.builder._then()
-        self.visit(node.thenExpr)
+        thenFn()
         self.setLocal(n)
         self.builder.end()
         self.builder._else()
-        self.visit(node.elseExpr)
+        elseFn()
         self.setLocal(n)
         self.builder.end()
         self.builder.end()

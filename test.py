@@ -28,10 +28,7 @@ disabled_jvm_tests = []
 
 disabled_cil_tests = []
 
-disabled_wasm_tests = [
-    "short_circuit",
-    "modulo"
-]
+disabled_wasm_tests = []
 
 
 def should_skip(disabled_tests: List[str], test: Path) -> bool:

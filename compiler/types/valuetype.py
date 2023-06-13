@@ -23,3 +23,6 @@ class ValueType(SymbolType):
 
     def getLLVMType(self) -> ir.Type:
         raise Exception("unsupported")
+
+    def getWasmName(self) -> str:
+        raise Exception("unsupported")
