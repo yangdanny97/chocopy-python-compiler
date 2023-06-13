@@ -20,8 +20,7 @@ disabled_llvm_tests = [
     "/binary_tree.",
     "/doubling_vector.",
     "/nonlocal.",
-    "/exponent.",
-    "/modulo."
+    "/exponent."
 ]
 
 disabled_jvm_tests = []

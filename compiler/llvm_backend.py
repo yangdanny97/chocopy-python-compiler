@@ -399,7 +399,10 @@ class LlvmBackend(Visitor):
         elif operator == "//":
             return self.builder.sdiv(lhs, rhs)
         elif operator == "%":
-            return self.builder.srem(lhs, rhs)
+            # emulate Python modulo with ((a % b) + b) % b)
+            val = self.builder.srem(lhs, rhs)
+            val = self.builder.add(val, rhs)
+            return self.builder.srem(val, rhs)
         # relational operators
         elif operator in {"<", "<=", ">", ">="}:
             return self.builder.icmp_signed(operator, lhs, rhs)
