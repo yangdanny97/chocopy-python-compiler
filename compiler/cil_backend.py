@@ -348,8 +348,10 @@ class CilBackend(CommonVisitor):
         operator = node.operator
         leftType = node.left.inferredType
         rightType = node.right.inferredType
-        self.visit(node.left)
-        self.visit(node.right)
+        shortCircuitOperators = {"and", "or"}
+        if operator not in shortCircuitOperators:
+            self.visit(node.left)
+            self.visit(node.right)
         if operator == "+":
             if self.isListConcat(operator, leftType, rightType):
                 """
@@ -399,6 +401,15 @@ class CilBackend(CommonVisitor):
         elif operator == "//":
             self.instr("div")
         elif operator == "%":
+            b = self.newLocal(None, IntType())
+            a = self.newLocal(None, IntType())
+            # emulate Python modulo with ((a rem b) + b) rem b)
+            self.load(a)
+            self.load(b)
+            self.instr("rem")
+            self.load(b)
+            self.instr("add.ovf")
+            self.load(b)
             self.instr("rem")
         # relational operators
         elif operator == "<":
@@ -427,9 +438,15 @@ class CilBackend(CommonVisitor):
             self.instr("ceq")
         # logical operators
         elif operator == "and":
-            self.instr("and")
+            c = lambda: self.visit(node.left)
+            t = lambda: self.visit(node.right)
+            e = lambda: self.instr("ldc.i4.0")
+            self.ternary(c, t, e)
         elif operator == "or":
-            self.instr("or")
+            c = lambda: self.visit(node.left)
+            t = lambda: self.instr("ldc.i4.1")
+            e = lambda: self.visit(node.right)
+            self.ternary(c, t, e)
         else:
             raise Exception(
                 f"Internal compiler error: unexpected operator {operator}")
@@ -577,14 +594,20 @@ class CilBackend(CommonVisitor):
             f"ldfld {node.inferredType.getCILName()} {node.object.inferredType.getCILName()}::{node.member.getCILName()}")
 
     def IfExpr(self, node: IfExpr):
-        self.visit(node.condition)
+        c = lambda: self.visit(node.condition)
+        t = lambda: self.visit(node.thenExpr)
+        e = lambda: self.visit(node.elseExpr)
+        self.ternary(c, t, e)
+
+    def ternary(self, condFn, thenFn, elseFn):
+        condFn()
         l1 = self.newLabelName()
         l2 = self.newLabelName()
         self.instr(f"brtrue {l1}")
-        self.visit(node.elseExpr)
+        elseFn()
         self.instr(f"br {l2}")
         self.label(l1)
-        self.visit(node.thenExpr)
+        thenFn()
         self.label(l2)
 
     def MethodCallExpr(self, node: MethodCallExpr):

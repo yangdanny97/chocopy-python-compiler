@@ -26,10 +26,7 @@ disabled_llvm_tests = [
 
 disabled_jvm_tests = []
 
-disabled_cil_tests = [
-    "short_circuit",
-    "modulo"
-]
+disabled_cil_tests = []
 
 disabled_wasm_tests = [
     "short_circuit",
