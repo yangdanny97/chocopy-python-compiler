@@ -1,4 +1,3 @@
-# TODO: fix modulo operator behavior
 assert -5 % 2 == 1
 assert 5 % -2 == -1
 assert -5 % -2 == -1

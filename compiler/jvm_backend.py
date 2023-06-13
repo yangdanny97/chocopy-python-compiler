@@ -360,8 +360,10 @@ class JvmBackend(CommonVisitor):
         operator = node.operator
         leftType = node.left.inferredType
         rightType = node.right.inferredType
-        self.visit(node.left)
-        self.visit(node.right)
+        shortCircuitOps = {"and", "or"}
+        if operator not in shortCircuitOps:
+            self.visit(node.left)
+            self.visit(node.right)
         # concatenation and addition
         if operator == "+":
             if self.isListConcat(operator, leftType, rightType):
@@ -412,7 +414,7 @@ class JvmBackend(CommonVisitor):
         elif operator == "//":
             self.instr("invokestatic Method java/lang/Math floorDiv (II)I")
         elif operator == "%":
-            self.instr("irem")
+            self.instr("invokestatic Method java/lang/Math floorMod (II)I")
         # relational operators
         elif operator == "<":
             self.comparator("if_icmplt")
@@ -439,9 +441,15 @@ class JvmBackend(CommonVisitor):
             self.comparator("if_acmpeq")
         # logical operators
         elif operator == "and":
-            self.instr("iand")
+            condFn = lambda: self.visit(node.left)
+            thenFn = lambda: self.visit(node.right)
+            elseFn = lambda: self.instr("iconst_0")
+            self.ternary(condFn, thenFn, elseFn)
         elif operator == "or":
-            self.instr("ior")
+            condFn = lambda: self.visit(node.left)
+            thenFn = lambda: self.instr("iconst_1")
+            elseFn = lambda: self.visit(node.right)
+            self.ternary(condFn, thenFn, elseFn)
         else:
             raise Exception(
                 f"Internal compiler error: unexpected operator {operator}")
@@ -597,14 +605,20 @@ class JvmBackend(CommonVisitor):
             f"getfield Field {node.object.inferredType.className} {node.member.name} {node.inferredType.getJavaSignature()}")
 
     def IfExpr(self, node: IfExpr):
-        self.visit(node.condition)
+        condFn = lambda: self.visit(node.condition)
+        thenFn = lambda: self.visit(node.thenExpr)
+        elseFn = lambda: self.visit(node.elseExpr)
+        self.ternary(condFn, thenFn, elseFn)
+
+    def ternary(self, condFn, thenFn, elseFn):
+        condFn()
         l1 = self.newLabelName()
         l2 = self.newLabelName()
         self.instr(f"ifne {l1}")
-        self.visit(node.elseExpr)
+        elseFn()
         self.instr(f"goto {l2}")
         self.label(l1)
-        self.visit(node.thenExpr)
+        thenFn()
         self.label(l2)
         self.instr("nop")
 

@@ -24,10 +24,7 @@ disabled_llvm_tests = [
     "/modulo."
 ]
 
-disabled_jvm_tests = [
-    "short_circuit",
-    "modulo"
-]
+disabled_jvm_tests = []
 
 disabled_cil_tests = [
     "short_circuit",
