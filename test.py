@@ -9,16 +9,14 @@ from compiler.typesystem import TypeSystem
 from compiler.compiler import Compiler
 import llvmlite.binding as llvm
 from ctypes import CFUNCTYPE
-from typing import List
+from typing import List, Optional
 
 dump_location = True
 error_flags = {"error", "Error", "Exception",
                "exception", "Expected", "expected", "failed"}
 
 
-disabled_llvm_tests = [
-    "/nonlocal.",
-]
+disabled_llvm_tests = []
 
 disabled_jvm_tests = []
 
@@ -38,15 +36,15 @@ def should_skip(disabled_tests: List[str], test: Path) -> bool:
 
 
 def run_all_tests():
-    # run_parse_tests()
-    # run_typecheck_tests()
-    # run_python_backend_tests()
-    # run_closure_tests()
-    # run_jvm_tests()
-    # run_cil_tests()
-    # run_wasm_tests()
-    # run_llvm_tests()
-    test_eval_llvm()
+    run_parse_tests()
+    run_typecheck_tests()
+    run_python_backend_tests()
+    run_closure_tests()
+    run_jvm_tests()
+    run_cil_tests()
+    run_wasm_tests()
+    run_llvm_tests()
+    # run_llvm_test("tests/runtime/nested_list.py", "debug.ll")
 
 
 def run_parse_tests():
@@ -315,18 +313,13 @@ def run_closure_test(test) -> bool:
     # for valid cases only
     try:
         compiler = Compiler()
-        astparser = compiler.parser
-        ast = compiler.parse(test)
-        if len(astparser.errors) > 0:
-            return False
-        tc = compiler.typechecker
-        compiler.typecheck(ast)
-        compiler.closurepass(ast)
+        chocopy_ast = build_and_check_ast(compiler, test)
+        compiler.closurepass(chocopy_ast)
         # clean types to get fresh typecheck
-        ast.visit(TypeEraser())
+        chocopy_ast.visit(TypeEraser())
         tc = TypeChecker(TypeSystem())
-        tc.visit(ast)
-        if len(ast.errors.errors) > 0:
+        tc.visit(chocopy_ast)
+        if len(chocopy_ast.errors.errors) > 0:
             for e in ast.errors.errors:
                 print(e.toJSON(dump_location))
             return False
@@ -343,11 +336,7 @@ def run_closure_runtime_test(test) -> bool:
     infile_name = str(test)[:-3].split("/")[-1]
     try:
         compiler = Compiler()
-        astparser = compiler.parser
-        chocopy_ast = compiler.parse(test)
-        if len(astparser.errors) > 0:
-            return False
-        compiler.typecheck(chocopy_ast)
+        chocopy_ast = build_and_check_ast(compiler, test)
         compiler.closurepass(chocopy_ast)
         builder = compiler.emitPython(chocopy_ast)
         name = f"./{infile_name}.test.py"
@@ -376,11 +365,7 @@ def run_closure_runtime_test(test) -> bool:
 def run_python_emit_test(test) -> bool:
     try:
         compiler = Compiler()
-        astparser = compiler.parser
-        chocopy_ast = compiler.parse(test)
-        if len(astparser.errors) > 0:
-            return False
-        compiler.typecheck(chocopy_ast)
+        chocopy_ast = build_and_check_ast(compiler, test)
         builder = compiler.emitPython(chocopy_ast)
         ast.parse(builder.emit())
         return True
@@ -396,11 +381,7 @@ def run_python_runtime_test(test) -> bool:
     infile_name = str(test)[:-3].split("/")[-1]
     try:
         compiler = Compiler()
-        astparser = compiler.parser
-        chocopy_ast = compiler.parse(test)
-        if len(astparser.errors) > 0:
-            return False
-        compiler.typecheck(chocopy_ast)
+        chocopy_ast = build_and_check_ast(compiler, test)
         builder = compiler.emitPython(chocopy_ast)
         name = f"./{infile_name}.test.py"
         with open(name, "w") as f:
@@ -431,15 +412,8 @@ def run_jvm_test(test) -> bool:
         infile_name = str(test)[:-3].split("/")[-1]
         outdir = "./"
         compiler = Compiler()
-        astparser = compiler.parser
-        ast = compiler.parse(test)
-        if len(astparser.errors) > 0:
-            return False
-        compiler.typecheck(ast)
-        if len(ast.errors.errors) > 0:
-            print(ast.errors.toJSON(False))
-            return False
-        jvm_emitters = compiler.emitJVM(infile_name, ast)
+        chocopy_ast = build_and_check_ast(compiler, test)
+        jvm_emitters = compiler.emitJVM(infile_name, chocopy_ast)
         for cls in jvm_emitters:
             jvm_emitter = jvm_emitters[cls]
             fname = outdir + cls + ".j"
@@ -479,15 +453,8 @@ def run_cil_test(test) -> bool:
         infile_name = name.split("/")[-1]
         outdir = "./"
         compiler = Compiler()
-        astparser = compiler.parser
-        ast = compiler.parse(test)
-        if len(astparser.errors) > 0:
-            return False
-        compiler.typecheck(ast)
-        if len(ast.errors.errors) > 0:
-            print(ast.errors.toJSON(False))
-            return False
-        cil_emitter = compiler.emitCIL(infile_name, ast)
+        chocopy_ast = build_and_check_ast(compiler, test)
+        cil_emitter = compiler.emitCIL(infile_name, chocopy_ast)
         fname = outdir + cil_emitter.name + ".cil"
         with open(fname, "w") as f:
             f.write(cil_emitter.emit())
@@ -524,15 +491,8 @@ def run_wasm_test(test) -> bool:
         infile_name = name.split("/")[-1]
         outdir = "./"
         compiler = Compiler()
-        astparser = compiler.parser
-        ast = compiler.parse(test)
-        if len(astparser.errors) > 0:
-            return False
-        compiler.typecheck(ast)
-        if len(ast.errors.errors) > 0:
-            print(ast.errors.toJSON(False))
-            return False
-        wasm_emitter = compiler.emitWASM(infile_name, ast)
+        chocopy_ast = build_and_check_ast(compiler, test)
+        wasm_emitter = compiler.emitWASM(infile_name, chocopy_ast)
         fname = outdir + name + ".wat"
         with open(fname, "w") as f:
             f.write(wasm_emitter.emit())
@@ -618,7 +578,7 @@ def run_llvm_tests():
         if skip:
             print("Skipping: " + str(test) + "\n")
             continue
-        passed = run_llvm_test(test, False)
+        passed = run_llvm_test(test)
         total += 1
         if not passed:
             print("Failed: " + str(test) + "\n")
@@ -639,27 +599,16 @@ def eval_llvm(module):
     llvmmod.verify()
     with llvm.create_mcjit_compiler(llvmmod, target_machine) as ee:
         ee.finalize_object()
-        fptr = CFUNCTYPE(None)(ee.get_function_address("__main__"))
+        fptr = CFUNCTYPE(None)(ee.get_function_address("main"))
         fptr()
 
 
-def test_eval_llvm():
-    run_llvm_test("foobar.py", "foobar.ll")
-
-
-def run_llvm_test(test, debug):
-    print("running test", test)
+def run_llvm_test(test: str, debug: Optional[str] = None):
+    if debug:
+        print("Running test", test)
     try:
         compiler = Compiler()
-        astparser = compiler.parser
-        chocopy_ast = compiler.parse(test)
-        if len(astparser.errors) > 0:
-            print(astparser.errors)
-            assert len(astparser.errors) == 0
-        compiler.typecheck(chocopy_ast)
-        if len(compiler.typechecker.errors) > 0:
-            print(compiler.typechecker.errors)
-            assert len(compiler.typechecker.errors) == 0
+        chocopy_ast = build_and_check_ast(compiler, test)
         module = compiler.emitLLVM(chocopy_ast)
         if debug:
             with open(debug, "w") as f:
@@ -672,3 +621,16 @@ def run_llvm_test(test, debug):
         print(e)
         print(track)
         return False
+
+
+def build_and_check_ast(compiler: Compiler, test: str):
+    astparser = compiler.parser
+    chocopy_ast = compiler.parse(test)
+    if len(astparser.errors) > 0:
+        print(astparser.errors)
+        assert len(astparser.errors) == 0
+    compiler.typecheck(chocopy_ast)
+    if len(compiler.typechecker.errors) > 0:
+        print(compiler.typechecker.errors)
+        assert len(compiler.typechecker.errors) == 0
+    return chocopy_ast

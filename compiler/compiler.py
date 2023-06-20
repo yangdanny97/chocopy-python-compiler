@@ -24,7 +24,7 @@ class Compiler:
         self.parser = Parser()
         self.typechecker = TypeChecker(self.ts)
 
-    def parse(self, infile) -> Node:
+    def parse(self, infile) -> Program:
         astparser = self.parser
         # given an input file, parse it into an AST object
         lines = None
@@ -46,46 +46,46 @@ class Compiler:
             astparser.errors.append(ParseError(message))
             return None
 
-    def closurepass(self, ast: Node):
+    def closurepass(self, ast: Program):
         ClosureVisitor().visit(ast)
         NestedFuncHoister().visit(ast)
         self.transformer = ClosureTransformer()
         self.transformer.visit(ast)
         return ast
 
-    def typecheck(self, ast: Node):
+    def typecheck(self, ast: Program):
         # given an AST object, typecheck it
         # typechecking mutates the AST, adding types and errors
         self.typechecker.visit(ast)
         return ast
 
-    def emitPython(self, ast: Node):
+    def emitPython(self, ast: Program):
         backend = PythonBackend()
         backend.visit(ast)
         return backend.builder
 
-    def emitJVM(self, main: str, ast: Node):
+    def emitJVM(self, main: str, ast: Program):
         self.closurepass(ast)
         EmptyListTyper().visit(ast)
         jvm_backend = JvmBackend(main, self.transformer.ts)
         jvm_backend.visit(ast)
         return jvm_backend.classes
 
-    def emitCIL(self, main: str, ast: Node):
+    def emitCIL(self, main: str, ast: Program):
         self.closurepass(ast)
         EmptyListTyper().visit(ast)
         cil_backend = CilBackend(main, self.transformer.ts)
         cil_backend.visit(ast)
         return cil_backend.builder
 
-    def emitWASM(self, main: str, ast: Node):
+    def emitWASM(self, main: str, ast: Program):
         self.closurepass(ast)
         EmptyListTyper().visit(ast)
         wasm_backend = WasmBackend(main, self.transformer.ts)
         wasm_backend.visit(ast)
         return wasm_backend.builder
 
-    def emitLLVM(self, ast: Node):
+    def emitLLVM(self, ast: Program):
         self.closurepass(ast)
         EmptyListTyper().visit(ast)
         llvm_backend = LlvmBackend(self.transformer.ts)

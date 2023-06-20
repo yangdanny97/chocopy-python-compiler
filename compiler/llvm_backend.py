@@ -34,6 +34,7 @@ class LlvmBackend(Visitor):
         llvm.initialize_native_target()
         llvm.initialize_native_asmprinter()
         self.module = ir.Module()
+        self.module.triple = llvm.get_process_triple()
         self.ts = ts
         self.locals = []
         self.externs = {}
@@ -188,7 +189,7 @@ class LlvmBackend(Visitor):
 
         # main function
         funcType = ir.FunctionType(ir.VoidType(), [])
-        func = ir.Function(self.module, funcType, "__main__")
+        func = ir.Function(self.module, funcType, "main")
 
         self.enterScope()
         entry_block = func.append_basic_block('entry')
@@ -224,6 +225,12 @@ class LlvmBackend(Visitor):
         self.builder.position_at_start(end_program)
         assert not end_program.is_terminated
         self.builder.ret_void()
+
+        for block in func.blocks:
+            self.builder.position_at_end(block)
+            if not block.is_terminated:
+                self.builder.unreachable()
+
         self.exitScope()
 
     def VarDef(self, node: VarDef):
@@ -263,7 +270,8 @@ class LlvmBackend(Visitor):
         else:
             func = self.module.get_global(fname)
         self.returnType = node.type.returnType
-        implicitReturn = self.returnType not in {IntType(), BoolType(), StrType(), NoneType()}
+        implicitReturn = self.returnType not in {
+            IntType(), BoolType(), StrType()}
         self.enterScope()
         bb_entry = func.append_basic_block('entry')
         self.builder = ir.IRBuilder(bb_entry)
@@ -318,12 +326,16 @@ class LlvmBackend(Visitor):
                 raise Exception("Illegal assignment")
 
     def IfStmt(self, node: IfStmt):
+        cond = self.visit(node.condition)
         if len(node.elseBody) == 0:
-            self.ifHelper(lambda: self.visit(node.condition), lambda: self.visitStmtList(
-                node.thenBody))
+            with self.builder.if_then(cond):
+                self.visitStmtList(node.thenBody)
         else:
-            self.ifHelper(lambda: self.visit(node.condition), lambda: self.visitStmtList(
-                node.thenBody), lambda: self.visitStmtList(node.elseBody))
+            with self.builder.if_else(cond) as (then, else_):
+                with then:
+                    self.visitStmtList(node.thenBody)
+                with else_:
+                    self.visitStmtList(node.elseBody)
 
     def ExprStmt(self, node: ExprStmt):
         self.visit(node.expr)
@@ -430,10 +442,9 @@ class LlvmBackend(Visitor):
                 return self.builder.icmp_signed(operator, lhs, rhs)
         elif operator == "is":
             # pointer comparisons
-            return self.builder.icmp_unsigned("==",
-                                              self.builder.ptrtoint(
-                                                  lhs, int32_t),
-                                              self.builder.ptrtoint(rhs, int32_t))
+            lhs_ptr = self.builder.ptrtoint(lhs, int32_t)
+            rhs_ptr = self.builder.ptrtoint(rhs, int32_t)
+            return self.builder.icmp_unsigned("==", lhs_ptr, rhs_ptr)
         # logical operators
         elif operator == "and":
             return self.builder.and_(lhs, rhs)
@@ -459,19 +470,14 @@ class LlvmBackend(Visitor):
 
     def listIndex(self, list, index, elemType, check_bounds=False, line: int = 0):
         # return pointer to list[index]
-        length = self.list_len(list)
         if check_bounds:
-            self.ifHelper(
-                lambda: self.builder.icmp_signed(
-                    '>', int32_t(0), index),
-                lambda: self.longJmp(line)
-            )
-            self.ifHelper(
-                lambda: self.builder.icmp_signed('<=',
-                                                 length,
-                                                 index),
-                lambda: self.longJmp(line)
-            )
+            min_idx = self.builder.icmp_signed('>', int32_t(0), index)
+            with self.builder.if_then(min_idx):
+                self.longJmp(line)
+            length = self.list_len(list)
+            max_idx = self.builder.icmp_signed('<=', length, index)
+            with self.builder.if_then(max_idx):
+                self.longJmp(line)
         data = self.getListDataPtr(list, elemType)
         # return pointer to value in array
         return self.builder.gep(data, [index])
@@ -480,18 +486,13 @@ class LlvmBackend(Visitor):
         string = self.toVoidPtr(string)
         # bounds checks
         if check_bounds:
-            self.ifHelper(
-                lambda: self.builder.icmp_signed(
-                    '>', int32_t(0), index),
-                lambda: self.longJmp(line)
-            )
-            self.ifHelper(
-                lambda: self.builder.icmp_signed('<=',
-                                                 self.builder.call(
-                                                     self.externs['strlen'], [string]),
-                                                 index),
-                lambda: self.longJmp(line)
-            )
+            min_idx = self.builder.icmp_signed('>', int32_t(0), index)
+            with self.builder.if_then(min_idx):
+                self.longJmp(line)
+            length = self.builder.call(self.externs['strlen'], [string])
+            max_idx = self.builder.icmp_signed('<=', length, index)
+            with self.builder.if_then(max_idx):
+                self.longJmp(line)
         ptr = self.builder.gep(string, [index])
         char = self.builder.load(ptr)
         addr = self.builder.call(self.externs['malloc'], [
@@ -540,17 +541,10 @@ class LlvmBackend(Visitor):
             # unwrap if necessary, re-wrap
             saved_block = self.builder.block
             val = self.visit(arg)
-            # print(val)
-            addr = self.builder.alloca(
-                arg.inferredType.getLLVMType())
-            # print(addr)
-            wrapper = self.builder.alloca(
-                arg.inferredType.getLLVMType().as_pointer(), None, "wrapper")
-            # print(wrapper)
+            addr = self.builder.alloca(arg.inferredType.getLLVMType())
             self.builder.position_at_end(saved_block)
             self.builder.store(val, addr)
-            self.builder.store(addr, wrapper)
-            return wrapper
+            return addr
         else:  # non-ref param, maybe unwrap
             return self.visit(arg)
 
@@ -609,8 +603,7 @@ class LlvmBackend(Visitor):
         currIdx = self.builder.load(idx_var)
         self.builder.store(idxFn(currIdx), var)
         self.visitStmtList(node.body)
-        self.builder.store(self.builder.add(
-            currIdx, int32_t(1)), idx_var)
+        self.builder.store(self.builder.add(currIdx, int32_t(1)), idx_var)
 
     def ListExpr(self, node: ListExpr):
         n = len(node.elements)
@@ -701,44 +694,18 @@ class LlvmBackend(Visitor):
         return self.builder.load(ptr, attr)
 
     def IfExpr(self, node: IfExpr):
-        return self.ifHelper(lambda: self.visit(node.condition),
-                             lambda: self.visit(node.thenExpr),
-                             lambda: self.visit(node.elseExpr),
-                             node.inferredType.getLLVMType())
-
-    def ifHelper(self, condFn, thenFn, elseFn=None, returnType=None):
-        cond = condFn()
-        if returnType is not None:
-            assert elseFn is not None
-
-        then_block = self.builder.append_basic_block('then')
-        if elseFn is not None:
-            else_block = self.builder.append_basic_block('else')
-        merge_block = self.builder.append_basic_block('merge')
-        self.builder.cbranch(cond,
-                             then_block,
-                             else_block if elseFn is not None else merge_block)
-
-        self.builder.position_at_start(then_block)
-        then_val = thenFn()
-        if not then_block.is_terminated:
-            self.builder.branch(merge_block)
-        then_block = self.builder.block
-
-        if elseFn is not None:
-            self.builder.position_at_start(else_block)
-            else_val = elseFn()
-            if not else_block.is_terminated:
-                self.builder.branch(merge_block)
-            else_block = self.builder.block
-
-        self.builder.position_at_start(merge_block)
-
-        if returnType is not None:
-            phi = self.builder.phi(returnType, 'phi')
-            phi.add_incoming(then_val, then_block)
-            phi.add_incoming(else_val, else_block)
-            return phi
+        cond = self.visit(node.condition)
+        with self.builder.if_else(cond) as (then, else_):
+            with then:
+                then_val = self.visit(node.thenExpr)
+                then_block = self.builder.block
+            with else_:
+                else_val = self.visit(node.elseExpr)
+                else_block = self.builder.block
+        phi = self.builder.phi(node.inferredType.getLLVMType(), 'phi')
+        phi.add_incoming(then_val, then_block)
+        phi.add_incoming(else_val, else_block)
+        return phi
 
     def MethodCallExpr(self, node: MethodCallExpr):
         className = node.method.object.inferredType.className
@@ -758,7 +725,7 @@ class LlvmBackend(Visitor):
         call_args = [self.builder.bitcast(obj, voidptr_t)]
         for i in range(len(node.args)):
             call_args.append(self.visitArg(
-                node.method.inferredType, i, node.args[i]))
+                node.method.inferredType, i + 1, node.args[i]))
         return self.builder.call(callee_func, call_args, 'callmethodtmp')
 
     # LITERALS
@@ -793,11 +760,9 @@ class LlvmBackend(Visitor):
 
     def assert_nonnull(self, val, line):
         val = self.toVoidPtr(val)
-        self.ifHelper(
-            lambda: self.builder.icmp_signed(
-                '==', voidptr_t(None), val),
-            lambda: self.longJmp(line)
-        )
+        cond = self.builder.icmp_signed('==', voidptr_t(None), val)
+        with self.builder.if_then(cond):
+            self.longJmp(line)
 
     def list_len(self, arg):
         val = self.builder.bitcast(arg, int32_t.as_pointer())
@@ -806,27 +771,34 @@ class LlvmBackend(Visitor):
     def emit_assert(self, arg: Expr):
         line = arg.location[0]
         arg = self.visit(arg)
-        return self.ifHelper(
-            lambda: self.builder.icmp_unsigned(
-                '==', bool_t(0), arg),
-            lambda: self.longJmp(line)
-        )
+        cond = self.builder.icmp_unsigned('==', bool_t(0), arg)
+        with self.builder.if_then(cond):
+            self.longJmp(line)
 
     def longJmp(self, line: int):
         jmp_buf = self.module.get_global('__jmp_buf')
         self.builder.call(self.externs['longjmp'], [
                           jmp_buf, int32_t(line)])
+        self.builder.unreachable()
 
     def emit_print(self, arg: Expr):
         if isinstance(arg.inferredType, ListValueType) or arg.inferredType.className not in {"bool", "int", "str"}:
             raise Exception("Only bool, int, or str may be printed")
         if arg.inferredType == BoolType():
-            text = self.ifHelper(
-                lambda: self.visit(arg),
-                lambda: self.toVoidPtr(self.module.get_global('__true')),
-                lambda: self.toVoidPtr(self.module.get_global('__false')),
-                voidptr_t)
-            self.printf(self.module.get_global('__fmt_s'), text)
+            cond = self.visit(arg)
+            with self.builder.if_else(cond) as (then, else_):
+                with then:
+                    then_text = self.toVoidPtr(
+                        self.module.get_global('__true'))
+                    then_block = self.builder.block
+                with else_:
+                    else_text = self.toVoidPtr(
+                        self.module.get_global('__false'))
+                    else_block = self.builder.block
+            phi = self.builder.phi(voidptr_t, 'phi')
+            phi.add_incoming(then_text, then_block)
+            phi.add_incoming(else_text, else_block)
+            self.printf(self.module.get_global('__fmt_s'), phi)
         elif arg.inferredType.className == 'int':
             self.printf(self.module.get_global('__fmt_i'), self.visit(arg))
         else:

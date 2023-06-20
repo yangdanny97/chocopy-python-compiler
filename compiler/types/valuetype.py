@@ -1,5 +1,5 @@
 from .symboltype import SymbolType
-from llvmlite import ir
+import llvmlite.ir as ir
 
 
 class ValueType(SymbolType):

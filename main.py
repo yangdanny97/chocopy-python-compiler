@@ -70,6 +70,11 @@ def main():
         outfile = outdir + infile_name + ".j"
     elif args.mode == "llvm":
         outfile = outdir + infile_name + ".ll"
+    elif args.mode == "cil":
+        outfile = outdir + infile_name + ".cil"
+    elif args.mode == "wasm":
+        outfile = outdir + infile_name + ".wat"
+    assert outfile is not None
 
     compiler = Compiler()
     astparser = compiler.parser
@@ -128,27 +133,24 @@ def main():
         if args.should_print:
             print(cil_emitter.emit())
         else:
-            fname = outdir + cil_emitter.name + ".cil"
-            with open(fname, "w") as f:
-                out_msg(fname, args.verbose)
+            with open(outfile, "w") as f:
+                out_msg(outfile, args.verbose)
                 f.write(cil_emitter.emit())
     elif args.mode == "wasm":
         wat_emitter = compiler.emitWASM(infile_name, tree)
         if args.should_print:
             print(wat_emitter.emit())
         else:
-            fname = outdir + wat_emitter.name + ".wat"
-            with open(fname, "w") as f:
-                out_msg(fname, args.verbose)
+            with open(outfile, "w") as f:
+                out_msg(outfile, args.verbose)
                 f.write(wat_emitter.emit())
     elif args.mode == "llvm":
-        llvm_module = compiler.emitLLVM(infile_name, tree)
+        llvm_module = compiler.emitLLVM(tree)
         if args.should_print:
             print(str(llvm_module))
         else:
-            fname = outdir + llvm_module.name + ".ll"
-            with open(fname, "w") as f:
-                out_msg(fname, args.verbose)
+            with open(outfile, "w") as f:
+                out_msg(outfile, args.verbose)
                 f.write(str(llvm_module))
 
 

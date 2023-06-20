@@ -10,3 +10,4 @@ clean:
 	rm -f *.wasm
 	rm -f *.wat
 	rm -f *.ll
+	rm -f *.s

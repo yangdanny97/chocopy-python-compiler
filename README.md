@@ -9,6 +9,7 @@ Progress is documented on my [blog](https://yangdanny97.github.io/blog/):
 - [Part 2: JVM backend](https://yangdanny97.github.io/blog/2021/08/26/chocopy-jvm-backend)
 - [Part 3: CIL backend](https://yangdanny97.github.io/blog/2022/05/22/chocopy-cil-backend)
 - [Part 4: WASM backend](https://yangdanny97.github.io/blog/2022/10/11/chocopy-wasm-backend)
+- [Part 5: LLVM backend - coming soon!](https://yangdanny97.github.io/blog)
 
 ## Features
 
@@ -21,6 +22,7 @@ This compiler contains multiple backends not found in the reference implementati
 - JVM bytecode, formatted for the Krakatau assembler
 - CIL bytecode, formatted for the Mono ilasm assembler
 - WASM, in WAT format
+- LLVM IR, in text format
 
 The test suite includes both static validation of generated/annotated ASTs, as well as runtime tests that actually execute the output programs to check correctness. Many of the AST validation test cases are taken from test suites included in the release code for Berkeley's CS164, with some additional tests written for more coverage.
 
@@ -35,6 +37,10 @@ The test suite includes both static validation of generated/annotated ASTs, as w
 - WASM Backend Requirements:
   - [WebAssembly Binary Toolkit (wabt)](https://github.com/WebAssembly/wabt), specifically the `wat2wasm` tool
   - NodeJS for the runtime
+- LLVM Backend Requirements
+  - LLVM toolchain
+  - `llvmlite`
+  - Tested with LLVM 16.0.6
 
 ## Usage
 
@@ -61,6 +67,7 @@ The input file should have extension `.py`. If the output file is not provided, 
     - `jvm` - output JVM bytecode formatted for the Krakatau assembler
     - `cil` - output CIL bytecode formatted for the Mono ilasm assembler
     - `wasm` - output WASM as plaintext in WAT format
+    - `llvm` - output LLVM IR in text format
 
 ## Differences from the reference implementation:
 
@@ -144,6 +151,38 @@ The `wasm.js` file contains all the runtime support needed to run the WASM gener
 Strings, lists, objects, and refs holding nonlocals are stored in the heap, aligned to 8 bytes. Right now, memory does not get freed/garbage collected once it is allocated, so large programs may run out of memory.
 
 To provide memory safety, string/list indexing have bounds checking and list operations have a null-check, which crashes the program with a generic "unreachable" instruction.
+
+## LLVM Backend Notes:
+
+The LLVM backend for this compiler outputs LLVM IR in plaintext `.ll` format which can be compiled using `llc` or interpreted using `lli`:
+1. Use this compiler to generate plaintext LLVM IR
+    - Format:  `python3 main.py --mode llvm <input file> <output dir>`
+    - Example: `python3 main.py --mode llvm tests/runtime/binary_tree.py .`
+2. Run the `.ll` files using `lli`
+    - Example: `lli <.ll file>`
+    - Example: `lli binary_tree.ll`
+
+The `demo_llvm.sh` script is a useful utility to compile and run files with the LLVM backend with a single command (provide the path to the input source file as an argument). 
+- To run the same example as above, run `./demo_llvm.sh tests/runtime/binary_tree.py`
+
+Generated programs should only depend on the C standard library, so there's no custom runtime to link to.
+
+### LLVM Backend - Unsupported Features:
+- `input` stdlib function - TODO
+
+### LLVM Backend - Memory Format, Safety, and Management:
+
+- strings - null-terminated `char*`, same as C strings
+- lists - first 4 bytes for length, followed by the contents as a packed array
+- ints - 32 bits
+- pointers (objects, strings, lists) - same as C pointers, where `None` is the null pointer
+- objects - struct containing vtable address followed by attributes
+
+Memory does not get freed/garbage collected once it is allocated, so large programs may run out of memory. 
+
+To provide some memory safety, string/list indexing have bounds checking and list operations have a null-check, which exits the program with a generic error message and line number.
+
+Error handling is done using the `setjmp`/`longjmp` strategy, with the line of the error/assertion used as the argument for `longjmp`.
 
 ## FAQ
 
