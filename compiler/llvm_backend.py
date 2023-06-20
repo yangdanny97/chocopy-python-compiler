@@ -9,12 +9,21 @@ import llvmlite.ir as ir
 import llvmlite.binding as llvm
 
 JMP_BUF_BYTES = 200
+INPUT_CHARS = 100
+
+
+class ErrorCode:
+    NULL_PTR = 1
+    OUT_OF_BOUNDS = 2
+    ASSERT = 3
+
 
 bool_t = ir.IntType(1)  # for booleans
 int8_t = ir.IntType(8)  # chars, or booleans in arrays
 int32_t = ir.IntType(32)  # for ints
 voidptr_t = ir.IntType(8).as_pointer()
 jmp_buf_t = ir.ArrayType(ir.IntType(8), JMP_BUF_BYTES)
+input_buf_t = ir.ArrayType(int8_t, INPUT_CHARS + 1)
 
 
 class LlvmBackend(Visitor):
@@ -119,6 +128,12 @@ class LlvmBackend(Visitor):
         self.global_constant('__fmt_s',
                              ir.ArrayType(int8_t, 4),
                              self.make_bytearray('%s\n\00'.encode('ascii')))
+        self.global_constant('__fmt_oob',
+                             ir.ArrayType(int8_t, 26),
+                             self.make_bytearray('Out of bounds on line %i\n\00'.encode('ascii')))
+        self.global_constant('__fmt_null',
+                             ir.ArrayType(int8_t, 25),
+                             self.make_bytearray('Null pointer on line %i\n\00'.encode('ascii')))
         self.global_constant('__fmt_assert',
                              ir.ArrayType(int8_t, 29),
                              self.make_bytearray('Assertion failed on line %i\n\00'.encode('ascii')))
@@ -128,8 +143,20 @@ class LlvmBackend(Visitor):
         self.global_constant('__fmt_str_concat',
                              ir.ArrayType(int8_t, 5),
                              self.make_bytearray('%s%s\00'.encode('ascii')))
+        self.global_constant('__fmt_str',
+                             ir.ArrayType(int8_t, 3),
+                             self.make_bytearray('%s\00'.encode('ascii')))
+        self.global_constant('__fmt_input',
+                             ir.ArrayType(int8_t, 9),
+                             self.make_bytearray('%100[^\n]\00'.encode('ascii')))
         self.global_constant(
             "__jmp_buf", jmp_buf_t, ir.Constant(jmp_buf_t, bytearray([0] * JMP_BUF_BYTES)))
+        self.global_constant(
+            "__input_buf", input_buf_t,
+            ir.Constant(input_buf_t, bytearray([0] * (INPUT_CHARS + 1))))
+
+        error_code = self.global_variable("__error_code", int32_t)
+        error_line = self.global_variable("__error_line", int32_t)
 
         printf_t = ir.FunctionType(int32_t, [voidptr_t], True)
         self.externs['printf'] = ir.Function(self.module, printf_t, 'printf')
@@ -158,6 +185,9 @@ class LlvmBackend(Visitor):
         memcpy_t = ir.FunctionType(voidptr_t, [voidptr_t, voidptr_t, int32_t])
         self.externs['memcpy'] = ir.Function(self.module, memcpy_t, 'memcpy')
 
+        scanf_t = ir.FunctionType(int32_t, [voidptr_t], True)
+        self.externs['scanf'] = ir.Function(self.module, scanf_t, 'scanf')
+
         # begin main function
         # declare global variables, methods, and functions
         varDefs = [d for d in node.declarations if isinstance(d, VarDef)]
@@ -166,7 +196,9 @@ class LlvmBackend(Visitor):
             self.global_variable(d.var.name(), t)
         funcDefs = [d for d in node.declarations if isinstance(d, FuncDef)]
         for d in funcDefs:
-            self.declareFunc(d)
+            funcname = d.name.name
+            funcType = d.type.getLLVMType()
+            ir.Function(self.module, funcType, funcname)
         classDefs = [d for d in node.declarations if isinstance(d, ClassDef)]
         for cls in classDefs:
             self.currentClass = cls.name.name
@@ -207,7 +239,32 @@ class LlvmBackend(Visitor):
                              program_block)
 
         self.builder.position_at_start(error_block)
-        self.printf(self.module.get_global('__fmt_err'), status)
+
+        error_code = self.builder.load(error_code)
+        error_line = self.builder.load(error_line)
+
+        assert_cond = self.builder.icmp_signed(
+            '==', error_code, int32_t(ErrorCode.ASSERT))
+        with self.builder.if_else(assert_cond) as (then_assert, else_):
+            with then_assert:
+                self.printf(self.module.get_global('__fmt_assert'), error_line)
+            with else_:
+                null_cond = self.builder.icmp_signed(
+                    '==', error_code, int32_t(ErrorCode.NULL_PTR))
+                with self.builder.if_else(null_cond) as (null_assert, else__):
+                    with null_assert:
+                        self.printf(self.module.get_global(
+                            '__fmt_null'), error_line)
+                    with else__:
+                        oob_cond = self.builder.icmp_signed(
+                            '==', error_code, int32_t(ErrorCode.OUT_OF_BOUNDS))
+                        with self.builder.if_else(oob_cond) as (oob_assert, else____):
+                            with oob_assert:
+                                self.printf(self.module.get_global(
+                                    '__fmt_oob'), error_line)
+                            with else____:
+                                self.printf(self.module.get_global(
+                                    '__fmt_err'), error_line)
 
         self.builder.branch(end_program)
         error_block = self.builder.block
@@ -257,11 +314,6 @@ class LlvmBackend(Visitor):
     def ClassDef(self, node: ClassDef):
         pass
 
-    def declareFunc(self, node: FuncDef):
-        funcname = node.name.name
-        funcType = node.type.getLLVMType()
-        ir.Function(self.module, funcType, funcname)
-
     def FuncDef(self, node: FuncDef):
         fname = node.getIdentifier().name
         if node.isMethod:
@@ -310,6 +362,7 @@ class LlvmBackend(Visitor):
                 cls = var.object.inferredType.className
                 attr = var.member.name
                 obj = self.visit(var.object)
+                self.assert_nonnull(obj, var.object.location[0])
                 ptr = self.getAttrPtr(obj, cls, attr)
                 self.builder.store(val, ptr)
             elif isinstance(var, IndexExpr):
@@ -471,13 +524,14 @@ class LlvmBackend(Visitor):
     def listIndex(self, list, index, elemType, check_bounds=False, line: int = 0):
         # return pointer to list[index]
         if check_bounds:
+            assert line != 0
             min_idx = self.builder.icmp_signed('>', int32_t(0), index)
             with self.builder.if_then(min_idx):
-                self.longJmp(line)
+                self.longJmp(ErrorCode.OUT_OF_BOUNDS, line)
             length = self.list_len(list)
             max_idx = self.builder.icmp_signed('<=', length, index)
             with self.builder.if_then(max_idx):
-                self.longJmp(line)
+                self.longJmp(ErrorCode.OUT_OF_BOUNDS, line)
         data = self.getListDataPtr(list, elemType)
         # return pointer to value in array
         return self.builder.gep(data, [index])
@@ -486,13 +540,14 @@ class LlvmBackend(Visitor):
         string = self.toVoidPtr(string)
         # bounds checks
         if check_bounds:
+            assert line != 0
             min_idx = self.builder.icmp_signed('>', int32_t(0), index)
             with self.builder.if_then(min_idx):
-                self.longJmp(line)
+                self.longJmp(ErrorCode.OUT_OF_BOUNDS, line)
             length = self.builder.call(self.externs['strlen'], [string])
             max_idx = self.builder.icmp_signed('<=', length, index)
             with self.builder.if_then(max_idx):
-                self.longJmp(line)
+                self.longJmp(ErrorCode.OUT_OF_BOUNDS, line)
         ptr = self.builder.gep(string, [index])
         char = self.builder.load(ptr)
         addr = self.builder.call(self.externs['malloc'], [
@@ -558,6 +613,8 @@ class LlvmBackend(Visitor):
             return
         elif node.function.name == "len":
             return self.emit_len(node.args[0])
+        elif node.function.name == "input":
+            return self.emit_input()
         callee_func = self.module.get_global(node.function.name)
         if callee_func is None or not isinstance(callee_func, ir.Function):
             raise Exception("unknown function")
@@ -583,8 +640,7 @@ class LlvmBackend(Visitor):
                                                  self.builder.call(self.externs['strlen'], [iterable])),
                 lambda: self.forBody(node,
                                      var,
-                                     lambda currIdx: self.strIndex(
-                                         iterable, currIdx),
+                                     lambda currIdx: self.strIndex(iterable, currIdx),
                                      idx_var))
         else:
             self.assert_nonnull(iterable, node.iterable.location[0])
@@ -690,6 +746,7 @@ class LlvmBackend(Visitor):
         cls = node.object.inferredType.className
         attr = node.member.name
         obj = self.visit(node.object)
+        self.assert_nonnull(obj, node.object.location[0])
         ptr = self.getAttrPtr(obj, cls, attr)
         return self.builder.load(ptr, attr)
 
@@ -762,7 +819,7 @@ class LlvmBackend(Visitor):
         val = self.toVoidPtr(val)
         cond = self.builder.icmp_signed('==', voidptr_t(None), val)
         with self.builder.if_then(cond):
-            self.longJmp(line)
+            self.longJmp(ErrorCode.NULL_PTR, line)
 
     def list_len(self, arg):
         val = self.builder.bitcast(arg, int32_t.as_pointer())
@@ -773,12 +830,18 @@ class LlvmBackend(Visitor):
         arg = self.visit(arg)
         cond = self.builder.icmp_unsigned('==', bool_t(0), arg)
         with self.builder.if_then(cond):
-            self.longJmp(line)
+            self.longJmp(ErrorCode.ASSERT, line)
 
-    def longJmp(self, line: int):
+    def longJmp(self, code: int, line: int):
+        code_addr = self.module.get_global("__error_code")
+        self.builder.store(int32_t(code), code_addr)
+
+        line_addr = self.module.get_global("__error_line")
+        self.builder.store(int32_t(line), line_addr)
+
         jmp_buf = self.module.get_global('__jmp_buf')
         self.builder.call(self.externs['longjmp'], [
-                          jmp_buf, int32_t(line)])
+                          jmp_buf, int32_t(1)])
         self.builder.unreachable()
 
     def emit_print(self, arg: Expr):
@@ -804,6 +867,20 @@ class LlvmBackend(Visitor):
         else:
             self.printf(self.module.get_global('__fmt_s'), self.visit(arg))
         return self.NoneLiteral(None)
+
+    def emit_input(self):
+        # get input from user
+        input_buf = self.toVoidPtr(self.module.get_global("__input_buf"))
+        fmt = self.toVoidPtr(self.module.get_global('__fmt_input'))
+        self.builder.call(self.externs['scanf'], [fmt, input_buf])
+
+        # copy contents into new string so that input buffer can be reused
+        len = self.builder.call(self.externs['strlen'], [input_buf])
+        new_str = self.builder.call(
+            self.externs['malloc'], [self.builder.add(len, int32_t(1))], 'new_str')
+        fmt = self.toVoidPtr(self.module.get_global('__fmt_str'))
+        self.builder.call(self.externs['sprintf'], [new_str, fmt, input_buf])
+        return new_str
 
     # UTILS
 
