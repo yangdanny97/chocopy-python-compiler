@@ -187,7 +187,7 @@ Memory does not get freed/garbage collected once it is allocated, so large progr
 
 To provide some memory safety, string/list indexing have bounds checking and list operations have a null-check. Unlike the WASM backend, bounds checking and null checks have their own error messages and display a line number similar to assertions.
 
-Error handling is done using the `setjmp`/`longjmp` strategy, with the line of the error/assertion used as the argument for `longjmp`.
+Error handling is done using the `setjmp`/`longjmp` strategy, with the error code and line saved in global variables.
 
 ## FAQ
 
