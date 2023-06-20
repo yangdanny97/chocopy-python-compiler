@@ -27,10 +27,10 @@ This compiler contains multiple backends not found in the reference implementati
 The test suite includes both static validation of generated/annotated ASTs, as well as runtime tests that actually execute the output programs to check correctness. Many of the AST validation test cases are taken from test suites included in the release code for Berkeley's CS164, with some additional tests written for more coverage.
 
 ## Requirements:
-- Python 3.6 - 3.8
+- Python 3.11
 - JVM Backend Requirements:
   - [Krakatau JVM Assembler](https://github.com/Storyyeller/Krakatau)
-  - Tested with Java 8
+  - Tested with Java 8, using Krakatau V1 (the one written in Python, not Rust)
 - CIL Backend Requirements:
   - [Mono](https://www.mono-project.com/)
   - Tested with Mono 6.12
@@ -194,7 +194,7 @@ Error handling is done using the `setjmp`/`longjmp` strategy, with the line of t
 - What is this for?
   - The primary goal of the project is for me to practice compiler implementation. The secondary goal is to provide a reference to anyone else who is interested in the topics I explore through working on this project - I go into more detail about each part of the compiler on my blog. 
 - Why Chocopy?
-  - It has a detailed spec and is a relatively small language while being non-trivial enough to offer interesting compiler implementation problems. 
+  - It has a detailed spec and is a relatively small language while being non-trivial enough to offer interesting compiler implementation problems. For example: arrays, inheritance/dynamic dispatch, nested functions, etc.
 - Why not design your own language?
   - This project is focused on compiler implementation. I want to keep the project very focused and make each addition manageable so that I can make progress in my very limited spare time.
 - Why implement this in Python?
