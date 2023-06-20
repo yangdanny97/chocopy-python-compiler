@@ -1,59 +1,87 @@
-class A:
-    y: int = 1
+# Binary-search trees
+class TreeNode(object):
+    value: int = 0
+    left: "TreeNode" = None
+    right: "TreeNode" = None
 
-    def __init__(self: A):
-        pass
+    def insert(self: "TreeNode", x: int) -> bool:
+        if x < self.value:
+            if self.left is None:
+                self.left = makeNode(x)
+                return True
+            else:
+                return self.left.insert(x)
+        elif x > self.value:
+            if self.right is None:
+                self.right = makeNode(x)
+                return True
+            else:
+                return self.right.insert(x)
+        return False
 
-    def t(self: A):
-        global x
-        x = 1
+    def contains(self: "TreeNode", x: int) -> bool:
+        if x < self.value:
+            if self.left is None:
+                return False
+            else:
+                return self.left.contains(x)
+        elif x > self.value:
+            if self.right is None:
+                return False
+            else:
+                return self.right.contains(x)
+        else:
+            return True
 
 
-class B(A):
-    z: int = 0
+class Tree(object):
+    root: TreeNode = None
+    size: int = 0
 
-    def __init__(self: B):
-        self.z = 5
-        self.y = 5
+    def insert(self: "Tree", x: int) -> object:
+        if self.root is None:
+            self.root = makeNode(x)
+            self.size = 1
+        else:
+            if self.root.insert(x):
+                self.size = self.size + 1
 
-    def t(self: B):
-        global x
-        x = 2
+    def contains(self: "Tree", x: int) -> bool:
+        if self.root is None:
+            return False
+        else:
+            return self.root.contains(x)
 
-    def setZ(self: B, z: int):
-        self.z = z
+
+def makeNode(x: int) -> TreeNode:
+    b: TreeNode = None
+    b = TreeNode()
+    b.value = x
+    return b
 
 
-x: int = 0
-c1: A = None
-c2: B = None
-c3: A = None
+# Input parameters
+n: int = 100
+c: int = 4
 
-# constructors, getters, setters
-c1 = A()
-assert c1.y == 1
-c2 = B()
-assert c2.y == 5
-assert c2.z == 5
-c3 = B()
-assert c3.y == 5
+# Data
+t: Tree = None
+i: int = 0
+k: int = 37813
 
-c2.y = 0
-assert c2.y == 0
+# Crunch
+t = Tree()
+while i < n:
+    t.insert(k)
+    k = (k * 37813) % 37831
+    if i % c != 0:
+        t.insert(i)
+    i = i + 1
 
-# methods, dynamic dispatch
-
-c2.setZ(2)
-assert c2.z == 2
-
-x = 0
-c1.t()
-assert x == 1
-
-x = 0
-c2.t()
-assert x == 2
-
-x = 0
-c3.t()
-assert x == 2
+assert t.size == 175
+assert t.contains(15)
+assert t.contains(23)
+assert t.contains(42)
+assert not t.contains(4)
+assert not t.contains(8)
+assert not t.contains(16)

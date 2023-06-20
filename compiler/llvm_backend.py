@@ -20,7 +20,6 @@ jmp_buf_t = ir.ArrayType(ir.IntType(8), JMP_BUF_BYTES)
 class LlvmBackend(Visitor):
     locals: List[defaultdict]
     externs: Dict[str, ir.Function]
-    constructors: Dict[str, ir.Function]
     methods: Dict[str, Dict[str, ir.Function]]
     structs: Dict[str, ir.LiteralStructType]
     # (class name, method name) -> idx in vtable, type
@@ -58,14 +57,16 @@ class LlvmBackend(Visitor):
             self.methods[cls] = {}
             orderedMethods = self.ts.getOrderedMethods(cls)
             vtable = []
-            for idx, (methName, methType, _) in enumerate(orderedMethods):
+            for idx, (methName, methType, defCls) in enumerate(orderedMethods):
                 funcType = methType.getLLVMType()
                 self.methodOffsets[(cls, methName)] = (idx, funcType)
-                func = ir.Function(self.module, funcType,
-                                   cls + "__" + methName)
+                if defCls == cls:
+                    func = ir.Function(self.module, funcType,
+                                       cls + "__" + methName)
+                    self.methods[cls][methName] = func
+            for methName, _, defCls in orderedMethods:
+                func = self.methods[defCls][methName]
                 self.methods[cls][methName] = func
-            for methName, _, _ in orderedMethods:
-                func = self.methods[cls][methName]
                 vtable.append(func)
             t = self.getClassVtableType(cls)
             self.global_constant('__' + cls + '__vtable',
@@ -220,8 +221,8 @@ class LlvmBackend(Visitor):
         self.visitStmtList(node.statements)
 
         self.builder.branch(end_program)
-        program_block = self.builder.block
         self.builder.position_at_start(end_program)
+        assert not end_program.is_terminated
         self.builder.ret_void()
         self.exitScope()
 
@@ -255,13 +256,14 @@ class LlvmBackend(Visitor):
         ir.Function(self.module, funcType, funcname)
 
     def FuncDef(self, node: FuncDef):
+        fname = node.getIdentifier().name
         if node.isMethod:
             func = self.module.get_global(
-                self.currentClass + "__" + node.getIdentifier().name)
+                self.currentClass + "__" + fname)
         else:
-            func = self.module.get_global(node.getIdentifier().name)
+            func = self.module.get_global(fname)
         self.returnType = node.type.returnType
-        shouldReturnValue = not self.returnType.isNone()
+        implicitReturn = self.returnType not in {IntType(), BoolType(), StrType(), NoneType()}
         self.enterScope()
         bb_entry = func.append_basic_block('entry')
         self.builder = ir.IRBuilder(bb_entry)
@@ -274,12 +276,14 @@ class LlvmBackend(Visitor):
         for d in node.declarations:
             self.visit(d)
         self.visitStmtList(node.statements)
-        # implicitly return None if possible
-        if shouldReturnValue is not None and (
-            len(node.statements) == 0 or
-            not isinstance(node.statements[-1], ReturnStmt)
-        ):
-            self.builder.ret(self.NoneLiteral(None))
+        # implicitly return None if needed, close all blocks
+        for block in func.blocks:
+            self.builder.position_at_end(block)
+            if not block.is_terminated:
+                if implicitReturn:
+                    self.builder.ret(self.NoneLiteral(None))
+                else:
+                    self.builder.unreachable()
         self.exitScope()
         return func
 
@@ -536,10 +540,13 @@ class LlvmBackend(Visitor):
             # unwrap if necessary, re-wrap
             saved_block = self.builder.block
             val = self.visit(arg)
+            # print(val)
             addr = self.builder.alloca(
-                node.var.t.getLLVMType())
+                arg.inferredType.getLLVMType())
+            # print(addr)
             wrapper = self.builder.alloca(
-                node.var.t.getLLVMType().as_pointer(), None, "wrapper")
+                arg.inferredType.getLLVMType().as_pointer(), None, "wrapper")
+            # print(wrapper)
             self.builder.position_at_end(saved_block)
             self.builder.store(val, addr)
             self.builder.store(addr, wrapper)
@@ -659,6 +666,7 @@ class LlvmBackend(Visitor):
         self.builder.position_at_start(end_block)
 
     def ReturnStmt(self, node: ReturnStmt):
+        assert not self.builder.block.is_terminated
         if self.returnType.isNone():
             self.builder.ret(self.NoneLiteral(None))
         else:
@@ -713,14 +721,14 @@ class LlvmBackend(Visitor):
 
         self.builder.position_at_start(then_block)
         then_val = thenFn()
-        if not self.builder.block.is_terminated:
+        if not then_block.is_terminated:
             self.builder.branch(merge_block)
         then_block = self.builder.block
 
         if elseFn is not None:
             self.builder.position_at_start(else_block)
             else_val = elseFn()
-            if not self.builder.block.is_terminated:
+            if not else_block.is_terminated:
                 self.builder.branch(merge_block)
             else_block = self.builder.block
 
@@ -749,7 +757,8 @@ class LlvmBackend(Visitor):
 
         call_args = [self.builder.bitcast(obj, voidptr_t)]
         for i in range(len(node.args)):
-            call_args.append(self.visitArg(node.method.inferredType, i, node.args[i]))
+            call_args.append(self.visitArg(
+                node.method.inferredType, i, node.args[i]))
         return self.builder.call(callee_func, call_args, 'callmethodtmp')
 
     # LITERALS

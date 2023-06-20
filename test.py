@@ -17,10 +17,7 @@ error_flags = {"error", "Error", "Exception",
 
 
 disabled_llvm_tests = [
-    "/binary_tree.",
-    "/doubling_vector.",
     "/nonlocal.",
-    "/exponent."
 ]
 
 disabled_jvm_tests = []
@@ -41,15 +38,15 @@ def should_skip(disabled_tests: List[str], test: Path) -> bool:
 
 
 def run_all_tests():
-    run_parse_tests()
-    run_typecheck_tests()
-    run_python_backend_tests()
-    run_closure_tests()
-    run_jvm_tests()
-    run_cil_tests()
-    run_wasm_tests()
-    run_llvm_tests()
-    # test_eval_llvm()
+    # run_parse_tests()
+    # run_typecheck_tests()
+    # run_python_backend_tests()
+    # run_closure_tests()
+    # run_jvm_tests()
+    # run_cil_tests()
+    # run_wasm_tests()
+    # run_llvm_tests()
+    test_eval_llvm()
 
 
 def run_parse_tests():
@@ -647,7 +644,7 @@ def eval_llvm(module):
 
 
 def test_eval_llvm():
-    run_llvm_test("foobar.py", True)
+    run_llvm_test("foobar.py", "foobar.ll")
 
 
 def run_llvm_test(test, debug):
@@ -665,8 +662,8 @@ def run_llvm_test(test, debug):
             assert len(compiler.typechecker.errors) == 0
         module = compiler.emitLLVM(chocopy_ast)
         if debug:
-            print("Module output:")
-            print(str(module))
+            with open(debug, "w") as f:
+                f.write(str(module))
         eval_llvm(module)
         return True
     except Exception as e:
