@@ -26,7 +26,8 @@ def main():
     parser = argparse.ArgumentParser(description='Chocopy frontend')
     parser.add_argument('--mode',
                         dest='mode',
-                        choices=["parse", "tc", "python", "jvm", "hoist", "cil", "wasm", "llvm"],
+                        choices=["parse", "tc", "python", "jvm",
+                                 "hoist", "cil", "wasm", "llvm"],
                         default="python",
                         help=mode_help)
     parser.add_argument('--print', dest='should_print', action='store_true',

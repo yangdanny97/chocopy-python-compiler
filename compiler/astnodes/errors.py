@@ -10,7 +10,7 @@ class Errors(Node):
         self.errors = errors
 
     def visit(self, visitor):
-        pass
+        return self
 
     def toJSON(self, dump_location=True):
         d = super().toJSON(dump_location)

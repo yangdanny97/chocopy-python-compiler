@@ -7,7 +7,7 @@ import json
 
 class PythonBackend(Visitor):
     def __init__(self):
-        self.builder = Builder(None)
+        self.builder = Builder("")
 
     def visit(self, node: Node):
         return node.visit(self)
@@ -141,7 +141,8 @@ class PythonBackend(Visitor):
         if isinstance(arg, Identifier) and arg.varInstance is None:
             self.visit(arg)
             return
-        argIsRef = isinstance(arg, Identifier) and arg.varInstance.isNonlocal
+        argIsRef = isinstance(
+            arg, Identifier) and arg.varInstance is not None and arg.varInstance.isNonlocal
         paramIsRef = paramIdx in funcType.refParams
         if argIsRef and paramIsRef and arg.varInstance == funcType.refParams[paramIdx]:
             # ref arg and ref param, pass ref arg

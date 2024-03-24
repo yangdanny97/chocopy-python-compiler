@@ -3,7 +3,7 @@ from .types import *
 from .builder import Builder
 from .typesystem import TypeSystem
 from .visitor import CommonVisitor
-from typing import List, Dict
+from typing import List, Dict, Optional, cast, Callable
 import json
 
 
@@ -29,7 +29,7 @@ class JvmBackend(CommonVisitor):
         self.counter += 1
         return "L" + str(self.counter)
 
-    def label(self, name: str) -> str:
+    def label(self, name: str):
         self.currentBuilder().unindent()
         self.instr(name + ":")
         self.currentBuilder().indent()
@@ -96,7 +96,7 @@ class JvmBackend(CommonVisitor):
     def genLocalName(self, offset: int) -> str:
         return f"__local__{offset}"
 
-    def newLocal(self, name: str = None, isRef: bool = True) -> int:
+    def newLocal(self, name: Optional[str] = None, isRef: bool = True) -> int:
         # store the top of stack as a new local
         n = len(self.locals[-1])
         if isRef:
@@ -126,7 +126,7 @@ class JvmBackend(CommonVisitor):
         # global decls
         for v in var_decls:
             self.instr(
-                f".field static {v.var.identifier.name} {v.var.t.getJavaSignature()}")
+                f".field static {v.var.identifier.name} {v.var.getTypeX().getJavaSignature()}")
 
         # main
         self.instr(".method public static main : ([Ljava/lang/String;)V")
@@ -148,7 +148,7 @@ class JvmBackend(CommonVisitor):
         for v in var_decls:
             self.visit(v.value)
             self.instr(
-                f"putstatic Field {self.main} {v.var.identifier.name} {v.var.t.getJavaSignature()}")
+                f"putstatic Field {self.main} {v.var.identifier.name} {v.var.getTypeX().getJavaSignature()}")
         self.instr("return")
         self.instr(".end code")
         self.currentBuilder().unindent()
@@ -180,7 +180,7 @@ class JvmBackend(CommonVisitor):
         # field decls
         for v in var_decls:
             self.instr(
-                f".field {v.var.identifier.name} {v.var.t.getJavaSignature()}")
+                f".field {v.var.identifier.name} {v.var.getTypeX().getJavaSignature()}")
         for d in func_decls:
             if d.name.name == "__init__":
                 constructor_def = d
@@ -198,7 +198,7 @@ class JvmBackend(CommonVisitor):
             self.newLocalEntry(node.params[i].identifier.name)
         for d in node.declarations:
             self.visit(d)
-        self.returnType = node.type.returnType
+        self.returnType = node.getTypeX().returnType
         # handle last return
         self.visitStmtList(node.statements)
         hasReturn = False
@@ -211,7 +211,7 @@ class JvmBackend(CommonVisitor):
 
     def constructor(self, superclass: str, node: FuncDef):
         self.enterScope()
-        constructorSig = node.type.dropFirstParam()
+        constructorSig = node.getTypeX().dropFirstParam()
         self.instr(
             f".method public <init> : {constructorSig.getJavaSignature()}")
         self.currentBuilder().indent()
@@ -227,7 +227,7 @@ class JvmBackend(CommonVisitor):
 
     def method(self, node: FuncDef):
         self.enterScope()
-        methodSig = node.type.dropFirstParam()
+        methodSig = node.getTypeX().dropFirstParam()
         self.instr(
             f".method public {node.name.name} : {methodSig.getJavaSignature()}")
         self.currentBuilder().indent()
@@ -241,7 +241,7 @@ class JvmBackend(CommonVisitor):
     def FuncDef(self, node: FuncDef):
         self.enterScope()
         self.instr(
-            f".method public static {node.name.name} : {node.type.getJavaSignature()}")
+            f".method public static {node.name.name} : {node.getTypeX().getJavaSignature()}")
         self.currentBuilder().indent()
         self.instr(
             f".code stack {self.stackLimit} locals {len(node.declarations) + self.localLimit}")
@@ -257,42 +257,42 @@ class JvmBackend(CommonVisitor):
             self.instr("aload 0")
             self.visit(node.value)
             self.instr(
-                f"putfield Field {className.getJavaName()} {varName} {node.var.t.getJavaSignature()}")
-        elif node.var.varInstance.isNonlocal:
-            elementType = node.var.t
-            self.wrap(node.value, elementType)
+                f"putfield Field {className.getJavaName()} {varName} {node.var.getTypeX().getJavaSignature()}")
+        elif node.var.varInstanceX().isNonlocal:
+            self.wrap(node.value, node.var.getTypeX())
             self.newLocal(varName, True)
         else:
             self.visit(node.value)
-            self.newLocal(varName, node.value.inferredType.isJavaRef())
+            self.newLocal(varName, node.value.inferredValueType().isJavaRef())
 
     # STATEMENTS
 
     def processAssignmentTarget(self, target: Expr):
         if isinstance(target, Identifier):
-            if self.defaultToGlobals or target.varInstance.isGlobal:
+            if self.defaultToGlobals or target.varInstanceX().isGlobal:
                 self.instr(
-                    f"putstatic Field {self.main} {target.name} {target.inferredType.getJavaSignature()}")
-            elif target.varInstance.isNonlocal:
-                self.load(target.name, ListValueType(target.inferredType))
+                    f"putstatic Field {self.main} {target.name} {target.inferredValueType().getJavaSignature()}")
+            elif target.varInstanceX().isNonlocal:
+                self.load(target.name, ListValueType(
+                    target.inferredValueType()))
                 self.instr("swap")
                 self.loadInt(0)
                 self.instr("swap")
-                self.arrayStore(target.inferredType)
+                self.arrayStore(target.inferredValueType())
             else:
-                self.store(target.name, target.inferredType)
+                self.store(target.name, target.inferredValueType())
         elif isinstance(target, IndexExpr):
             # stack should be array, idx, value
             self.visit(target.list)
             self.instr("swap")
             self.visit(target.index)
             self.instr("swap")
-            self.arrayStore(target.inferredType)
+            self.arrayStore(target.inferredValueType())
         elif isinstance(target, MemberExpr):
             self.visit(target.object)
             self.instr("swap")
             self.instr(
-                f"putfield Field {target.object.inferredType.className} {target.member.name} {target.inferredType.getJavaSignature()}")
+                f"putfield Field {cast(ClassValueType, target.object.inferredValueType()).className} {target.member.name} {target.inferredValueType().getJavaSignature()}")
         else:
             raise Exception(
                 "Internal compiler error: unsupported assignment target")
@@ -358,8 +358,8 @@ class JvmBackend(CommonVisitor):
 
     def BinaryExpr(self, node: BinaryExpr):
         operator = node.operator
-        leftType = node.left.inferredType
-        rightType = node.right.inferredType
+        leftType = node.left.inferredValueType()
+        rightType = node.right.inferredValueType()
         shortCircuitOps = {"and", "or"}
         if operator not in shortCircuitOps:
             self.visit(node.left)
@@ -378,8 +378,9 @@ class JvmBackend(CommonVisitor):
                 self.instr(f"iload {lenR}")
                 self.instr("iadd")
                 # stack is L, total_length
+                list_t = cast(ListValueType, self.ts.join(leftType, rightType))
                 self.instr(
-                    f"anewarray {self.ts.join(leftType, rightType).elementType.getJavaName(True)}")
+                    f"anewarray {list_t.elementType.getJavaName(True)}")
                 newArr = self.newLocal(None, True)
                 self.instr("iconst_0")
                 self.instr(f"aload {newArr}")
@@ -441,15 +442,15 @@ class JvmBackend(CommonVisitor):
             self.comparator("if_acmpeq")
         # logical operators
         elif operator == "and":
-            condFn = lambda: self.visit(node.left)
-            thenFn = lambda: self.visit(node.right)
-            elseFn = lambda: self.instr("iconst_0")
-            self.ternary(condFn, thenFn, elseFn)
+            c = lambda: self.visit(node.left)
+            t = lambda: self.visit(node.right)
+            e = lambda: self.instr("iconst_0")
+            self.ternary(c, t, e)
         elif operator == "or":
-            condFn = lambda: self.visit(node.left)
-            thenFn = lambda: self.instr("iconst_1")
-            elseFn = lambda: self.visit(node.right)
-            self.ternary(condFn, thenFn, elseFn)
+            c = lambda: self.visit(node.left)
+            t = lambda: self.instr("iconst_1")
+            e = lambda: self.visit(node.right)
+            self.ternary(c, t, e)
         else:
             raise Exception(
                 f"Internal compiler error: unexpected operator {operator}")
@@ -457,8 +458,9 @@ class JvmBackend(CommonVisitor):
     def IndexExpr(self, node: IndexExpr):
         self.visit(node.list)
         self.visit(node.index)
-        if node.list.inferredType.isListType():
-            self.arrayLoad(node.list.inferredType.elementType)
+        if node.list.inferredValueType().isListType():
+            self.arrayLoad(
+                cast(ListValueType, node.list.inferredType).elementType)
         else:
             self.instr("dup")
             self.instr("iconst_1")
@@ -482,6 +484,7 @@ class JvmBackend(CommonVisitor):
         self.instr(f"invokespecial Method {javaName} <init> ()V")
 
     def CallExpr(self, node: CallExpr):
+        assert isinstance(node.function.inferredType, FuncType)
         signature = node.function.inferredType.getJavaSignature()
         name = node.function.name
         if node.isConstructor:
@@ -515,18 +518,19 @@ class JvmBackend(CommonVisitor):
         self.label(startLabel)
         # while idx < len(itr)
         self.load(self.genLocalName(idx), IntType())
-        self.load(self.genLocalName(itr), node.iterable.inferredType)
-        if node.iterable.inferredType.isListType():
+        self.load(self.genLocalName(itr), node.iterable.inferredValueType())
+        if node.iterable.inferredValueType().isListType():
             self.instr("arraylength")
         else:
             self.instr("invokevirtual Method java/lang/String length ()I")
         self.instr("isub")
         self.instr(f"ifge {endLabel}")
         # x = itr[idx]
-        self.load(self.genLocalName(itr), node.iterable.inferredType)
+        self.load(self.genLocalName(itr), node.iterable.inferredValueType())
         self.load(self.genLocalName(idx), IntType())
-        if node.iterable.inferredType.isListType():
-            self.arrayLoad(node.iterable.inferredType.elementType)
+        if node.iterable.inferredValueType().isListType():
+            self.arrayLoad(
+                cast(ListValueType, node.iterable.inferredValueType()).elementType)
         else:
             self.instr("dup")
             self.instr("iconst_1")
@@ -556,7 +560,7 @@ class JvmBackend(CommonVisitor):
             else:
                 elementType = ClassValueType("object")
         else:
-            elementType = t.elementType
+            elementType = cast(ListValueType, t).elementType
         self.instr(f"anewarray {elementType.getJavaName(True)}")
         for i in range(len(node.elements)):
             self.instr("dup")
@@ -575,7 +579,7 @@ class JvmBackend(CommonVisitor):
         self.label(endLabel)
         self.instr("nop")
 
-    def buildReturn(self, value: Expr):
+    def buildReturn(self, value: Optional[Expr]):
         if self.returnType.isNone():
             self.instr("return")
         else:
@@ -589,28 +593,28 @@ class JvmBackend(CommonVisitor):
         self.buildReturn(node.value)
 
     def Identifier(self, node: Identifier):
-        if self.defaultToGlobals or node.varInstance.isGlobal:
+        if self.defaultToGlobals or node.varInstanceX().isGlobal:
             self.instr(
-                f"getstatic Field {self.main} {node.name} {node.inferredType.getJavaSignature()}")
-        elif node.varInstance.isNonlocal:
-            self.load(node.name, ListValueType(node.inferredType))
+                f"getstatic Field {self.main} {node.name} {node.inferredValueType().getJavaSignature()}")
+        elif node.varInstanceX().isNonlocal:
+            self.load(node.name, ListValueType(node.inferredValueType()))
             self.loadInt(0)
-            self.arrayLoad(node.inferredType)
+            self.arrayLoad(node.inferredValueType())
         else:
-            self.load(node.name, node.inferredType)
+            self.load(node.name, node.inferredValueType())
 
     def MemberExpr(self, node: MemberExpr):
         self.visit(node.object)
         self.instr(
-            f"getfield Field {node.object.inferredType.className} {node.member.name} {node.inferredType.getJavaSignature()}")
+            f"getfield Field {cast(ClassValueType, node.object.inferredValueType()).className} {node.member.name} {node.inferredValueType().getJavaSignature()}")
 
     def IfExpr(self, node: IfExpr):
-        condFn = lambda: self.visit(node.condition)
-        thenFn = lambda: self.visit(node.thenExpr)
-        elseFn = lambda: self.visit(node.elseExpr)
-        self.ternary(condFn, thenFn, elseFn)
+        c = lambda: self.visit(node.condition)
+        t = lambda: self.visit(node.thenExpr)
+        e = lambda: self.visit(node.elseExpr)
+        self.ternary(c, t, e)
 
-    def ternary(self, condFn, thenFn, elseFn):
+    def ternary(self, condFn: Callable, thenFn: Callable, elseFn: Callable):
         condFn()
         l1 = self.newLabelName()
         l2 = self.newLabelName()
@@ -623,18 +627,20 @@ class JvmBackend(CommonVisitor):
         self.instr("nop")
 
     def MethodCallExpr(self, node: MethodCallExpr):
-        className = node.method.object.inferredType.className
+        className = cast(
+            ClassValueType, node.method.object.inferredType).className
         methodName = node.method.member.name
         if methodName == "__init__" and className in {"int", "bool"}:
             return
         self.visit(node.method.object)
-        for i in range(len(node.args)):
-            self.visitArg(node.method.inferredType, i + 1, node.args[i])
         methodType = node.method.inferredType
+        assert isinstance(methodType, FuncType)
+        for i in range(len(node.args)):
+            self.visitArg(methodType, i + 1, node.args[i])
         javaMethodType = methodType.dropFirstParam()
         self.instr(
             f"invokevirtual Method {className} {methodName} {javaMethodType.getJavaSignature()}")
-        if node.method.inferredType.returnType.isNone():
+        if methodType.returnType.isNone():
             self.NoneLiteral(None)  # push null for void return
 
     # LITERALS
@@ -654,7 +660,7 @@ class JvmBackend(CommonVisitor):
     def IntegerLiteral(self, node: IntegerLiteral):
         self.loadInt(node.value)
 
-    def NoneLiteral(self, node: NoneLiteral):
+    def NoneLiteral(self, node: Optional[NoneLiteral]):
         self.instr("aconst_null")
 
     def StringLiteral(self, node: StringLiteral):
@@ -691,7 +697,7 @@ class JvmBackend(CommonVisitor):
             "invokevirtual Method java/util/Scanner nextLine ()Ljava/lang/String;")
 
     def emit_len(self, arg: Expr):
-        t = arg.inferredType
+        t = arg.inferredValueType()
         is_list = False
         if t.isListType():
             is_list = True
@@ -704,7 +710,8 @@ class JvmBackend(CommonVisitor):
                 is_list = False
             else:
                 self.emit_exn(
-                    f"Built-in function len is unsupported for values of type {arg.inferredType.classname}")
+                    "Built-in function len is unsupported for values of this type")
+                return
         self.visit(arg)
         if is_list:
             self.instr("arraylength")
@@ -712,25 +719,27 @@ class JvmBackend(CommonVisitor):
             self.instr("invokevirtual Method java/lang/String length ()I")
 
     def emit_print(self, arg: Expr):
-        if isinstance(arg.inferredType, ListValueType) or arg.inferredType.className not in {"bool", "int", "str"}:
+        if isinstance(arg.inferredType, ListValueType) or cast(ClassValueType, arg.inferredType).className not in {"bool", "int", "str"}:
             self.emit_exn(
-                f"Built-in function print is unsupported for values of type {arg.inferredType.classname}")
-        t = arg.inferredType.getJavaSignature()
+                "Built-in function print is unsupported for values of this type")
+        t = arg.inferredValueType().getJavaSignature()
         self.instr("getstatic Field java/lang/System out Ljava/io/PrintStream;")
         self.visit(arg)
         self.instr(
             f"invokevirtual Method java/io/PrintStream println ({t})V")
         self.NoneLiteral(None)  # push None for void return
 
-    def visitArg(self, funcType, paramIdx: int, arg: Expr):
-        argIsRef = isinstance(arg, Identifier) and arg.varInstance.isNonlocal
+    def visitArg(self, funcType: FuncType, paramIdx: int, arg: Expr):
+        argIsRef = isinstance(
+            arg, Identifier) and arg.varInstanceX().isNonlocal
         paramIsRef = paramIdx in funcType.refParams
-        if argIsRef and paramIsRef and arg.varInstance == funcType.refParams[paramIdx]:
+        if argIsRef and paramIsRef and cast(Identifier, arg).varInstance == funcType.refParams[paramIdx]:
             # ref arg and ref param, pass ref arg
-            self.load(arg.name, ListValueType(arg.inferredType))
+            self.load(cast(Identifier, arg).name,
+                      ListValueType(arg.inferredValueType()))
         elif paramIsRef:
             # non-ref arg and ref param, or do not pass ref arg
             # unwrap if necessary, re-wrap
-            self.wrap(arg, arg.inferredType)
+            self.wrap(arg, arg.inferredValueType())
         else:  # non-ref param, maybe unwrap
             self.visit(arg)

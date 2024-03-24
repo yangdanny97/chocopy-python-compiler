@@ -3,7 +3,7 @@ from .types import *
 from .builder import Builder
 from .typesystem import TypeSystem
 from .visitor import CommonVisitor
-from typing import List, Dict, Tuple, Set
+from typing import List, Dict, Tuple, Set, Optional, cast, Callable
 
 
 class WasmBuilder(Builder):
@@ -34,7 +34,7 @@ class WasmBuilder(Builder):
         self.newLine("(else")
         self.indent()
 
-    def func(self, name: str, sig: str = "") -> Builder:
+    def func(self, name: str, sig: str = "") -> "WasmBuilder":
         # return new block for declaring extra locals
         self.newLine(f"(func ${name} {sig}")
         self.indent()
@@ -45,19 +45,18 @@ class WasmBuilder(Builder):
         self.newLine(")")
 
     def emit(self) -> str:
-        lines = []
+        lines: List[str] = []
         for l in self.lines:
             if isinstance(l, str):
-                if " drop" in l and " i32.const 0" in lines[-1]:
-                    lines[-1] = None
+                if " drop" in l and lines[-1] and " i32.const 0" in lines[-1]:
+                    lines.pop()
                     continue
                 lines.append(l)
             else:
                 lines.append(l.emit())
-        lines = [l for l in lines if l is not None]
         return "\n".join(lines)
 
-    def newBlock(self) -> Builder:
+    def newBlock(self) -> "WasmBuilder":
         child = WasmBuilder(self.name)
         child.indentation = self.indentation
         self.lines.append(child)
@@ -70,9 +69,9 @@ class WasmBackend(CommonVisitor):
     # (class name, method name) -> (class offset, table offset, inherited)
     methodOffsets: Dict[Tuple[str, str], Tuple[int, int, bool]]
     # class -> offset of start of vtable
-    vtables: Dict[str, int]
+    vtables: Dict[str, List[Tuple[int, int]]]
     undeclaredFuncs: Set[str]
-    locals: WasmBuilder = None
+    localsBuilder: Optional[WasmBuilder] = None
 
     def __init__(self, main: str, ts: TypeSystem):
         self.builder = WasmBuilder(main)
@@ -112,9 +111,6 @@ class WasmBackend(CommonVisitor):
                 self.vtables[cls].append((memOffset + idx * 4, t))
             memOffset += (len(methods) * 4)
 
-    def currentBuilder(self):
-        return self.classes[self.currentClass]
-
     def newLabelName(self) -> str:
         self.counter += 1
         return "label_" + str(self.counter)
@@ -133,16 +129,17 @@ class WasmBackend(CommonVisitor):
     def getLocal(self, name: str):
         self.instr(f"local.get ${name}")
 
-    def genLocalName(self, suffix=None) -> str:
+    def genLocalName(self, suffix: Optional[str] = None) -> str:
         self.localCounter += 1
         suffix = "" if suffix is None else ("_" + suffix)
         return f"local{suffix}{self.localCounter}"
 
-    def newLocal(self, name: str = None, t: str = "i32") -> str:
+    def newLocal(self, name: Optional[str] = None, t: str = "i32") -> str:
         # add a new local decl, does not store anything
         if name is None:
             name = self.genLocalName()
-        self.locals.newLine(f"(local ${name} {t})")
+        assert self.localsBuilder is not None
+        self.localsBuilder.newLine(f"(local ${name} {t})")
         return name
 
     def visitStmtList(self, stmts: List[Stmt]):
@@ -152,7 +149,7 @@ class WasmBackend(CommonVisitor):
             for s in stmts:
                 self.visit(s)
 
-    def alloc(self, local=None):
+    def alloc(self, local: Optional[str] = None):
         # consume i32 from top of stack, allocate that many bytes
         self.instr("call $alloc")
         if local is not None:
@@ -194,7 +191,7 @@ class WasmBackend(CommonVisitor):
         # initialize all globals to 0 for now, since we don't statically allocate strings or arrays
         for v in var_decls:
             self.instr(
-                f"(global ${v.var.identifier.name} (mut {v.var.t.getWasmName()}) ({v.var.t.getWasmName()}.const 0))")
+                f"(global ${v.var.identifier.name} (mut {v.var.getTypeX().getWasmName()}) ({v.var.getTypeX().getWasmName()}.const 0))")
         for d in func_decls:
             self.visit(d)
         for c in cls_decls:
@@ -207,7 +204,7 @@ class WasmBackend(CommonVisitor):
         module_builder = self.builder
         self.builder = module_builder.newBlock()
 
-        self.locals = self.builder.func("main")
+        self.localsBuilder = self.builder.func("main")
         self.defaultToGlobals = True
         self.initializeVtables()
         # initialize globals
@@ -230,23 +227,12 @@ class WasmBackend(CommonVisitor):
                 self.instr(f"i32.const {funcOffset}")
                 self.instr("i32.store")
 
-    def ClassDef(self, node: ClassDef):
-        self.currentClass = node.name.name
-        func_decls = [d for d in node.declarations if isinstance(d, FuncDef)]
-        for func in func_decls:
-            name = f"{node.name.name}${func.name.name}"
-            self.undeclaredFuncs.remove("$" + name)
-            self.funcDefHelper(func, name)
-
-    def FuncDef(self, node: FuncDef):
-        self.funcDefHelper(node, node.name.name)
-
     def funcDefHelper(self, node: FuncDef, name: str):
-        self.returnType = node.type.returnType
+        self.returnType = node.getTypeX().returnType
         ret = None if self.returnType.isNone() else self.returnType.getWasmName()
         paramNames = [x.identifier.name for x in node.params]
-        self.locals = self.builder.func(
-            name, node.type.getWasmSignature(paramNames))
+        self.localsBuilder = self.builder.func(
+            name, node.getTypeX().getWasmSignature(paramNames))
         for d in node.declarations:
             self.visit(d)
         self.visitStmtList(node.statements)
@@ -258,33 +244,44 @@ class WasmBackend(CommonVisitor):
                 self.instr("unreachable")
         self.builder.end()
 
+    def ClassDef(self, node: ClassDef):
+        self.currentClass = node.name.name
+        func_decls = [d for d in node.declarations if isinstance(d, FuncDef)]
+        for func in func_decls:
+            name = f"{node.name.name}${func.name.name}"
+            self.undeclaredFuncs.remove("$" + name)
+            self.funcDefHelper(func, name)
+
+    def FuncDef(self, node: FuncDef):
+        self.funcDefHelper(node, node.name.name)
+
     def VarDef(self, node: VarDef):
         varName = node.var.identifier.name
         if node.isAttr:
             raise Exception("this should be handled elsewhere")
-        elif node.var.varInstance.isNonlocal:
+        elif node.var.varInstanceX().isNonlocal:
             self.instr("i32.const 8")
             self.instr("call $alloc")
             addr = self.newLocal(varName)
             self.teeLocal(addr)
             self.visit(node.value)
-            self.instr(f"{node.value.inferredType.getWasmName()}.store")
+            self.instr(f"{node.value.inferredValueType().getWasmName()}.store")
         else:
             self.visit(node.value)
-            n = self.newLocal(varName, node.value.inferredType.getWasmName())
+            n = self.newLocal(varName, node.value.inferredValueType().getWasmName())
             self.setLocal(n)
 
     # # STATEMENTS
 
     def setIdentifier(self, target: Identifier, val: str):
         # val is the name of the local that the value is stored in
-        if self.defaultToGlobals or target.varInstance.isGlobal:
+        if self.defaultToGlobals or target.varInstanceX().isGlobal:
             self.getLocal(val)
             self.instr(f"global.set ${target.name}")
-        elif target.varInstance.isNonlocal:
+        elif target.varInstanceX().isNonlocal:
             self.getLocal(target.name)
             self.getLocal(val)
-            self.instr(f"{target.inferredType.getWasmName()}.store")
+            self.instr(f"{target.inferredValueType().getWasmName()}.store")
         else:
             self.getLocal(val)
             self.setLocal(target.name)
@@ -307,33 +304,33 @@ class WasmBackend(CommonVisitor):
             self.getLocal(iterable)
             self.instr("i32.add")
             self.getLocal(val)
-            self.instr(f"{target.inferredType.getWasmName()}.store")
+            self.instr(f"{target.inferredValueType().getWasmName()}.store")
         elif isinstance(target, MemberExpr):
-            cls = target.object.inferredType.className
+            cls = cast(ClassValueType, target.object.inferredValueType()).className
             attr = target.member.name
             offset = self.attrOffsets[(cls, attr)]
             self.visit(target.object)
             self.instr(f"i32.const {offset * 8 + 4}")
             self.instr("i32.add")
             self.getLocal(val)
-            self.instr(f"{target.inferredType.getWasmName()}.store")
+            self.instr(f"{target.inferredValueType().getWasmName()}.store")
         else:
             raise Exception(
                 "Internal compiler error: unsupported assignment target")
 
     def MemberExpr(self, node: MemberExpr):
-        cls = node.object.inferredType.className
+        cls = cast(ClassValueType, node.object.inferredValueType()).className
         attr = node.member.name
         offset = self.attrOffsets[(cls, attr)]
         self.visit(node.object)
         self.instr(f"i32.const {offset * 8 + 4}")
         self.instr("i32.add")
-        self.instr(f"{node.inferredType.getWasmName()}.load")
+        self.instr(f"{node.inferredValueType().getWasmName()}.load")
 
     def AssignStmt(self, node: AssignStmt):
         self.visit(node.value)
         val = self.newLocal(self.genLocalName(
-            "val"), node.value.inferredType.getWasmName())
+            "val"), node.value.inferredValueType().getWasmName())
         self.setLocal(val)
         targets = node.targets[::-1]
         for t in targets:
@@ -373,8 +370,8 @@ class WasmBackend(CommonVisitor):
 
     def BinaryExpr(self, node: BinaryExpr):
         operator = node.operator
-        leftType = node.left.inferredType
-        rightType = node.right.inferredType
+        leftType = node.left.inferredValueType()
+        rightType = node.right.inferredValueType()
         shortCircuitOperators = {"and", "or"}
         if operator not in shortCircuitOperators:
             self.visit(node.left)
@@ -511,14 +508,14 @@ class WasmBackend(CommonVisitor):
             self.emit_assert(node.args[0], node.location[0])
         else:
             for i in range(len(node.args)):
-                self.visitArg(node.function.inferredType, i, node.args[i])
+                self.visitArg(cast(FuncType, node.function.inferredType), i, node.args[i])
             self.instr(f"call ${name}")
-            if node.function.inferredType.returnType.isNone():
+            if cast(FuncType, node.function.inferredType).returnType.isNone():
                 self.NoneLiteral(None)  # push null for void return
 
     def MethodCallExpr(self, node: MethodCallExpr):
-        funcType = node.method.inferredType
-        className = node.method.object.inferredType.className
+        funcType = cast(FuncType, node.method.inferredType)
+        className = cast(ClassValueType, node.method.object.inferredType).className
         methodName = node.method.member.name
         if methodName == "__init__" and className in {"int", "bool"}:
             return
@@ -579,7 +576,7 @@ class WasmBackend(CommonVisitor):
         length = self.newLocal(self.genLocalName("length"))
         # this temporarily stores the current value
         temp = self.newLocal(self.genLocalName(
-            "temp"), node.identifier.inferredType.getWasmName())
+            "temp"), node.identifier.inferredValueType().getWasmName())
 
         self.visit(node.iterable)
         self.teeLocal(iterable)
@@ -603,8 +600,8 @@ class WasmBackend(CommonVisitor):
 
         self.instr(f"br_if ${block}")
 
-        isList = node.iterable.inferredType.isListType()
-        contentsType = node.identifier.inferredType.getWasmName()
+        isList = node.iterable.inferredValueType().isListType()
+        contentsType = node.identifier.inferredValueType().getWasmName()
         self.idxHelper(iterable, idx, isList, contentsType)
         self.setLocal(temp)
         self.setIdentifier(node.identifier, temp)
@@ -622,7 +619,7 @@ class WasmBackend(CommonVisitor):
         self.builder.end()
         self.builder.end()
 
-    def buildReturn(self, value: Expr):
+    def buildReturn(self, value: Optional[Expr]):
         if self.returnType.isNone():
             self.instr("return")
         else:
@@ -636,11 +633,11 @@ class WasmBackend(CommonVisitor):
         self.buildReturn(node.value)
 
     def Identifier(self, node: Identifier):
-        if self.defaultToGlobals or node.varInstance.isGlobal:
+        if self.defaultToGlobals or node.varInstanceX().isGlobal:
             self.instr(f"global.get ${node.name}")
-        elif node.varInstance.isNonlocal:
+        elif node.varInstanceX().isNonlocal:
             self.instr(f"local.get ${node.name}")
-            self.instr(f"{node.inferredType.getWasmName()}.load")
+            self.instr(f"{node.inferredValueType().getWasmName()}.load")
         else:
             self.instr(f"local.get ${node.name}")
 
@@ -648,10 +645,10 @@ class WasmBackend(CommonVisitor):
         c = lambda: self.visit(node.condition)
         t = lambda: self.visit(node.thenExpr)
         e = lambda: self.visit(node.elseExpr)
-        resultType = node.inferredType.getWasmName()
+        resultType = node.inferredValueType().getWasmName()
         self.ternary(c, t, e, resultType)
 
-    def ternary(self, condFn, thenFn, elseFn, resultType):
+    def ternary(self, condFn: Callable, thenFn: Callable, elseFn: Callable, resultType: str):
         n = self.newLocal(self.genLocalName("ifexpr_result"), resultType)
         condFn()
         self.builder._if()
@@ -676,7 +673,7 @@ class WasmBackend(CommonVisitor):
             else:
                 elementType = ClassValueType("object")
         else:
-            elementType = t.elementType
+            elementType = cast(ListValueType, t).elementType
 
         # 8 bytes per element + 4 for the length, rounded up to nearest 8
         increase = (length + 1) * 8
@@ -735,8 +732,8 @@ class WasmBackend(CommonVisitor):
         iterable = self.newLocal(self.genLocalName("iterable"))
         self.setLocal(iterable)
         idx = self.validateIdx(iterable, node)
-        self.idxHelper(iterable, idx, node.list.inferredType.isListType(),
-                       node.inferredType.getWasmName())
+        self.idxHelper(iterable, idx, node.list.inferredValueType().isListType(),
+                       node.inferredValueType().getWasmName())
 
     # # LITERALS
 
@@ -749,7 +746,7 @@ class WasmBackend(CommonVisitor):
     def IntegerLiteral(self, node: IntegerLiteral):
         self.instr(f"i64.const {node.value}")
 
-    def NoneLiteral(self, node: NoneLiteral):
+    def NoneLiteral(self, node: Optional[NoneLiteral]):
         self.instr("i32.const 0")
 
     def StringLiteral(self, node: StringLiteral):
@@ -779,12 +776,12 @@ class WasmBackend(CommonVisitor):
         # load the address the string was stored at to the stack
         self.getLocal(addr)
 
-    def visitArg(self, funcType, paramIdx: int, arg: Expr):
-        argIsRef = isinstance(arg, Identifier) and arg.varInstance.isNonlocal
+    def visitArg(self, funcType: FuncType, paramIdx: int, arg: Expr):
+        argIsRef = isinstance(arg, Identifier) and arg.varInstanceX().isNonlocal
         paramIsRef = paramIdx in funcType.refParams
-        if argIsRef and paramIsRef and arg.varInstance == funcType.refParams[paramIdx]:
+        if argIsRef and paramIsRef and cast(Identifier, arg).varInstanceX() == funcType.refParams[paramIdx]:
             # ref arg and ref param, pass ref arg
-            self.getLocal(arg.name)
+            self.getLocal(cast(Identifier, arg).name)
         elif paramIsRef:
             # non-ref arg and ref param, or do not pass ref arg
             # unwrap if necessary, re-wrap
@@ -793,7 +790,7 @@ class WasmBackend(CommonVisitor):
             addr = self.newLocal(self.genLocalName("arg_" + str(paramIdx)))
             self.teeLocal(addr)
             self.visit(arg)
-            self.instr(f"{arg.inferredType.getWasmName()}.store")
+            self.instr(f"{arg.inferredValueType().getWasmName()}.store")
             self.getLocal(addr)
 
         else:  # non-ref param, maybe unwrap
@@ -808,11 +805,11 @@ class WasmBackend(CommonVisitor):
         self.NoneLiteral(None)
 
     def emit_print(self, arg: Expr):
-        if isinstance(arg.inferredType, ListValueType) or arg.inferredType.className not in {"bool", "int", "str"}:
+        if isinstance(arg.inferredType, ListValueType) or cast(ClassValueType, arg.inferredType).className not in {"bool", "int", "str"}:
             raise Exception(
-                f"Built-in function print is unsupported for values of type {arg.inferredType.classname}")
+                f"Built-in function print is unsupported for values of type {cast(ClassValueType, arg.inferredType).className}")
         self.visit(arg)
-        self.instr(f"call $log_{arg.inferredType.className}")
+        self.instr(f"call $log_{cast(ClassValueType, arg.inferredType).className}")
         self.NoneLiteral(None)
 
     def emit_len(self, arg: Expr):

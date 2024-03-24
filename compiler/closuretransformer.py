@@ -4,11 +4,13 @@ from .astnodes import *
 from .types import *
 
 
-def typeToAnnotation(t: ValueType) -> SymbolType:
+def typeToAnnotation(t: ValueType) -> TypeAnnotation:
     if isinstance(t, ListValueType):
         return ListType([0, 0], typeToAnnotation(t.elementType))
     elif isinstance(t, ClassValueType):
         return ClassType([0, 0], t.className)
+    else:
+        raise Exception("unexpected type")
 
 
 class ClosureTransformer(TypeChecker):
@@ -26,17 +28,18 @@ class ClosureTransformer(TypeChecker):
         t.refParams = {}
 
         for i in range(len(node.params)):
-            if node.params[i].varInstance.isNonlocal:
-                t.refParams[i] = node.params[i].varInstance
+            if node.params[i].varInstanceX().isNonlocal:
+                t.refParams[i] = node.params[i].varInstanceX()
         for i in range(len(node.freevars)):
-            if node.freevars[i].varInstance.isNonlocal:
+            if node.freevars[i].varInstanceX().isNonlocal:
                 t.refParams[len(node.params) +
-                            i] = node.freevars[i].varInstance
+                            i] = node.freevars[i].varInstanceX()
         return t
 
     def funcParams(self, node: FuncDef):
         for fv in node.freevars:
             ident = fv.copy()
+            assert isinstance(ident.inferredType, ValueType)
             annot = typeToAnnotation(ident.inferredType)
             tv = TypedVar(node.location, ident, annot)
             tv.varInstance = ident.varInstance
@@ -52,6 +55,7 @@ class ClosureTransformer(TypeChecker):
             else:
                 t = self.getType(fname)
         if isinstance(node, MethodCallExpr):
+            assert isinstance(node.method.object.inferredType, ClassValueType)
             class_name, member_name = node.method.object.inferredType.className, node.method.member.name
             t = self.ts.getMethod(class_name, member_name)
         if t is None or len(t.freevars) == 0 or not isinstance(t, FuncType):

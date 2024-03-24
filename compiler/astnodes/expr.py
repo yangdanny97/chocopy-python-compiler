@@ -1,10 +1,10 @@
 from .node import Node
-from typing import List
-from ..types import ValueType
+from typing import List, Optional, Union
+from ..types import ValueType, FuncType
 
 
 class Expr(Node):
-    inferredType: ValueType
+    inferredType: Optional[Union[ValueType, FuncType]]
 
     def __init__(self, location: List[int], kind: str):
         super().__init__(location, kind)
@@ -16,3 +16,8 @@ class Expr(Node):
         if self.inferredType is not None:
             d['inferredType'] = self.inferredType.toJSON(dump_location)
         return d
+
+    def inferredValueType(self) -> ValueType:
+        assert self.inferredType is not None and isinstance(
+            self.inferredType, ValueType)
+        return self.inferredType

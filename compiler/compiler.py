@@ -1,10 +1,10 @@
-from compiler.empty_list_typer import EmptyListTyper
 from .astnodes import *
 from .types import *
 from .typechecker import TypeChecker
 from .parser import Parser, ParseError
 from .closurevisitor import ClosureVisitor
 from .closuretransformer import ClosureTransformer
+from .empty_list_typer import EmptyListTyper
 from .nestedfunchoister import NestedFuncHoister
 from .typesystem import TypeSystem
 from .jvm_backend import JvmBackend
@@ -14,17 +14,18 @@ from .wasm_backend import WasmBackend
 from .llvm_backend import LlvmBackend
 import ast
 from pathlib import Path
+from typing import Optional
 
 
 class Compiler:
-    transformer: ClosureTransformer = None
+    transformer: Optional[ClosureTransformer] = None
 
     def __init__(self):
         self.ts = TypeSystem()
         self.parser = Parser()
         self.typechecker = TypeChecker(self.ts)
 
-    def parse(self, infile) -> Program:
+    def parse(self, infile) -> Optional[Program]:
         astparser = self.parser
         # given an input file, parse it into an AST object
         lines = None
@@ -67,6 +68,7 @@ class Compiler:
     def emitJVM(self, main: str, ast: Program):
         self.closurepass(ast)
         EmptyListTyper().visit(ast)
+        assert self.transformer is not None
         jvm_backend = JvmBackend(main, self.transformer.ts)
         jvm_backend.visit(ast)
         return jvm_backend.classes
@@ -74,6 +76,7 @@ class Compiler:
     def emitCIL(self, main: str, ast: Program):
         self.closurepass(ast)
         EmptyListTyper().visit(ast)
+        assert self.transformer is not None
         cil_backend = CilBackend(main, self.transformer.ts)
         cil_backend.visit(ast)
         return cil_backend.builder
@@ -81,6 +84,7 @@ class Compiler:
     def emitWASM(self, main: str, ast: Program):
         self.closurepass(ast)
         EmptyListTyper().visit(ast)
+        assert self.transformer is not None
         wasm_backend = WasmBackend(main, self.transformer.ts)
         wasm_backend.visit(ast)
         return wasm_backend.builder
@@ -88,6 +92,7 @@ class Compiler:
     def emitLLVM(self, ast: Program):
         self.closurepass(ast)
         EmptyListTyper().visit(ast)
+        assert self.transformer is not None
         llvm_backend = LlvmBackend(self.transformer.ts)
         llvm_backend.visit(ast)
         return llvm_backend.module

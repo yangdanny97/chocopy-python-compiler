@@ -3,7 +3,7 @@ from .types import *
 from .builder import Builder
 from .typesystem import TypeSystem
 from .visitor import CommonVisitor
-from typing import List
+from typing import List, Optional, cast, Callable
 import json
 
 
@@ -44,7 +44,7 @@ class CilBackend(CommonVisitor):
         self.counter += 1
         return "IL_" + str(self.counter)
 
-    def label(self, name: str) -> str:
+    def label(self, name: str):
         self.builder.unindent()
         self.instr(name + ": nop")
         self.builder.indent()
@@ -70,9 +70,9 @@ class CilBackend(CommonVisitor):
             self.instr(f"ldloc {n.loc}")
 
     def loadVarAddr(self, node: Identifier):
-        if self.defaultToGlobals or node.varInstance.isGlobal:
+        if self.defaultToGlobals or node.varInstanceX().isGlobal:
             self.instr(
-                f"ldsflda {node.inferredType.getCILName()} {self.main}::{node.getCILName()}")
+                f"ldsflda {node.inferredValueType().getCILName()} {self.main}::{node.getCILName()}")
         elif self.isFromRefArg(node):
             self.load(node.name)
         else:
@@ -119,7 +119,7 @@ class CilBackend(CommonVisitor):
     def genLocalName(self, offset: int) -> str:
         return f"__local__{offset}"
 
-    def newLocal(self, name: str, t: ValueType):
+    def newLocal(self, name: Optional[str], t: ValueType):
         # store the top of stack as a new local
         n = len([k for k in self.locals[-1] if not self.locals[-1][k].isArg])
         self.instr(f"stloc {n}")
@@ -151,7 +151,7 @@ class CilBackend(CommonVisitor):
         # global vars (static members)
         for v in var_decls:
             self.instr(
-                f".field public static {v.var.t.getCILName()} {v.getIdentifier().getCILName()}")
+                f".field public static {v.var.getTypeX().getCILName()} {v.getIdentifier().getCILName()}")
 
         # main method, top level statements
         self.instr(
@@ -164,7 +164,7 @@ class CilBackend(CommonVisitor):
         for v in var_decls:
             self.visit(v.value)
             self.instr(
-                f"stsfld {v.var.t.getCILName()} {self.main}::{v.getIdentifier().getCILName()}")
+                f"stsfld {v.var.getTypeX().getCILName()} {self.main}::{v.getIdentifier().getCILName()}")
         self.visitStmtList(node.statements)
         self.defaultToGlobals = False
         self.generateLocalsDirective(locals)
@@ -182,7 +182,7 @@ class CilBackend(CommonVisitor):
 
     def ClassDef(self, node: ClassDef):
         def constructor(superclass: str, func: FuncDef):
-            func.type = func.type.dropFirstParam()
+            func.type = func.getTypeX().dropFirstParam()
             func.name.name = ".ctor"
             # add call to parent constructor after child field initialization
             # before other constructor statements
@@ -202,7 +202,7 @@ class CilBackend(CommonVisitor):
         # field decls
         for v in var_decls:
             self.instr(
-                f".field public {v.var.t.getCILName()} {v.getIdentifier().getCILName()}")
+                f".field public {v.var.getTypeX().getCILName()} {v.getIdentifier().getCILName()}")
         for d in func_decls:
             if d.name.name == "__init__":
                 # constructor
@@ -211,7 +211,7 @@ class CilBackend(CommonVisitor):
                 constructor(superclass, d)
             else:
                 # method
-                d.type = d.type.dropFirstParam()
+                d.type = d.getTypeX().dropFirstParam()
                 self.FuncDef(d, "virtual instance")
         if constructor_def is None:
             # give a default constructor if none exists
@@ -220,7 +220,7 @@ class CilBackend(CommonVisitor):
 
         self.unindent()  # end class
 
-    def generateLocalsDirective(self, locals):
+    def generateLocalsDirective(self, locals: Builder):
         # defer local declarations until we know what we need
         locals.newLine(".locals init (").indent()
         mapping = self.locals[-1]
@@ -231,10 +231,10 @@ class CilBackend(CommonVisitor):
             locals.newLine(sortedDecls[i].decl() + comma)
         locals.unindent().newLine(")")
 
-    def FuncDef(self, node: FuncDef, funcType: str = "static", superConstructor=None):
+    def FuncDef(self, node: FuncDef, funcType: str = "static", superConstructor: Optional[str] = None):
         self.instr(f".method public hidebysig {funcType}")
         self.instr(
-            f"{node.type.getCILSignature(node.name.getCILName())} cil managed")
+            f"{node.getTypeX().getCILSignature(node.name.getCILName())} cil managed")
         self.indent()
         self.instr(f".maxstack {self.stackLimit}")
         self.enterScope()
@@ -242,11 +242,11 @@ class CilBackend(CommonVisitor):
         # initialize locals
         locals = self.builder.newBlock()
         for i in range(len(node.params)):
-            self.newLocalEntry(
-                node.params[i].identifier.name, node.params[i].t, True)
+            param = node.params[i]
+            self.newLocalEntry(param.identifier.name, param.getTypeX(), True)
         for d in node.declarations:
             self.visit(d)
-        self.returnType = node.type.returnType
+        self.returnType = node.getTypeX().returnType
 
         # handle last return
         if superConstructor:
@@ -266,41 +266,42 @@ class CilBackend(CommonVisitor):
     def VarDef(self, node: VarDef):
         if node.isAttr:
             # codegen for initialization in constructors
+            assert node.attrOfClass is not None
             className = ClassValueType(node.attrOfClass)
             self.instr("ldarg 0")
             self.visit(node.value)
             self.instr(
-                f"stfld {node.var.t.getCILName()} {className.getCILName()}::{node.getIdentifier().getCILName()}")
+                f"stfld {node.var.getTypeX().getCILName()} {className.getCILName()}::{node.getIdentifier().getCILName()}")
         else:
             self.visit(node.value)
-            self.newLocal(node.getIdentifier().name, node.var.t)
+            self.newLocal(node.getIdentifier().name, node.var.getTypeX())
 
     # STATEMENTS
 
     def processAssignmentTarget(self, target: Expr):
         if isinstance(target, Identifier):
-            if self.defaultToGlobals or target.varInstance.isGlobal:
+            if self.defaultToGlobals or target.varInstanceX().isGlobal:
                 self.instr(
-                    f"stsfld {target.inferredType.getCILName()} {self.main}::{target.getCILName()}")
+                    f"stsfld {target.inferredValueType().getCILName()} {self.main}::{target.getCILName()}")
             elif self.isFromRefArg(target):
-                temp = self.newLocal(None, target.inferredType)
+                temp = self.newLocal(None, target.inferredValueType())
                 self.load(target.name)
                 self.load(temp)
-                self.storeInd(target.inferredType)
+                self.storeInd(target.inferredValueType())
             else:
                 self.store(target.name)
         elif isinstance(target, IndexExpr):
-            temp = self.newLocal(None, target.inferredType)
+            temp = self.newLocal(None, target.inferredValueType())
             self.visit(target.list)
             self.visit(target.index)
             self.load(temp)
-            self.arrayStore(target.inferredType)
+            self.arrayStore(target.inferredValueType())
         elif isinstance(target, MemberExpr):
-            temp = self.newLocal(None, target.inferredType)
+            temp = self.newLocal(None, target.inferredValueType())
             self.visit(target.object)
             self.load(temp)
             self.instr(
-                f"stfld {target.inferredType.getCILName()} {target.object.inferredType.getCILName()}::{target.member.getCILName()}")
+                f"stfld {target.inferredValueType().getCILName()} {target.object.inferredValueType().getCILName()}::{target.member.getCILName()}")
         else:
             raise Exception(
                 "Internal compiler error: unsupported assignment target")
@@ -346,8 +347,8 @@ class CilBackend(CommonVisitor):
 
     def BinaryExpr(self, node: BinaryExpr):
         operator = node.operator
-        leftType = node.left.inferredType
-        rightType = node.right.inferredType
+        leftType = node.left.inferredValueType()
+        rightType = node.right.inferredValueType()
         shortCircuitOperators = {"and", "or"}
         if operator not in shortCircuitOperators:
             self.visit(node.left)
@@ -369,9 +370,9 @@ class CilBackend(CommonVisitor):
                 self.instr("ldlen")
                 self.instr("add")
                 self.instr("conv.i4")
-                merged_t = self.ts.join(leftType, rightType).elementType
-                self.instr(f"newarr {merged_t.getCILName()}")
-                merged = self.newLocal(None, ListValueType(merged_t))
+                merged_list = cast(ListValueType, self.ts.join(leftType, rightType))
+                self.instr(f"newarr {merged_list.elementType.getCILName()}")
+                merged = self.newLocal(None, merged_list)
                 self.load(l)
                 self.load(merged)
                 self.instr("ldc.i4 0")
@@ -455,8 +456,9 @@ class CilBackend(CommonVisitor):
         self.visit(node.list)
         self.visit(node.index)
         self.instr("conv.i4")
-        if node.list.inferredType.isListType():
-            self.arrayLoad(node.list.inferredType.elementType)
+        t_list = node.list.inferredValueType()
+        if isinstance(t_list, ListValueType):
+            self.arrayLoad(t_list.elementType)
         else:
             self.instr(
                 "call instance char [mscorlib]System.String::get_Chars(int32)")
@@ -488,6 +490,7 @@ class CilBackend(CommonVisitor):
         else:
             for i in range(len(node.args)):
                 self.visitArg(node.function.inferredType, i, node.args[i])
+            assert isinstance(node.function.inferredType, FuncType)
             signature = node.function.inferredType.getCILSignature(
                 f"{self.main}::{name}")
             self.instr(f"call {signature}")
@@ -497,7 +500,7 @@ class CilBackend(CommonVisitor):
     def ForStmt(self, node: ForStmt):
         # itr = {expr}, idx = 0
         self.visit(node.iterable)
-        itr = self.newLocal(None, node.iterable.inferredType)
+        itr = self.newLocal(None, node.iterable.inferredValueType())
         self.instr("ldc.i8 0")
         idx = self.newLocal(None, IntType())
         startLabel = self.newLabelName()
@@ -507,7 +510,7 @@ class CilBackend(CommonVisitor):
         self.load(idx)
         self.instr("conv.i4")
         self.load(itr)
-        if node.iterable.inferredType.isListType():
+        if isinstance(node.iterable.inferredType, ListValueType):
             self.instr("ldlen")
         else:
             self.instr(
@@ -519,7 +522,7 @@ class CilBackend(CommonVisitor):
         self.load(itr)
         self.load(idx)
         self.instr("conv.i4")
-        if node.iterable.inferredType.isListType():
+        if isinstance(node.iterable.inferredType, ListValueType):
             self.arrayLoad(node.iterable.inferredType.elementType)
         else:
             self.instr(
@@ -549,7 +552,7 @@ class CilBackend(CommonVisitor):
             else:
                 elementType = ClassValueType("object")
         else:
-            elementType = t.elementType
+            elementType = cast(ListValueType, t).elementType
         self.instr(f"newarr {elementType.getCILName()}")
         for i in range(len(node.elements)):
             self.instr("dup")
@@ -567,7 +570,7 @@ class CilBackend(CommonVisitor):
         self.instr(f"br {startLabel}")
         self.label(endLabel)
 
-    def buildReturn(self, value: Expr):
+    def buildReturn(self, value: Optional[Expr]):
         if not self.returnType.isNone():
             if value is None:
                 self.NoneLiteral(None)
@@ -579,19 +582,19 @@ class CilBackend(CommonVisitor):
         self.buildReturn(node.value)
 
     def Identifier(self, node: Identifier):
-        if self.defaultToGlobals or node.varInstance.isGlobal:
+        if self.defaultToGlobals or node.varInstanceX().isGlobal:
             self.instr(
-                f"ldsfld {node.inferredType.getCILName()} {self.main}::{node.getCILName()}")
+                f"ldsfld {node.inferredValueType().getCILName()} {self.main}::{node.getCILName()}")
         elif self.isFromRefArg(node):
             self.load(node.name)
-            self.loadInd(node.inferredType)
+            self.loadInd(node.inferredValueType())
         else:
             self.load(node.name)
 
     def MemberExpr(self, node: MemberExpr):
         self.visit(node.object)
         self.instr(
-            f"ldfld {node.inferredType.getCILName()} {node.object.inferredType.getCILName()}::{node.member.getCILName()}")
+            f"ldfld {node.inferredValueType().getCILName()} {node.object.inferredValueType().getCILName()}::{node.member.getCILName()}")
 
     def IfExpr(self, node: IfExpr):
         c = lambda: self.visit(node.condition)
@@ -599,7 +602,7 @@ class CilBackend(CommonVisitor):
         e = lambda: self.visit(node.elseExpr)
         self.ternary(c, t, e)
 
-    def ternary(self, condFn, thenFn, elseFn):
+    def ternary(self, condFn: Callable, thenFn: Callable, elseFn: Callable):
         condFn()
         l1 = self.newLabelName()
         l2 = self.newLabelName()
@@ -611,6 +614,7 @@ class CilBackend(CommonVisitor):
         self.label(l2)
 
     def MethodCallExpr(self, node: MethodCallExpr):
+        assert isinstance(node.method.object.inferredType, ClassValueType)
         className = node.method.object.inferredType.className
         methodName = node.method.member.getCILName()
         if methodName == "__init__" and className in {"int", "bool"}:
@@ -618,6 +622,7 @@ class CilBackend(CommonVisitor):
         self.visit(node.method.object)
         for i in range(len(node.args)):
             self.visitArg(node.method.inferredType, i + 1, node.args[i])
+        assert isinstance(node.method.inferredType, FuncType)
         methodType = node.method.inferredType.dropFirstParam()
         signature = methodType.getCILSignature(
             f"{className}::{methodName}")
@@ -636,7 +641,7 @@ class CilBackend(CommonVisitor):
     def IntegerLiteral(self, node: IntegerLiteral):
         self.instr(f"ldc.i8 {node.value}")
 
-    def NoneLiteral(self, _: NoneLiteral):
+    def NoneLiteral(self, node: Optional[NoneLiteral]):
         self.instr("ldnull")
 
     def StringLiteral(self, node: StringLiteral):
@@ -662,7 +667,7 @@ class CilBackend(CommonVisitor):
         self.instr("call string [mscorlib]System.Console::ReadLine()")
 
     def emit_len(self, arg: Expr):
-        t = arg.inferredType
+        t = arg.inferredValueType()
         is_list = False
         if t.isListType():
             is_list = True
@@ -674,8 +679,8 @@ class CilBackend(CommonVisitor):
             elif t == StrType():
                 is_list = False
             else:
-                self.emit_exn(
-                    f"Built-in function len is unsupported for values of type {arg.inferredType.classname}")
+                self.emit_exn("Built-in function len is unsupported for values of this type")
+                return
         self.visit(arg)
         if is_list:
             self.instr("ldlen")
@@ -688,16 +693,18 @@ class CilBackend(CommonVisitor):
     def emit_print(self, arg: Expr):
         self.visit(arg)
         self.instr(
-            f"call void class [mscorlib]System.Console::WriteLine({arg.inferredType.getCILName()})")
+            f"call void class [mscorlib]System.Console::WriteLine({arg.inferredValueType().getCILName()})")
         self.NoneLiteral(None)
 
     def isFromRefArg(self, arg: Expr):
-        return self.isFromArg(arg) and arg.varInstance.isNonlocal
+        if not isinstance(arg, Identifier):
+            return False
+        return self.isFromArg(arg) and arg.varInstanceX().isNonlocal
 
     def isFromArg(self, arg: Expr):
         if not isinstance(arg, Identifier):
             return False
-        if arg.varInstance.isGlobal:
+        if arg.varInstanceX().isGlobal:
             return True
         n = self.locals[-1][arg.name]
         if n is None:
@@ -708,14 +715,14 @@ class CilBackend(CommonVisitor):
     def visitArg(self, funcType, paramIdx: int, arg: Expr):
         argIsRef = self.isFromRefArg(arg)
         paramIsRef = paramIdx in funcType.refParams
-        if argIsRef and paramIsRef and arg.varInstance == funcType.refParams[paramIdx]:
+        if argIsRef and paramIsRef and cast(Identifier, arg).varInstance == funcType.refParams[paramIdx]:
             # ref -> ref: pass through a ref to a nonlocal
-            self.load(arg.name)
+            self.load(cast(Identifier, arg).name)
         elif paramIsRef and argIsRef:
             # ref -> ref:
             # deref, store value in new local, and pass ref to new local
             self.visit(arg)
-            temp = self.newLocal(None, arg.inferredType)
+            temp = self.newLocal(None, arg.inferredValueType())
             self.loadAddr(temp)
         elif paramIsRef:
             # value -> ref
@@ -724,7 +731,7 @@ class CilBackend(CommonVisitor):
                 self.loadVarAddr(arg)
             else:
                 self.visit(arg)
-                temp = self.newLocal(None, arg.inferredType)
+                temp = self.newLocal(None, arg.inferredValueType())
                 self.loadAddr(temp)
         else:
             # value/ref -> value : deref if necessary

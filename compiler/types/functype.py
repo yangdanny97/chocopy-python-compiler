@@ -23,9 +23,12 @@ class FuncType(SymbolType):
 
     def dropFirstParam(self):
         f = FuncType(self.parameters[1:], self.returnType)
-        f.refParams = [i - 1 for i in self.refParams]
+        f.refParams = {i - 1: v for i, v in self.refParams.items()}
         f.freevars = self.freevars
         return f
+
+    def getCILName(self) -> str:
+        raise Exception("unsupported")
 
     def getCILSignature(self, name: str) -> str:
         params = []
@@ -44,14 +47,14 @@ class FuncType(SymbolType):
         if self.returnType.isNone():
             r = "V"
         else:
-            r = self.returnType.getJavaSignature()
+            r = self.returnType.getJavaSignature(False)
         params = []
         for i in range(len(self.parameters)):
             p = self.parameters[i]
             if i in self.refParams and isinstance(p, ClassValueType):
                 sig = '[' + p.getJavaSignature(True)
             else:
-                sig = p.getJavaSignature()
+                sig = p.getJavaSignature(False)
             params.append(sig)
         return "({}){}".format("".join(params), r)
 
@@ -75,7 +78,7 @@ class FuncType(SymbolType):
             return self.parameters[1:] == other.parameters[1:] and self.returnType == other.returnType
         return False
 
-    def isFuncType() -> bool:
+    def isFuncType(self) -> bool:
         return True
 
     def __str__(self):

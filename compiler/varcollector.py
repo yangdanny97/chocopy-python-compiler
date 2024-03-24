@@ -1,4 +1,4 @@
-from typing import List
+from typing import Sequence, List
 from .astnodes import *
 from .types import *
 from .visitor import Visitor
@@ -15,7 +15,7 @@ class VarCollector(Visitor):
         self.visit(node)
         return self.vars
 
-    def getVarsFromList(self, nodes: List[Node]):
+    def getVarsFromList(self, nodes: Sequence[Node]):
         for n in nodes:
             self.visit(n)
         return self.vars

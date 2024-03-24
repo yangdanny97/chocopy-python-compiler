@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Self, Optional
 
 
 class Node:
+    errorMsg: Optional[str]
 
     def __init__(self, location: List[int], kind: str):
         if len(location) != 2:
@@ -10,13 +11,13 @@ class Node:
         self.location = location
         self.errorMsg = None
 
-    def visit(self, visitor):
-        return Exception('operation not supported')
+    def visit(self, visitor) -> Self:
+        raise Exception('operation not supported')
 
-    def preorder(self, visitor):
+    def preorder(self, visitor) -> Self:
         return self.visit(visitor)
 
-    def postorder(self, visitor):
+    def postorder(self, visitor) -> Self:
         return self.visit(visitor)
 
     def toJSON(self, dump_location=True) -> dict:

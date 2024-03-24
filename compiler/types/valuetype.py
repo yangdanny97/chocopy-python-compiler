@@ -3,16 +3,25 @@ import llvmlite.ir as ir
 
 
 class ValueType(SymbolType):
-    def isValueType() -> bool:
+    def isValueType(self) -> bool:
         return True
 
     def isNone(self) -> bool:
         return False
 
-    def toJSON(self, dump_location=True):
+    def toJSON(self, dump_location=True) -> dict:
         raise Exception("unsupported")
 
-    def getJavaSignature(self) -> str:
+    def getCILName(self) -> str:
+        raise Exception("unsupported")
+
+    def getCILSignature(self) -> str:
+        raise Exception("unsupported")
+
+    def getJavaName(self, isList: bool = False) -> str:
+        raise Exception("unsupported")
+
+    def getJavaSignature(self, isList: bool = False) -> str:
         raise Exception("unsupported")
 
     def isJavaRef(self) -> bool:

@@ -4,12 +4,12 @@ from .typedvar import TypedVar
 from .typeannotation import TypeAnnotation
 from .stmt import Stmt
 from ..types import FuncType
-from typing import List
+from typing import List, Optional
 
 
 class FuncDef(Declaration):
     freevars: List[Identifier]  # used in AST transformations, not printed out
-    type: FuncType = None  # type signature of function
+    type: Optional[FuncType] = None  # type signature of function
 
     # The AST for
     #     def NAME(PARAMS) -> RETURNTYPE:
@@ -60,3 +60,7 @@ class FuncDef(Declaration):
 
     def getIdentifier(self) -> Identifier:
         return self.name
+
+    def getTypeX(self) -> FuncType:
+        assert self.type is not None
+        return self.type

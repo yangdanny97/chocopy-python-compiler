@@ -1,11 +1,13 @@
 from .stmt import Stmt
 from .expr import Expr
-from typing import List
+from ..types import ValueType
+from typing import List, Optional
 
 
 class ReturnStmt(Stmt):
+    expType: Optional[ValueType]
 
-    def __init__(self, location: List[int], value: Expr):
+    def __init__(self, location: List[int], value: Optional[Expr]):
         super().__init__(location, "ReturnStmt")
         self.value = value
         self.isReturn = True

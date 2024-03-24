@@ -1,7 +1,10 @@
+from typing import List, Union, cast
+
+
 class Builder:
     def __init__(self, name: str):
         self.name = name
-        self.lines = []  # list of strings or children builders
+        self.lines: List[Union[str, Builder]] = []  # list of strings or children builders
         self.indentation = 0
 
     def newLine(self, line=""):
@@ -16,9 +19,9 @@ class Builder:
         return child
 
     def addText(self, text=""):
-        if len(self.lines) == 0:
+        if len(self.lines) == 0 or isinstance(self.lines[-1], Builder):
             self.newLine()
-        self.lines[-1] = self.lines[-1] + text
+        self.lines[-1] = cast(str, self.lines[-1]) + text
         return self
 
     def indent(self):

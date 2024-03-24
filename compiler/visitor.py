@@ -1,104 +1,104 @@
 from .astnodes import *
 from collections import defaultdict
 from .builder import Builder
-from typing import List
+from typing import List, Any
 
 
 class Visitor:
 
-    def visit(self, node: Node):
+    def visit(self, node: Node) -> Any:
         return node.visit(self)
 
     # TOP LEVEL & DECLARATIONS
 
-    def Program(self, node: Program):
+    def Program(self, node: Program) -> Any:
         pass
 
-    def VarDef(self, node: VarDef):
+    def VarDef(self, node: VarDef) -> Any:
         pass
 
-    def ClassDef(self, node: ClassDef):
+    def ClassDef(self, node: ClassDef) -> Any:
         pass
 
-    def FuncDef(self, node: FuncDef):
+    def FuncDef(self, node: FuncDef) -> Any:
         pass
 
     # STATEMENTS
 
-    def NonLocalDecl(self, node: NonLocalDecl):
+    def NonLocalDecl(self, node: NonLocalDecl) -> Any:
         pass
 
-    def GlobalDecl(self, node: GlobalDecl):
+    def GlobalDecl(self, node: GlobalDecl) -> Any:
         pass
 
-    def AssignStmt(self, node: AssignStmt):
+    def AssignStmt(self, node: AssignStmt) -> Any:
         pass
 
-    def IfStmt(self, node: IfStmt):
+    def IfStmt(self, node: IfStmt) -> Any:
         pass
 
-    def ExprStmt(self, node: ExprStmt):
+    def ExprStmt(self, node: ExprStmt) -> Any:
         pass
 
-    def BinaryExpr(self, node: BinaryExpr):
+    def BinaryExpr(self, node: BinaryExpr) -> Any:
         pass
 
-    def IndexExpr(self, node: IndexExpr):
+    def IndexExpr(self, node: IndexExpr) -> Any:
         pass
 
-    def UnaryExpr(self, node: UnaryExpr):
+    def UnaryExpr(self, node: UnaryExpr) -> Any:
         pass
 
-    def CallExpr(self, node: CallExpr):
+    def CallExpr(self, node: CallExpr) -> Any:
         pass
 
-    def ForStmt(self, node: ForStmt):
+    def ForStmt(self, node: ForStmt) -> Any:
         pass
 
-    def ListExpr(self, node: ListExpr):
+    def ListExpr(self, node: ListExpr) -> Any:
         pass
 
-    def WhileStmt(self, node: WhileStmt):
+    def WhileStmt(self, node: WhileStmt) -> Any:
         pass
 
-    def ReturnStmt(self, node: ReturnStmt):
+    def ReturnStmt(self, node: ReturnStmt) -> Any:
         pass
 
-    def Identifier(self, node: Identifier):
+    def Identifier(self, node: Identifier) -> Any:
         pass
 
-    def MemberExpr(self, node: MemberExpr):
+    def MemberExpr(self, node: MemberExpr) -> Any:
         pass
 
-    def IfExpr(self, node: IfExpr):
+    def IfExpr(self, node: IfExpr) -> Any:
         pass
 
-    def MethodCallExpr(self, node: MethodCallExpr):
+    def MethodCallExpr(self, node: MethodCallExpr) -> Any:
         pass
 
     # LITERALS
 
-    def BooleanLiteral(self, node: BooleanLiteral):
+    def BooleanLiteral(self, node: BooleanLiteral) -> Any:
         pass
 
-    def IntegerLiteral(self, node: IntegerLiteral):
+    def IntegerLiteral(self, node: IntegerLiteral) -> Any:
         pass
 
-    def NoneLiteral(self, node: NoneLiteral):
+    def NoneLiteral(self, node: NoneLiteral) -> Any:
         pass
 
-    def StringLiteral(self, node: StringLiteral):
+    def StringLiteral(self, node: StringLiteral) -> Any:
         pass
 
     # TYPES
 
-    def TypedVar(self, node: TypedVar):
+    def TypedVar(self, node: TypedVar) -> Any:
         pass
 
-    def ListType(self, node: ListType):
+    def ListType(self, node: ListType) -> Any:
         pass
 
-    def ClassType(self, node: ClassType):
+    def ClassType(self, node: ClassType) -> Any:
         pass
 
 
@@ -107,7 +107,7 @@ class CommonVisitor(Visitor):
     counter = 0  # for labels
 
     # helpers for handling locals
-    locals: List[defaultdict] = None
+    locals: List[defaultdict] = []
 
     def enterScope(self):
         self.locals.append(defaultdict(lambda: None))

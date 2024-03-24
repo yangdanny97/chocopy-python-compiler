@@ -2,12 +2,12 @@ from .node import Node
 from .identifier import Identifier
 from .typeannotation import TypeAnnotation
 from ..types import ValueType, VarInstance
-from typing import List
+from typing import List, Optional
 
 
 class TypedVar(Node):
-    t: ValueType = None  # the typechecked type goes here
-    varInstance: VarInstance = None
+    t: Optional[ValueType] = None  # the typechecked type goes here
+    varInstance: Optional[VarInstance] = None
 
     def __init__(self, location: List[int], identifier: Identifier, typ: TypeAnnotation):
         super().__init__(location, "TypedVar")
@@ -25,3 +25,11 @@ class TypedVar(Node):
         d["identifier"] = self.identifier.toJSON(dump_location)
         d["type"] = self.type.toJSON(dump_location)
         return d
+
+    def varInstanceX(self) -> VarInstance:
+        assert self.varInstance is not None
+        return self.varInstance
+
+    def getTypeX(self) -> ValueType:
+        assert self.t is not None
+        return self.t

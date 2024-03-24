@@ -1,8 +1,10 @@
 from .expr import Expr
-from typing import List
+from ..types import ValueType
+from typing import List, Optional
 
 
 class ListExpr(Expr):
+    emptyListType: Optional[ValueType]
 
     def __init__(self, location: List[int], elements: List[Expr]):
         super().__init__(location, "ListExpr")

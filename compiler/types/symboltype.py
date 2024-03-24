@@ -1,23 +1,20 @@
-from typing import Optional
+from typing import Optional, Self
 
 
 class SymbolType:
     # base class for types
 
-    def isValueType() -> bool:
+    def isValueType(self) -> bool:
         return False
 
-    def isListType() -> bool:
+    def isListType(self) -> bool:
         return False
 
-    def isFuncType() -> bool:
+    def isFuncType(self) -> bool:
         return False
 
-    def elementType():
-        return None
-
-    def isSpecialType() -> bool:
+    def isSpecialType(self) -> bool:
         return False
 
-    def toJSON(self, dump_location=True):
+    def toJSON(self, dump_location=True) -> dict:
         raise Exception("unsupported")

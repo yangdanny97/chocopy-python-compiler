@@ -1,6 +1,5 @@
 from .types import *
-from collections import defaultdict
-from typing import List, Dict, Tuple, Any
+from typing import List, Dict, Tuple, Any, Optional, cast, Union
 
 
 class ClassInfo:
@@ -8,11 +7,11 @@ class ClassInfo:
     attrs: Dict[str, Tuple[ValueType, Any]]
     methods: Dict[str, FuncType]
 
-    def __init__(self, name: str, superclass: str = None):
+    def __init__(self, name: str, superclass: Optional[str] = None):
         self.name = name
         self.superclass = superclass
-        self.attrs = defaultdict(lambda: None)  # (attr type, init value)
-        self.methods = defaultdict(lambda: None)  # type of method
+        self.attrs = {}  # (attr type, init value)
+        self.methods = {}  # type of method
         self.orderedAttrs = []
 
     def __str__(self):
@@ -24,7 +23,7 @@ class TypeSystem:
 
     def __init__(self):
         # information for each class
-        self.classes = defaultdict(lambda: None)
+        self.classes = {}
 
         objectInfo = ClassInfo("object")
         objectInfo.methods["__init__"] = FuncType([ObjectType()], NoneType())
@@ -45,15 +44,16 @@ class TypeSystem:
         self.classes["<None>"] = ClassInfo("<None>", "object")
         self.classes["<Empty>"] = ClassInfo("<Empty>", "object")
 
-    def getMethodHelper(self, className: str, methodName: str) -> Tuple[FuncType, str]:
+    def getMethodHelper(self, className: str, methodName: str) -> Tuple[Optional[FuncType], str]:
         # requires className to be the name of a valid class
-        if methodName not in self.classes[className].methods:
-            if self.classes[className].superclass is None:
-                return (None, None)
-            return self.getMethodHelper(self.classes[className].superclass, methodName)
-        return (self.classes[className].methods[methodName], className)
+        classInfo = self.classes[className]
+        if methodName not in classInfo.methods:
+            if classInfo.superclass is None:
+                return (None, "")
+            return self.getMethodHelper(classInfo.superclass, methodName)
+        return (classInfo.methods[methodName], className)
 
-    def getMethod(self, className: str, methodName: str) -> FuncType:
+    def getMethod(self, className: str, methodName: str) -> Optional[FuncType]:
         # requires className to be the name of a valid class
         return self.getMethodHelper(className, methodName)[0]
 
@@ -62,15 +62,16 @@ class TypeSystem:
         # requires className to be the name of a valid class
         return self.getMethodHelper(className, methodName)[1]
 
-    def getAttrHelper(self, className: str, attrName: str) -> Tuple[ValueType, Any]:
+    def getAttrHelper(self, className: str, attrName: str) -> Tuple[Optional[ValueType], Any]:
         # requires className to be the name of a valid class
-        if attrName not in self.classes[className].attrs:
-            if self.classes[className].superclass is None:
+        classInfo = self.classes[className]
+        if attrName not in classInfo.attrs:
+            if classInfo.superclass is None:
                 return (None, None)
-            return self.getAttrHelper(self.classes[className].superclass, attrName)
-        return self.classes[className].attrs[attrName]
+            return self.getAttrHelper(classInfo.superclass, attrName)
+        return classInfo.attrs[attrName]
 
-    def getAttr(self, className: str, attrName: str) -> ValueType:
+    def getAttr(self, className: str, attrName: str) -> Optional[ValueType]:
         # returns type of attribute
         # requires className to be the name of a valid class
         return self.getAttrHelper(className, attrName)[0]
@@ -80,17 +81,18 @@ class TypeSystem:
         # requires className to be the name of a valid class
         return self.getAttrHelper(className, attrName)[1]
 
-    def getAttrOrMethod(self, className: str, name: str) -> SymbolType:
+    def getAttrOrMethod(self, className: str, name: str) -> Optional[SymbolType]:
         # returns type of attribute or method
         # requires className to be the name of a valid class
-        if name in self.classes[className].methods:
-            return self.classes[className].methods[name]
-        elif name in self.classes[className].attrs:
-            return self.classes[className].attrs[name][0]
+        classInfo = self.classes[className]
+        if name in classInfo.methods:
+            return classInfo.methods[name]
+        elif name in classInfo.attrs:
+            return classInfo.attrs[name][0]
         else:
-            if self.classes[className].superclass is None:
+            if classInfo.superclass is None:
                 return None
-            return self.getAttrOrMethod(self.classes[className].superclass, name)
+            return self.getAttrOrMethod(classInfo.superclass, name)
 
     def classExists(self, className: str) -> bool:
         # we cannot check for None because it is a defaultdict
@@ -107,7 +109,7 @@ class TypeSystem:
                 curr = self.classes[curr].superclass
         return False
 
-    def isSubtype(self, a: ValueType, b: ValueType) -> bool:
+    def isSubtype(self, a: Optional[Union[ValueType, FuncType]], b: ValueType) -> bool:
         # return if a is a subtype of b
         if b == ObjectType():
             return True
@@ -115,7 +117,7 @@ class TypeSystem:
             return self.isSubClass(a.className, b.className)
         return a == b
 
-    def canAssign(self, a: ValueType, b: ValueType) -> bool:
+    def canAssign(self, a: Optional[Union[ValueType, FuncType]], b: ValueType) -> bool:
         # return if value of type a can be assigned/passed to type b (ex: b = a)
         if self.isSubtype(a, b):
             return True
@@ -140,41 +142,46 @@ class TypeSystem:
             return ObjectType()
         # for 2 classes that aren't related by subtyping
         # find paths from A & B to root of typing tree
-        a, b = a.className, b.className
+        aCls, bCls = cast(ClassValueType, a).className, cast(
+            ClassValueType, b).className
         aAncestors = []
         bAncestors = []
-        while self.classes[a].superclass is not None:
-            aAncestors.append(self.classes[a].superclass)
-            a = self.classes[a].superclass
-        while self.classes[b].superclass is not None:
-            aAncestors.append(self.classes[b].superclass)
-            b = self.classes[b].superclass
+        curr = aCls
+        while curr is not None and self.classes[curr].superclass is not None:
+            if curr != aCls:
+                aAncestors.append(self.classes[curr].superclass)
+            curr = self.classes[curr].superclass
+        curr = bCls
+        while curr is not None and self.classes[curr].superclass is not None:
+            if curr != bCls:
+                bAncestors.append(self.classes[curr].superclass)
+            curr = self.classes[curr].superclass
         # reverse lists to find lowest common ancestor
         aAncestors = aAncestors[::-1]
         bAncestors = bAncestors[::-1]
         for i in range(min(len(aAncestors), len(bAncestors))):
             if aAncestors[i] != bAncestors[i]:
-                return self.classes[aAncestors[i - 1]]
+                return ClassValueType(self.classes[aAncestors[i - 1]].name)
         # this really shouldn't be returned
         return ObjectType()
 
     def getOrderedMethods(self, className: str) -> List[Tuple[str, FuncType, str]]:
         # (name, signature, defined in class)
         methods = []
-        if self.classes[className].superclass is not None:
-            methods = self.getOrderedMethods(
-                self.classes[className].superclass)
-        for name in self.classes[className].methods:
+        classInfo = self.classes[className]
+        if classInfo.superclass is not None:
+            methods = self.getOrderedMethods(classInfo.superclass)
+        for name in classInfo.methods:
             hasExisting = False
             for i in range(len(methods)):
                 if methods[i][0] == name:
                     methods[i] = (
-                        name, self.classes[className].methods[name], className)
+                        name, classInfo.methods[name], className)
                     hasExisting = True
                     break
             if not hasExisting:
                 methods.append(
-                    (name, self.classes[className].methods[name], className))
+                    (name, classInfo.methods[name], className))
         return methods
 
     def getMappedMethods(self, className: str) -> Dict[str, Tuple[FuncType, str]]:
@@ -185,10 +192,11 @@ class TypeSystem:
     def getOrderedAttrs(self, className: str) -> List[Tuple[str, ValueType, Any]]:
         # return list of (name, type, init value) triples
         attrs = []
-        if self.classes[className].superclass is not None:
-            attrs = self.getOrderedAttrs(self.classes[className].superclass)
-        for attr in self.classes[className].orderedAttrs:
-            attrType, attrInit = self.classes[className].attrs[attr]
+        classInfo = self.classes[className]
+        if classInfo.superclass is not None:
+            attrs = self.getOrderedAttrs(classInfo.superclass)
+        for attr in classInfo.orderedAttrs:
+            attrType, attrInit = classInfo.attrs[attr]
             attrs.append((attr, attrType, attrInit))
         return attrs
 

@@ -32,7 +32,7 @@ class Parser(ast.NodeVisitor):
         # make columns 1-indexed
         return [node.lineno, node.col_offset + 1]
 
-    def visit(self, node: ast.AST):
+    def visit(self, node: ast.AST) -> typing.Any:
         try:
             return super().visit(node)
         except ParseError as e:
@@ -242,7 +242,7 @@ class Parser(ast.NodeVisitor):
         val = self.visit(node.value)
         return ExprStmt(location, val)
 
-    def visit_Pass(self, _: ast.Pass) -> None:
+    def visit_Pass(self, node: ast.Pass) -> None:
         # removed by any AST constructors that take in [Stmt]
         return None
 
@@ -341,9 +341,6 @@ class Parser(ast.NodeVisitor):
             return BooleanLiteral(location, node.value)
         else:
             raise ParseError("Unsupported name constant", node)
-
-    def visit_Index(self, node: ast.Index):
-        return self.visit(node.value)
 
     def visit_arguments(self, node: ast.arguments) -> list:
         if node.vararg:

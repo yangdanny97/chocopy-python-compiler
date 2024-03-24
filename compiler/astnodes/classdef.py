@@ -50,7 +50,8 @@ class ClassDef(Declaration):
         return self.name
 
     def getDefaultConstructor(self) -> FuncDef:
-        var_decls = [d for d in self.declarations if isinstance(d, VarDef)]
+        var_decls: List[Declaration] = [
+            d for d in self.declarations if isinstance(d, VarDef)]
         constructor = FuncDef(self.location,
                               Identifier(self.location, "__init__"),
                               [TypedVar(self.location,

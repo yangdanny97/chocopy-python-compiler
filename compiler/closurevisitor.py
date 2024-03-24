@@ -58,6 +58,7 @@ class ClosureVisitor(Visitor):
         for d in node.declarations:
             if isinstance(d, VarDef):
                 self.globals[d.getIdentifier().name] = newInstance(d.var)
+                assert d.var.varInstance is not None
                 d.var.varInstance.isGlobal = True
         # mark all top-level vars to be global
         vars = VarCollector().getVarsFromList(node.statements)

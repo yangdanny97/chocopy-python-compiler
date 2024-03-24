@@ -3,6 +3,7 @@ from llvmlite import ir
 
 
 class ListValueType(ValueType):
+    elementType: ValueType
 
     def __init__(self, elementType: ValueType):
         self.elementType = elementType
@@ -12,16 +13,16 @@ class ListValueType(ValueType):
             return self.elementType == other.elementType
         return False
 
-    def getJavaSignature(self, _=False) -> str:
+    def getJavaSignature(self, isList=False) -> str:
         return "[" + self.elementType.getJavaSignature(True)
 
-    def getJavaName(self, _=False) -> str:
+    def getJavaName(self, isList=False) -> str:
         return "[" + self.elementType.getJavaSignature(True)
 
-    def getCILName(self, _=False) -> str:
+    def getCILName(self) -> str:
         return self.elementType.getCILName() + "[]"
 
-    def getCILSignature(self, _=False) -> str:
+    def getCILSignature(self) -> str:
         return self.getCILName()
 
     def isListType(self) -> bool:

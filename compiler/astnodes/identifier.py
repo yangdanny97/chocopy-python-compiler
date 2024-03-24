@@ -1,5 +1,5 @@
 from .expr import Expr
-from typing import List
+from typing import List, Optional
 from ..types import VarInstance
 
 CIL_KEYWORDS = set(["char", "value", "int32", "int64", "string", "long", "null"] +
@@ -122,7 +122,7 @@ CIL_KEYWORDS = set(["char", "value", "int32", "int64", "string", "long", "null"]
 
 
 class Identifier(Expr):
-    varInstance: VarInstance = None
+    varInstance: Optional[VarInstance] = None
 
     def __init__(self, location: List[int], name: str):
         super().__init__(location, "Identifier")
@@ -146,3 +146,7 @@ class Identifier(Expr):
         if self.name in CIL_KEYWORDS:
             return f"'{self.name}'"
         return self.name
+
+    def varInstanceX(self) -> VarInstance:
+        assert self.varInstance is not None
+        return self.varInstance

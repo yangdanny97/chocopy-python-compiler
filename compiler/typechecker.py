@@ -3,15 +3,15 @@ from .types import *
 from collections import defaultdict
 from .typesystem import TypeSystem, ClassInfo
 from .visitor import Visitor
-from typing import List, Optional
+from typing import List, Optional, Any, assert_type
 
 
 class TypeChecker(Visitor):
     symbolTable: List[defaultdict]
-    currentClass: str
+    currentClass: Optional[str]
     errors: List[CompilerError]
     expReturnType: Optional[ValueType]
-    program: Program
+    program: Optional[Program]
 
     def __init__(self, ts: TypeSystem):
         # typechecker attributes and their chocopy typing judgement analogues:
@@ -39,7 +39,7 @@ class TypeChecker(Visitor):
         self.program = None
         self.addErrors = True
 
-    def visit(self, node: Node):
+    def visit(self, node: Node) -> Any:
         if isinstance(node, Program) or isinstance(node, ClassDef) or isinstance(node, FuncDef):
             return node.visit(self)
         else:
@@ -97,9 +97,10 @@ class TypeChecker(Visitor):
                 return
             message = F"{message}. Line {node.location[0]} Col {node.location[1]}"
             node.errorMsg = message
+            assert self.program is not None
             self.program.errors.errors.append(
                 CompilerError(node.location, message))
-            self.errors.append(message)
+            self.errors.append(CompilerError(node.location, message))
 
     def binopError(self, node):
         self.addError(node, "Cannot use operator {} on types {} and {}".format(
@@ -117,7 +118,7 @@ class TypeChecker(Visitor):
             identifier = d.getIdentifier()
             if self.defInCurrentScope(identifier.name) or self.ts.classExists(identifier.name):
                 self.addError(
-                    identifier, F"Duplicate declaration of identifier: {identifier.name}")
+                    identifier, f"Duplicate declaration of identifier: {identifier.name}")
             if isinstance(d, ClassDef):
                 className = d.name.name
                 superclass = d.superclass.name
@@ -148,7 +149,7 @@ class TypeChecker(Visitor):
         annotationType = self.visit(node.var)
         if not self.ts.canAssign(node.value.inferredType, annotationType):
             self.addError(
-                node, F"Expected {annotationType}, got {node.value.inferredType}")
+                node, f"Expected {annotationType}, got {node.value.inferredType}")
         return annotationType
 
     def ClassDef(self, node: ClassDef):
@@ -202,7 +203,7 @@ class TypeChecker(Visitor):
                 return
             if self.defInCurrentScope(funcName):
                 self.addError(node.getIdentifier(
-                ), F"Duplicate declaration of identifier: {funcName}")
+                ), f"Duplicate declaration of identifier: {funcName}")
                 return
             self.addType(funcName, funcType)
         else:  # method decl
@@ -210,14 +211,14 @@ class TypeChecker(Visitor):
                     (not isinstance(funcType.parameters[0], ClassValueType)) or
                     funcType.parameters[0].className != self.currentClass):
                 self.addError(
-                    node.getIdentifier(), F"Missing self param in method: {funcName}")
+                    node.getIdentifier(), f"Missing self param in method: {funcName}")
                 return
         for p in node.params:
             t = self.visit(p)
             pName = p.identifier.name
             if self.defInCurrentScope(pName) or self.ts.classExists(pName):
                 self.addError(
-                    p.identifier, F"Duplicate parameter name: {pName}")
+                    p.identifier, f"Duplicate parameter name: {pName}")
                 continue
             if t is not None:
                 self.addType(pName, t)
@@ -227,7 +228,7 @@ class TypeChecker(Visitor):
             name = identifier.name
             if self.defInCurrentScope(name) or self.ts.classExists(name):
                 self.addError(
-                    identifier, F"Duplicate declaration of identifier: {name}")
+                    identifier, f"Duplicate declaration of identifier: {name}")
                 continue
             if isinstance(d, FuncDef):
                 self.funcParams(d)
@@ -247,7 +248,7 @@ class TypeChecker(Visitor):
                 hasReturn = True
         if (not hasReturn) and (not self.ts.canAssign(NoneType(), self.expReturnType)):
             self.addError(node.getIdentifier(
-            ), F"Expected return statement of type {self.expReturnType}")
+            ), f"Expected return statement of type {self.expReturnType}")
         self.expReturnType = None
         self.exitScope()
         return funcType
@@ -263,7 +264,7 @@ class TypeChecker(Visitor):
         t = self.getNonLocalType(name)
         if t is None or not isinstance(t, ValueType):
             self.addError(
-                identifier, F"Unknown nonlocal variable: {name}")
+                identifier, f"Unknown nonlocal variable: {name}")
             return
         identifier.inferredType = t
         return t
@@ -277,7 +278,7 @@ class TypeChecker(Visitor):
         t = self.getGlobal(name)
         if t is None or not isinstance(t, ValueType):
             self.addError(
-                identifier, F"Unknown global variable: {name}")
+                identifier, f"Unknown global variable: {name}")
             return
         identifier.inferredType = t
         return t
@@ -294,11 +295,11 @@ class TypeChecker(Visitor):
                     return
                 if isinstance(t, Identifier) and not self.defInCurrentScope(t.name):
                     self.addError(
-                        t, F"Identifier not defined in current scope: {t.name}")
+                        t, f"Identifier not defined in current scope: {t.name}")
                     return
-                if not self.ts.canAssign(node.value.inferredType, t.inferredType):
+                if not self.ts.canAssign(node.value.inferredType, t.inferredValueType()):
                     self.addError(
-                        node, F"Expected {t.inferredType}, got {node.value.inferredType}")
+                        node, f"Expected {t.inferredType}, got {node.value.inferredType}")
                     return
 
     def IfStmt(self, node: IfStmt):
@@ -306,7 +307,7 @@ class TypeChecker(Visitor):
         # if a branch is empty, isReturn=False
         if node.condition.inferredType != BoolType():
             self.addError(
-                node.condition, F"Expected {BoolType()}, got {node.condition.inferredType}")
+                node.condition, f"Expected {BoolType()}, got {node.condition.inferredType}")
             return
         thenBody = False
         elseBody = False
@@ -381,7 +382,7 @@ class TypeChecker(Visitor):
     def IndexExpr(self, node: IndexExpr):
         if node.index.inferredType != IntType():
             self.addError(
-                node, F"Expected {IntType()} index, got {node.index.inferredType}")
+                node, f"Expected {IntType()} index, got {node.index.inferredType}")
         # indexing into a string returns a new string
         if node.list.inferredType == StrType():
             node.inferredType = StrType()
@@ -391,7 +392,7 @@ class TypeChecker(Visitor):
             node.inferredType = node.list.inferredType.elementType
             return node.inferredType
         else:
-            self.addError(node, F"Cannot index into {node.list.inferredType}")
+            self.addError(node, f"Cannot index into {node.list.inferredType}")
             node.inferredType = ObjectType()
             return ObjectType()
 
@@ -402,13 +403,13 @@ class TypeChecker(Visitor):
                 node.inferredType = IntType()
                 return IntType()
             else:
-                self.addError(node, F"Expected int, got {operandType}")
+                self.addError(node, f"Expected int, got {operandType}")
         elif node.operator == "not":
             if operandType == BoolType():
                 node.inferredType = BoolType()
                 return BoolType()
             else:
-                self.addError(node, F"Expected bool, got {operandType}")
+                self.addError(node, f"Expected bool, got {operandType}")
         else:
             node.inferredType = ObjectType()
             return ObjectType()
@@ -420,30 +421,31 @@ class TypeChecker(Visitor):
             # constructor
             node.isConstructor = True
             t = self.ts.getMethod(fname, "__init__")
+            assert t is not None
             if len(t.parameters) != len(node.args) + 1:
                 self.addError(
-                    node, F"Expected {len(t.parameters) - 1} args, got {len(node.args)}")
+                    node, f"Expected {len(t.parameters) - 1} args, got {len(node.args)}")
             else:
                 for i in range(len(t.parameters) - 1):
                     if not self.ts.canAssign(node.args[i].inferredType, t.parameters[i + 1]):
                         self.addError(
-                            node, F"Expected {t.parameters[i + 1]}, got {node.args[i].inferredType}")
+                            node, f"Expected {t.parameters[i + 1]}, got {node.args[i].inferredType}")
                         continue
             node.inferredType = ClassValueType(fname)
         else:
             t = self.getType(fname)
             if not isinstance(t, FuncType):
-                self.addError(node, F"Not a function: {fname}")
+                self.addError(node, f"Not a function: {fname}")
                 node.inferredType = ObjectType()
                 return ObjectType()
             if len(t.parameters) != len(node.args):
                 self.addError(
-                    node, F"Expected {len(t.parameters)} args, got {len(node.args)}")
+                    node, f"Expected {len(t.parameters)} args, got {len(node.args)}")
             else:
                 for i in range(len(t.parameters)):
                     if not self.ts.canAssign(node.args[i].inferredType, t.parameters[i]):
                         self.addError(
-                            node, F"Expected {t.parameters[i]}, got {node.args[i].inferredType}")
+                            node, f"Expected {t.parameters[i]}, got {node.args[i].inferredType}")
                         continue
             node.inferredType = t.returnType
         node.function.inferredType = t
@@ -454,21 +456,21 @@ class TypeChecker(Visitor):
         iterType = node.iterable.inferredType
         if not self.defInCurrentScope(node.identifier.name):
             self.addError(
-                node.identifier, F"Identifier not mutable in current scope: {node.identifier.name}")
+                node.identifier, f"Identifier not mutable in current scope: {node.identifier.name}")
             return
         if isinstance(iterType, ListValueType):
-            if not self.ts.canAssign(iterType.elementType, node.identifier.inferredType):
+            if not self.ts.canAssign(iterType.elementType, node.identifier.inferredValueType()):
                 self.addError(
-                    node.identifier, F"Expected {iterType.elementType}, got {node.identifier.inferredType}")
+                    node.identifier, f"Expected {iterType.elementType}, got {node.identifier.inferredType}")
                 return
         elif StrType() == iterType:
-            if not self.ts.canAssign(StrType(), node.identifier.inferredType):
+            if not self.ts.canAssign(StrType(), node.identifier.inferredValueType()):
                 self.addError(
-                    node.identifier, F"Expected {StrType()}, got {node.identifier.inferredType}")
+                    node.identifier, f"Expected {StrType()}, got {node.identifier.inferredType}")
                 return
         else:
             self.addError(
-                node.iterable, F"Expected iterable, got {node.iterable.inferredType}")
+                node.iterable, f"Expected iterable, got {node.iterable.inferredType}")
             return
         for s in node.body:
             if s.isReturn:
@@ -478,16 +480,16 @@ class TypeChecker(Visitor):
         if len(node.elements) == 0:
             node.inferredType = EmptyType()
         else:
-            e_type = node.elements[0].inferredType
+            e_type = node.elements[0].inferredValueType()
             for e in node.elements:
-                e_type = self.ts.join(e_type, e.inferredType)
+                e_type = self.ts.join(e_type, e.inferredValueType())
             node.inferredType = ListValueType(e_type)
         return node.inferredType
 
     def WhileStmt(self, node: WhileStmt):
         if node.condition.inferredType != BoolType():
             self.addError(
-                node.condition, F"Expected {BoolType()}, got {node.condition.inferredType}")
+                node.condition, f"Expected {BoolType()}, got {node.condition.inferredType}")
             return
         for s in node.body:
             if s.isReturn:
@@ -500,10 +502,10 @@ class TypeChecker(Visitor):
         elif node.value is None:
             if not self.ts.canAssign(NoneType(), self.expReturnType):
                 self.addError(
-                    node, F"Expected {self.expReturnType}, got {NoneType()}")
+                    node, f"Expected {self.expReturnType}, got {NoneType()}")
         elif not self.ts.canAssign(node.value.inferredType, self.expReturnType):
             self.addError(
-                node, F"Expected {self.expReturnType}, got {node.value.inferredType}")
+                node, f"Expected {self.expReturnType}, got {node.value.inferredType}")
         node.expType = self.expReturnType
         return
 
@@ -516,7 +518,7 @@ class TypeChecker(Visitor):
         if varType is not None and isinstance(varType, ValueType):
             node.inferredType = varType
         else:
-            self.addError(node, F"Unknown identifier: {node.name}")
+            self.addError(node, f"Unknown identifier: {node.name}")
             node.inferredType = ObjectType()
         return node.inferredType
 
@@ -525,12 +527,12 @@ class TypeChecker(Visitor):
                         BoolType(), StrType()}
         if node.object.inferredType in static_types or not isinstance(node.object.inferredType, ClassValueType):
             self.addError(
-                node, F"Expected object, got {node.object.inferredType}")
+                node, f"Expected object, got {node.object.inferredType}")
         else:
             class_name, member_name = node.object.inferredType.className, node.member.name
             if self.ts.getAttr(class_name, member_name) is None:
                 self.addError(
-                    node, F"Attribute {member_name} doesn't exist for class {class_name}")
+                    node, f"Attribute {member_name} doesn't exist for class {class_name}")
                 node.inferredType = ObjectType()
                 return ObjectType()
             else:
@@ -540,9 +542,9 @@ class TypeChecker(Visitor):
     def IfExpr(self, node: IfExpr):
         if node.condition.inferredType != BoolType():
             self.addError(
-                F"Expected boolean, got {node.condition.inferredType}")
+                node, f"Expected boolean, got {node.condition.inferredType}")
         node.inferredType = self.ts.join(
-            node.thenExpr.inferredType, node.elseExpr.inferredType)
+            node.thenExpr.inferredValueType(), node.elseExpr.inferredValueType())
         return node.inferredType
 
     def MethodCallExpr(self, node: MethodCallExpr):
@@ -552,7 +554,7 @@ class TypeChecker(Visitor):
                         BoolType(), StrType()}
         if method_member.object.inferredType in static_types or not isinstance(method_member.object.inferredType, ClassValueType):
             self.addError(
-                method_member, F"Expected object, got {method_member.object.inferredType}")
+                method_member, f"Expected object, got {method_member.object.inferredType}")
             node.inferredType = ObjectType()
             return node.inferredType
         else:
@@ -560,18 +562,18 @@ class TypeChecker(Visitor):
             t = self.ts.getMethod(class_name, member_name)
             if t is None:
                 self.addError(
-                    node, F"Method {member_name} doesn't exist for class {class_name}")
+                    node, f"Method {member_name} doesn't exist for class {class_name}")
                 node.inferredType = ObjectType()
                 return node.inferredType
         # self arguments
         if len(t.parameters) != len(node.args) + 1:
             self.addError(
-                node, F"Expected {len(t.parameters) - 1} args, got {len(node.args)}")
+                node, f"Expected {len(t.parameters) - 1} args, got {len(node.args)}")
         else:
             for i in range(len(t.parameters) - 1):
                 if not self.ts.canAssign(node.args[i].inferredType, t.parameters[i + 1]):
                     self.addError(
-                        node, F"Expected {t.parameters[i + 1]}, got {node.args[i].inferredType}")
+                        node, f"Expected {t.parameters[i + 1]}, got {node.args[i].inferredType}")
                     continue
         node.method.inferredType = t
         node.inferredType = t.returnType
@@ -607,7 +609,7 @@ class TypeChecker(Visitor):
 
     def ClassType(self, node: ClassType):
         if node.className not in {"<None>", "<Empty>"} and not self.ts.classExists(node.className):
-            self.addError(node, F"Unknown class: {node.className}")
+            self.addError(node, f"Unknown class: {node.className}")
             return ObjectType()
         else:
             return ClassValueType(node.className)
