@@ -428,6 +428,7 @@ class LlvmBackend(Visitor):
                     elemType = cast(
                         ListValueType, node.inferredType).elementType.getLLVMType()
                 assert elemType is not None
+                # pyrefly: ignore [missing-argument]
                 size = self.getBuilder().add(int32_t(4), self.getBuilder().mul(
                     total_len, self.sizeof(elemType)), 'bytes')
                 new_arr = self.getBuilder().call(
@@ -438,12 +439,14 @@ class LlvmBackend(Visitor):
                 data_lhs_start = self.getListDataPtr(new_arr, elemType)
                 lhs_data = self.getListDataPtr(lhs, elemType)
                 rhs_data = self.getListDataPtr(rhs, elemType)
+                # pyrefly: ignore [missing-argument]
                 lhs_bytes = self.getBuilder().mul(llen, self.sizeof(elemType))
 
                 self.getBuilder().call(self.externs['memcpy'], [
                     self.toVoidPtr(data_lhs_start), self.toVoidPtr(lhs_data), lhs_bytes])
 
                 data_rhs_start = self.getBuilder().gep(data_lhs_start, [llen])
+                # pyrefly: ignore [missing-argument]
                 rhs_bytes = self.getBuilder().mul(rlen, self.sizeof(elemType))
 
                 self.getBuilder().call(self.externs['memcpy'], [
@@ -454,6 +457,7 @@ class LlvmBackend(Visitor):
                 rhs = self.toVoidPtr(rhs)
                 llen = self.getBuilder().call(self.externs['strlen'], [lhs])
                 rlen = self.getBuilder().call(self.externs['strlen'], [rhs])
+                # pyrefly: ignore [missing-argument, missing-argument]
                 total_len = self.getBuilder().add(self.getBuilder().add(
                     llen, rlen), int32_t(1))
                 new_str = self.getBuilder().call(
@@ -464,21 +468,28 @@ class LlvmBackend(Visitor):
                     new_str, fmt, lhs, rhs])
                 return new_str
             elif leftType == IntType():
+                # pyrefly: ignore [missing-argument]
                 return self.getBuilder().add(lhs, rhs)
             else:
                 raise Exception(
                     "Internal compiler error: unexpected operand types for +")
         # other arithmetic operators
         elif operator == "-":
+            # pyrefly: ignore [missing-argument]
             return self.getBuilder().sub(lhs, rhs)
         elif operator == "*":
+            # pyrefly: ignore [missing-argument]
             return self.getBuilder().mul(lhs, rhs)
         elif operator == "//":
+            # pyrefly: ignore [missing-argument]
             return self.getBuilder().sdiv(lhs, rhs)
         elif operator == "%":
             # emulate Python modulo with ((a % b) + b) % b)
+            # pyrefly: ignore [missing-argument]
             val = self.getBuilder().srem(lhs, rhs)
+            # pyrefly: ignore [missing-argument]
             val = self.getBuilder().add(val, rhs)
+            # pyrefly: ignore [missing-argument]
             return self.getBuilder().srem(val, rhs)
         # relational operators
         elif operator in {"<", "<=", ">", ">="}:
@@ -505,13 +516,17 @@ class LlvmBackend(Visitor):
                 return self.getBuilder().icmp_signed(operator, lhs, rhs)
         elif operator == "is":
             # pointer comparisons
+            # pyrefly: ignore [missing-argument]
             lhs_ptr = self.getBuilder().ptrtoint(lhs, int32_t)
+            # pyrefly: ignore [missing-argument]
             rhs_ptr = self.getBuilder().ptrtoint(rhs, int32_t)
             return self.getBuilder().icmp_unsigned("==", lhs_ptr, rhs_ptr)
         # logical operators
         elif operator == "and":
+            # pyrefly: ignore [missing-argument]
             return self.getBuilder().and_(lhs, rhs)
         elif operator == "or":
+            # pyrefly: ignore [missing-argument]
             return self.getBuilder().or_(lhs, rhs)
         else:
             raise Exception(
@@ -643,6 +658,7 @@ class LlvmBackend(Visitor):
         currIdx = self.getBuilder().load(idx_var)
         self.getBuilder().store(idxFn(currIdx), var)
         self.visitStmtList(node.body)
+        # pyrefly: ignore [missing-argument]
         self.getBuilder().store(self.getBuilder().add(currIdx, int32_t(1)), idx_var)
 
     def ForStmt(self, node: ForStmt):
@@ -686,6 +702,7 @@ class LlvmBackend(Visitor):
             elemType = cast(
                 ListValueType, node.inferredType).elementType.getLLVMType()
         assert elemType is not None
+        # pyrefly: ignore [missing-argument, missing-argument]
         size = self.getBuilder().add(int32_t(4), self.getBuilder().mul(
             int32_t(n), self.sizeof(elemType)))
         addr = self.getBuilder().call(self.externs['malloc'], [
@@ -813,7 +830,9 @@ class LlvmBackend(Visitor):
         return voidptr_t(None)
 
     def StringLiteral(self, node: StringLiteral):
+        # pyrefly: ignore [unsupported-operation]
         bytes = bytearray((node.value + '\00').encode('ascii'))
+        # pyrefly: ignore [bad-argument-type]
         size = int32_t(1 + len(node.value))
         addr = self.getBuilder().call(
             self.externs['malloc'], [size], 'str_literal')
@@ -893,6 +912,7 @@ class LlvmBackend(Visitor):
         # copy contents into new string so that input buffer can be reused
         len = self.getBuilder().call(self.externs['strlen'], [input_buf])
         new_str = self.getBuilder().call(
+            # pyrefly: ignore [missing-argument]
             self.externs['malloc'], [self.getBuilder().add(len, int32_t(1))], 'new_str')
         fmt = self.toVoidPtr(self.module.get_global('__fmt_str'))
         self.getBuilder().call(self.externs['sprintf'], [

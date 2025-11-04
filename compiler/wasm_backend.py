@@ -228,7 +228,9 @@ class WasmBackend(CommonVisitor):
                 self.instr("i32.store")
 
     def funcDefHelper(self, node: FuncDef, name: str):
+        # pyrefly: ignore [bad-assignment]
         self.returnType = node.getTypeX().returnType
+        # pyrefly: ignore [missing-attribute, missing-attribute]
         ret = None if self.returnType.isNone() else self.returnType.getWasmName()
         paramNames = [x.identifier.name for x in node.params]
         self.localsBuilder = self.builder.func(
@@ -238,6 +240,7 @@ class WasmBackend(CommonVisitor):
         self.visitStmtList(node.statements)
         # implicitly return None if possible
         if ret is not None and not isinstance(node.statements[-1], ReturnStmt):
+            # pyrefly: ignore [missing-attribute, missing-attribute]
             if self.returnType.getWasmName() == "i32" and not self.returnType.isSpecialType():
                 self.instr("i32.const 0")
             else:
@@ -620,6 +623,7 @@ class WasmBackend(CommonVisitor):
         self.builder.end()
 
     def buildReturn(self, value: Optional[Expr]):
+        # pyrefly: ignore [missing-attribute]
         if self.returnType.isNone():
             self.instr("return")
         else:
@@ -750,6 +754,7 @@ class WasmBackend(CommonVisitor):
         self.instr("i32.const 0")
 
     def StringLiteral(self, node: StringLiteral):
+        # pyrefly: ignore [bad-argument-type]
         length = len(node.value)
         memory = length + 4
         # 1 byte per char + 4 for length, rounded to nearest 8
@@ -765,6 +770,7 @@ class WasmBackend(CommonVisitor):
         self.instr("i32.store")
         for i in range(length):
             offset = i + 4
+            # pyrefly: ignore [unsupported-operation]
             val = ord(node.value[i])
             # addr: mem + 4 + idx
             self.getLocal(addr)

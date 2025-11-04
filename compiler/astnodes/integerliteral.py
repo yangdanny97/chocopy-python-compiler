@@ -6,6 +6,7 @@ class IntegerLiteral(Literal):
 
     def __init__(self, location: List[int], value: int):
         super().__init__(location, "IntegerLiteral")
+        # pyrefly: ignore [bad-assignment]
         self.value = value
 
     def visit(self, visitor):

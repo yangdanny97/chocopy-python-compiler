@@ -246,6 +246,7 @@ class CilBackend(CommonVisitor):
             self.newLocalEntry(param.identifier.name, param.getTypeX(), True)
         for d in node.declarations:
             self.visit(d)
+        # pyrefly: ignore [bad-assignment]
         self.returnType = node.getTypeX().returnType
 
         # handle last return
@@ -571,6 +572,7 @@ class CilBackend(CommonVisitor):
         self.label(endLabel)
 
     def buildReturn(self, value: Optional[Expr]):
+        # pyrefly: ignore [missing-attribute]
         if not self.returnType.isNone():
             if value is None:
                 self.NoneLiteral(None)

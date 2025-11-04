@@ -30,6 +30,7 @@ class Parser(ast.NodeVisitor):
         # input is Python AST node
         # get 2 item list corresponding to AST node starting location
         # make columns 1-indexed
+        # pyrefly: ignore [missing-attribute, missing-attribute]
         return [node.lineno, node.col_offset + 1]
 
     def visit(self, node: ast.AST) -> typing.Any:
@@ -49,6 +50,7 @@ class Parser(ast.NodeVisitor):
         elif isinstance(node, ast.Name):
             return ClassType(location, node.id)
         elif isinstance(node, ast.Str):
+            # pyrefly: ignore [bad-argument-type, deprecated]
             return ClassType(location, node.s)
         else:
             raise ParseError("Unsupported type annotation", node)
@@ -320,12 +322,14 @@ class Parser(ast.NodeVisitor):
 
     def visit_Num(self, node: ast.Num) -> IntegerLiteral:
         location = self.getLocation(node)
+        # pyrefly: ignore [deprecated]
         if not isinstance(node.n, int):
             raise ParseError("Only integers are supported", node)
         return IntegerLiteral(location, node.n)
 
     def visit_Str(self, node: ast.Str) -> StringLiteral:
         location = self.getLocation(node)
+        # pyrefly: ignore [bad-argument-type, deprecated]
         return StringLiteral(location, node.s)
 
     def visit_List(self, node: ast.List) -> ListExpr:

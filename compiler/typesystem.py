@@ -102,6 +102,7 @@ class TypeSystem:
         # requires a and b to be the names of valid classes
         # return if a is the same class or subclass of b
         curr = a
+        # pyrefly: ignore [bad-assignment]
         while curr is not None:
             if curr == b:
                 return True
@@ -174,14 +175,18 @@ class TypeSystem:
         for name in classInfo.methods:
             hasExisting = False
             for i in range(len(methods)):
+                # pyrefly: ignore [bad-index]
                 if methods[i][0] == name:
+                    # pyrefly: ignore [unsupported-operation]
                     methods[i] = (
                         name, classInfo.methods[name], className)
                     hasExisting = True
                     break
             if not hasExisting:
+                # pyrefly: ignore [missing-attribute]
                 methods.append(
                     (name, classInfo.methods[name], className))
+        # pyrefly: ignore [bad-return]
         return methods
 
     def getMappedMethods(self, className: str) -> Dict[str, Tuple[FuncType, str]]:

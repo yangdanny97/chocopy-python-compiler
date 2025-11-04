@@ -1,0 +1,6 @@
+project-includes = ["compiler"]
+python-version = "3.11.0"
+infer-with-first-use = false
+
+[errors]
+missing-import = "error"

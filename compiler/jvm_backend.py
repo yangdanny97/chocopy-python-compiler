@@ -198,6 +198,7 @@ class JvmBackend(CommonVisitor):
             self.newLocalEntry(node.params[i].identifier.name)
         for d in node.declarations:
             self.visit(d)
+        # pyrefly: ignore [bad-assignment]
         self.returnType = node.getTypeX().returnType
         # handle last return
         self.visitStmtList(node.statements)
@@ -580,6 +581,7 @@ class JvmBackend(CommonVisitor):
         self.instr("nop")
 
     def buildReturn(self, value: Optional[Expr]):
+        # pyrefly: ignore [missing-attribute]
         if self.returnType.isNone():
             self.instr("return")
         else:
@@ -587,6 +589,7 @@ class JvmBackend(CommonVisitor):
                 self.NoneLiteral(None)
             else:
                 self.visit(value)
+            # pyrefly: ignore [bad-argument-type]
             self.returnInstr(self.returnType)
 
     def ReturnStmt(self, node: ReturnStmt):
@@ -658,6 +661,7 @@ class JvmBackend(CommonVisitor):
             self.instr(f"ldc {value}")
 
     def IntegerLiteral(self, node: IntegerLiteral):
+        # pyrefly: ignore [bad-argument-type]
         self.loadInt(node.value)
 
     def NoneLiteral(self, node: Optional[NoneLiteral]):
