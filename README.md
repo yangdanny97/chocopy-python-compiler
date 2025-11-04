@@ -1,5 +1,7 @@
 # chocopy-python-compiler
 
+[![pyrefly](https://img.shields.io/endpoint?url=https://pyrefly.org/badge.json)](https://github.com/facebook/pyrefly)
+
 Ahead-of-time compiler for [Chocopy](https://chocopy.org/), a subset of Python 3.6 with type annotations and static type checking. 
 
 Chocopy is used in compiler courses at several universities. This project has no relation to those courses, and is purely for my own learning/practice/fun. 
